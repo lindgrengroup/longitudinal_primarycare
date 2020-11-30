@@ -7,4 +7,4 @@ Folder structure by trait:
 
 ## Hormones
 
-### Luteinising hormone
+### LH (Luteinising hormone)
