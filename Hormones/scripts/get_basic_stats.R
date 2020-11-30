@@ -132,7 +132,7 @@ write.table(cleaned, "/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/LH_primary
 LH <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/LH_primary_care_annotated.txt",
                  sep = "\t", header = T)
 
-# Distribution of LH levels by sex
+### Distribution of LH levels by sex ----
 pdf("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/plots/sex_distribution.pdf")
 
 ggplot(LH, aes(x = hormone_level, color = sex, fill = sex)) +
@@ -162,7 +162,7 @@ ggplot(subset(LH, LH$sex == "M"),
 
 dev.off()
 
-# Distribution of LH values by age
+### Distribution of LH values by age ----
 
 breakpoints <- c(18, seq(30, 80, by = 10))
 names <- c("(18-30]", "(30-40]", "(40-50]", "(50-60]", "(60-70]",
@@ -191,6 +191,8 @@ ggplot(subset(LH, LH$sex == "M"),
        title = "Males, Plasma LH n = 31, Serum LH n = 3,415")
 
 dev.off()
+
+### Distribution by BMI ----
 
 # Create categories for BMI (underweight, normal, overweight, etc.)
 # based on WHO guidelines
@@ -228,108 +230,44 @@ ggplot(subset(LH, LH$sex == "M" & !is.na(LH$BMI_class)),
 
 dev.off()
 
-######################################## STOP HERE FOR NOW #############
+# Number of hormone measurements
+LH <- LH %>% group_by(eid, hormone) %>% mutate(n_obs = n())
 
-# Create categories for mean BMI (underweight, normal, overweight, etc.)
-# based on WHO guidelines - how many individuals are in each category?
+breakpoints <- c(-Inf, 1, 3, 9, Inf)
+names <- c("1", "2-3", "4-9", "10+")
+LH$nmeasures_bin <- cut(LH$n_obs, breaks = breakpoints, labels = names)
 
-pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/BMI_classes.pdf")
+pdf("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/plots/nmeasures_distribution.pdf")
 
-bmi %>% distinct(eid, .keep_all = T) %>%
-  group_by(sex, bmi_UKBIOBANK_class) %>% 
-  count() %>%
-  drop_na(bmi_UKBIOBANK_class) %>%
-  ggplot(aes(x = bmi_UKBIOBANK_class, y = n, 
-             color = sex, fill = sex)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "UKBIOBANK BMI Class", y = "Number of individuals")
+# LH distribution faceted by number of LH measures
+ggplot(subset(LH, LH$sex == "F"), 
+       aes(x = nmeasures_bin, y = hormone_level)) +
+  facet_wrap(~hormone, nrow = 2) +
+  geom_violin(fill = "#f8766d") +
+  stat_summary(fun.data = "mean_sdl", geom = "crossbar", width = 0.1,
+               fill = "white") +
+  ylim(c(0, 175)) +
+  labs(x = "Number of LH measures", y = "Hormone Level", 
+       title = "Females, Plasma LH n = 238, Serum LH n = 33,006")
 
-bmi %>% distinct(eid, .keep_all = T) %>%
-  group_by(sex, bmi_primarycare_class) %>% 
-  count() %>%
-  ggplot(aes(x = bmi_primarycare_class, y = n, 
-             color = sex, fill = sex)) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(x = "Primary Care BMI Class", y = "Number of individuals")
+ggplot(subset(LH, LH$sex == "M"), 
+       aes(x = nmeasures_bin, y = hormone_level)) +
+  facet_wrap(~hormone, nrow = 2, scales = "free_y") +
+  geom_violin(fill = "#00bfc4") +
+  stat_summary(fun.data = "mean_sdl", geom = "crossbar", width = 0.1,
+               fill = "white") +
+  labs(x = "Number of LH measures", y = "Hormone Level", 
+       title = "Males, Plasma LH n = 31, Serum LH n = 3,415")
 
-dev.off()
+# BMI distribution faceted by number of LH measures
+indivs <- distinct(LH, eid, sex, mean_UKBB_BMI, nmeasures_bin) 
 
-## Multiple measures ----
-
-# Distribution of number of BMI events
-indivs <- bmi %>% group_by(eid, sex) %>% count()
-pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/number_events.pdf")
-
-ggplot(indivs, aes(x = n, fill = sex, colour = sex)) +
-  geom_histogram(alpha = 0.25, position = "identity") +
-  labs(x = "Number of BMI measures", y = "Number of individuals")
-
-ggplot(indivs, aes(x = n, fill = sex, colour = sex)) +
-  geom_histogram(alpha = 0.25, position = "identity") +
-  xlim(c(0, 50)) +
-  labs(x = "Number of BMI measures", y = "Number of individuals")
-
-dev.off()
-
-# Number of measures by BMI class
-pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/nmeasures_BMI_class.pdf")
-
-tmp <- bmi %>% distinct(eid, .keep_all = T) 
-
-ggplot(tmp, aes(x = bmi_primarycare_class, y = n, fill = sex)) +
-  geom_boxplot() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Primary Care BMI Class", 
-       y = "Number of BMI measures")
-
-ggplot(tmp, aes(x = bmi_primarycare_class, y = n, fill = sex)) +
-  geom_boxplot() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ylim(c(0, 50)) +
-  labs(x = "Primary Care BMI Class", 
-       y = "Number of BMI measures")
-
-
-dev.off()
-
-# Count number of BMI measurements per individual
-bmi <- bmi %>% group_by(eid) %>% add_tally()
-
-# Create categories for number of measurements
-breakpoints <- c(-Inf, 1, 5, 10, 15, Inf)
-names <- c("1", "2-5", "6-10", "11-15", "16+")
-bmi$nmeasures_bin <- cut(bmi$nn, breaks = breakpoints, labels = names)
-
-# BMI values by number of measures
-pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/nmeasures_bin.pdf")
-
-ggplot(bmi, aes(x = nmeasures_bin, y = primarycare_BMI, fill = sex)) +
-  geom_boxplot() +
-  ylim(c(10, 100)) +
-  labs(x = "Number of BMI measures")
-
-ggplot(bmi, aes(x = primarycare_BMI, fill = nmeasures_bin, 
-                color = nmeasures_bin)) +
-  geom_density(alpha = 0.25) +
-  scale_color_brewer(palette = "Dark2") +
+ggplot(indivs, 
+       aes(x = mean_UKBB_BMI, col = nmeasures_bin, fill = nmeasures_bin)) +
+  facet_wrap(~sex, nrow = 2) +
+  geom_density(alpha = 0.25, position = "identity") +
   scale_fill_brewer(palette = "Dark2") +
-  xlim(c(10, 100))
+  scale_color_brewer(palette = "Dark2") +
+  labs(x = "UKBIOBANK BMI", y = "Density")
 
 dev.off()
-
-# Is the relationship between BMI and number of measures due to age?
-
-no_age_model <- lm(n ~ BMI, data = bmi)
-summary(no_age_model) 
-age_model <- lm(n ~ BMI + age_years, data = bmi)
-summary(age_model) 
-
-# Subset multiply measured individuals
-bmi_mult <- subset(bmi, bmi$n > 1)
-
-# Summary statistics for multiply measured individuals
-bmi_mult <- bmi_mult %>% mutate(min_BMI = min(BMI), mean_BMI = mean(BMI), 
-                                max_BMI = max(BMI), 
-                                range_BMI = max_BMI - mean_BMI)
