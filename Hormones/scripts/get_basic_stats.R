@@ -4,6 +4,7 @@
 library(tidyr)
 library(dplyr)
 library(eeptools)
+library(lubridate)
 library(ggplot2)
 theme_set(theme_bw())
 library(RColorBrewer)
@@ -133,19 +134,18 @@ LH <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/LH_primary_car
                  sep = "\t", header = T)
 
 ### Distribution of LH levels by sex ----
+
 pdf("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/plots/sex_distribution.pdf")
 
 ggplot(LH, aes(x = hormone_level, color = sex, fill = sex)) +
   facet_wrap(~hormone, nrow = 2) +
   geom_density(alpha = 0.25, na.rm = T) +
-  labs(x = "LH Level", y = "Density") +
-  xlim(c(0, 175))
+  labs(x = "LH Level", y = "Density") 
 
 ggplot(subset(LH, LH$sex == "F"), 
        aes(x = hormone, y = hormone_level)) +
   geom_jitter(size = 0.1, color = "grey") +
   geom_violin(fill = "#f8766d", trim = F) +
-  ylim(c(0, 175)) +
   stat_summary(fun.data = "mean_sdl", geom = "crossbar", width = 0.1,
                fill = "white") +
   labs(x = "Hormone", y = "Hormone Level", 
@@ -177,7 +177,6 @@ ggplot(subset(LH, LH$sex == "F"),
   geom_violin(fill = "#f8766d") +
   stat_summary(fun.data = "mean_sdl", geom = "crossbar", width = 0.1,
                fill = "white") +
-  ylim(c(0, 175)) +
   labs(x = "Age (years)", y = "Hormone Level", 
        title = "Females, Plasma LH n = 238, Serum LH n = 33,006")
 
@@ -213,7 +212,6 @@ ggplot(subset(LH, LH$sex == "F" & !is.na(LH$BMI_class)),
   geom_violin(fill = "#f8766d") +
   stat_summary(fun.data = "mean_sdl", geom = "crossbar", width = 0.1,
                fill = "white") +
-  ylim(c(0, 175)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(x = "UKBB BMI Class", y = "Hormone Level", 
        title = "Females, Plasma LH n = 238, Serum LH n = 33,006")
@@ -246,7 +244,6 @@ ggplot(subset(LH, LH$sex == "F"),
   geom_violin(fill = "#f8766d") +
   stat_summary(fun.data = "mean_sdl", geom = "crossbar", width = 0.1,
                fill = "white") +
-  ylim(c(0, 175)) +
   labs(x = "Number of LH measures", y = "Hormone Level", 
        title = "Females, Plasma LH n = 238, Serum LH n = 33,006")
 
@@ -271,3 +268,56 @@ ggplot(indivs,
   labs(x = "UKBIOBANK BMI", y = "Density")
 
 dev.off()
+
+### Number of tests in each age bin and BMI class etc. ----
+
+pdf("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/plots/ntests.pdf")
+
+# Age
+ntests <- LH %>% group_by(sex, hormone, age_10_bin) %>% count()
+ggplot(ntests, aes(x = age_10_bin, y = n, fill = sex, col = sex)) +
+  facet_wrap(~hormone+sex, nrow = 2, scales = "free_y") +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Age (years)", y = "# tests performed")
+
+# BMI
+ntests <- LH %>% group_by(sex, hormone, BMI_class) %>% count()
+ggplot(ntests, aes(x = BMI_class, y = n, fill = sex, col = sex)) +
+  facet_wrap(~hormone+sex, nrow = 2, scales = "free_y") +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "BMI class", y = "# tests performed")
+
+dev.off()
+
+# Remove noise ----
+
+# Calculate outliers
+cutoffs <- LH %>% group_by(sex, hormone) %>% summarise(n = n(), 
+                                                       five_indivs_cutoff = 5/n)
+thresholds <- LH %>% group_by(sex, hormone) %>% 
+  summarise(q1 = quantile(hormone_level, 0.9)[[1]], 
+            q2 = quantile(hormone_level, 0.99)[[1]],
+            q3 = quantile(hormone_level, 0.999)[[1]],
+            q4 = quantile(hormone_level, 0.9999)[[1]])
+
+# Manual inspection
+pF <- subset(LH, LH$hormone == "plasma LH" & LH$sex == "F")
+pF <- pF[order(pF$hormone_level, decreasing = T), ]
+# Values over 150 are obvious errors - discard
+pM <- subset(LH, LH$hormone == "plasma LH" & LH$sex == "M")
+pM <- pM[order(pM$hormone_level, decreasing = T), ]
+# No noise
+
+sF <- subset(LH, LH$hormone == "serum LH" & LH$sex == "F")
+sF <- sF[order(sF$hormone_level, decreasing = T), ]
+# Values over 150 are obvious errors - discard
+sM <- subset(LH, LH$hormone == "serum LH" & LH$sex == "M")
+sM <- sM[order(sM$hormone_level, decreasing = T), ]
+# No noise
+
+cleaned <- subset(LH, LH$hormone_level < 150)
+write.table(cleaned, 
+            "/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/LH_primary_care_annotated.txt", 
+            sep = "\t", quote = F, row.names = F)
