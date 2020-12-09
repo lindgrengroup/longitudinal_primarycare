@@ -1,103 +1,25 @@
 # Author: Samvida S. Venkatesh
-# Date: 30/11/20
+# Date: 09/12/20
 
 library(tidyverse)
 library(dplyr)
 theme_set(theme_bw())
 library(RColorBrewer)
 
+# Read and supplement data ----
+
 BMI <- read.table("/well/lindgren/UKBIOBANK/samvida/BMI/bmi_primary_care_errors_removed.txt",
                   sep = "\t", header = T)
 
-# Method 1 - logFC from min to max ----
-## Plot logFC ----
-
-indivs <- BMI %>% group_by(eid, sex, mean_UKBB_BMI) %>%
-  summarise(n_obs = n(),
-            min_BMI = min(primarycare_BMI),
-            max_BMI = max(primarycare_BMI))
-
-# Subset only those individuals for whom we have multiple measurements
-indivs <- subset(indivs, indivs$n_obs > 1)
-
-# Calculate logFC
-indivs$logFC <- log2((indivs$max_BMI - indivs$min_BMI) / indivs$min_BMI)
-
-# Group by number of measurements
-breakpoints <- c(-Inf, 1, 5, 10, 15, Inf)
-names <- c("1", "2-5", "6-10", "11-15", "16+")
-indivs$nmeasures_bin <- cut(indivs$n_obs, breaks = breakpoints, labels = names)
-
-# Group by weight class
-breakpoints <- c(-Inf, 18.5, 25, 30, 35, 40, Inf)
-names <- c("Underweight (< 18.5)", "Normal weight [18.5 - 25)", 
-           "Pre-obesity [25 - 30)", "Obesity Class I [30 - 35)", 
-           "Obesity Class II [35 - 40)", "Obesity Class III (>= 40)")
-indivs$BMI_class <- cut(indivs$mean_UKBB_BMI, breaks = breakpoints, 
-                        include.lowest = T, right = F,
-                        labels = names)
-
-# Plot distribution of logFC
-popn_99 <- quantile(indivs$logFC, 0.99)
-
-pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/indiv_outliers/logFC_distribution.pdf")
-
-# WOMEN
-p <- subset(indivs, indivs$sex == "F")
-# Faceted by number of measures
-ggplot(p, aes(x = logFC)) +
-  facet_wrap(~nmeasures_bin, scales = "free_y") +
-  geom_histogram(position = "identity", fill = "#f8766d") +
-  geom_vline(xintercept = popn_99, linetype = "dashed", col = "black") +
-  labs(x = "logFC (min to max)", y = "Number of women")
-# Faceted by weight class
-ggplot(subset(p, !is.na(p$BMI_class)), aes(x = logFC)) +
-  facet_wrap(~BMI_class, scales = "free_y") +
-  geom_histogram(position = "identity", fill = "#f8766d") +
-  geom_vline(xintercept = popn_99, linetype = "dashed", col = "black") +
-  labs(x = "logFC (min to max)", y = "Number of women")
-
-# MEN
-p <- subset(indivs, indivs$sex == "M")
-# Faceted by number of measures
-ggplot(p, aes(x = logFC)) +
-  facet_wrap(~nmeasures_bin, scales = "free_y") +
-  geom_histogram(position = "identity", fill = "#00bfc4") +
-  geom_vline(xintercept = popn_99, linetype = "dashed", col = "black") +
-  labs(x = "logFC (min to max)", y = "Number of men")
-# Faceted by weight class
-ggplot(subset(p, !is.na(p$BMI_class)), aes(x = logFC)) +
-  facet_wrap(~BMI_class, scales = "free_y") +
-  geom_histogram(position = "identity", fill = "#00bfc4") +
-  geom_vline(xintercept = popn_99, linetype = "dashed", col = "black") +
-  labs(x = "logFC (min to max)", y = "Number of men")
-
-dev.off()
-
-## Calculate thresholds ----
-
-thresholds <- indivs %>% group_by(sex, nmeasures_bin, BMI_class) %>%
-  summarise(q99 = quantile(logFC, 0.99)[[1]])
-write.table(thresholds, "/well/lindgren/UKBIOBANK/samvida/BMI/indiv_outliers_logFC.txt",
-            sep = "\t", row.names = F, quote = F)
-
-# Identify outlier individuals
-
-indivs <- indivs %>% group_by(sex, nmeasures_bin, BMI_class) %>%
-  mutate(q99 = quantile(logFC, 0.99)[[1]],
-         outlier = logFC > q99)
-
-outliers <- indivs[which(indivs$outlier), "eid"]
-
-## Plot trajectories for outlier individuals ----
-
+# Number of BMI measurements
 BMI <- BMI %>% group_by(eid) %>% mutate(n_obs = n())
+
 # Group by number of measurements
 breakpoints <- c(-Inf, 1, 5, 10, 15, Inf)
 names <- c("1", "2-5", "6-10", "11-15", "16+")
-BMI$nmeasures_bin <- cut(BMI$n_obs, breaks = breakpoints, labels = names)
+BMI$nobs_bin <- cut(BMI$n_obs, breaks = breakpoints, labels = names)
 
-# Group by weight class
+# Group by mean UKBIOBANK BMI obesity class
 breakpoints <- c(-Inf, 18.5, 25, 30, 35, 40, Inf)
 names <- c("Underweight (< 18.5)", "Normal weight [18.5 - 25)", 
            "Pre-obesity [25 - 30)", "Obesity Class I [30 - 35)", 
@@ -106,32 +28,74 @@ BMI$BMI_class <- cut(BMI$mean_UKBB_BMI, breaks = breakpoints,
                      include.lowest = T, right = F,
                      labels = names)
 
-outliers <- subset(BMI, BMI$eid %in% outliers$eid)
+# Calculate sequential logFC
+seq_change <- BMI %>% group_by(eid) %>%
+  arrange(age_years, .by_group = T) %>%
+  mutate(FC = abs(primarycare_BMI - lag(primarycare_BMI)) / 
+           lag(primarycare_BMI),
+         age_change = age_years - lag(age_years),
+         logFC = log2(FC),
+         seqlogFC = log2(FC / age_change))
+
+# Calculate outliers ----
+
+# Only keep values where the FC is not NA (NA: first obs in the series or when
+# only one observation available)
+seq_change <- subset(seq_change, !is.na(seq_change$FC))
+
+# 99th percentile of individuals in each category:
+
+summary(seq_change$logFC)
+popn_99_logFC <- quantile(seq_change$logFC, 0.99)[[1]]
+
+summary(seq_change$seqlogFC)
+# Don't look at positive infinite values (as these come from age-changes of 0)
+finseqlogFC <- seq_change$seqlogFC[which(seq_change$seqlogFC != Inf)]
+popn_99_seqlogFC <- quantile(finseqlogFC, 0.99, na.rm = T)[[1]]
+
+seq_change$outlier <- seq_change$logFC > popn_99_logFC &
+  seq_change$seqlogFC > popn_99_seqlogFC
+
+outliers <- unique(seq_change$eid[which(seq_change$outlier)])
+outliers <- subset(BMI, BMI$eid %in% outliers)
 outliers$outlier <- T
 
-# Randomly sample from the remaining (non-outlier) population to display trajectories
-sample_BMI <- subset(indivs, !indivs$outlier) %>% 
-  group_by(sex, nmeasures_bin, BMI_class) %>%
-  sample_n(size = 15)
+# Plot trajectories for outliers -----
+
+# Randomly sample from the remaining (non-outlier) population in each
+# sex, nobs_bin, and obesity class to display trajectories
+sample_BMI <- subset(seq_change, !seq_change$outlier) %>% 
+  distinct(eid, sex, nobs_bin, BMI_class) %>%
+  group_by(sex, nobs_bin, BMI_class) %>%
+  sample_n(size = min(n(), 50))
 sample_BMI <- subset(BMI, BMI$eid %in% sample_BMI$eid)
 sample_BMI$outlier <- F
 
-# Plot trajectories faceted by sex, number of measurements, and weight class
+# Plot trajectories faceted by sex and weight class
 
 pdata <- bind_rows(outliers, sample_BMI)
+plist <- pdata %>% group_by(nobs_bin, BMI_class) %>% group_split()
 
-plist <- pdata %>% group_by(nmeasures_bin, BMI_class) %>% 
-  group_split()
+# For lines showing UKBIOBANK obesity class thresholds
+mins <- c(-Inf, 18.5, 25, 30, 35, 40)
+maxes <- c(18.5, 25, 30, 35, 40, Inf)
+names <- c("Underweight (< 18.5)", "Normal weight [18.5 - 25)", 
+           "Pre-obesity [25 - 30)", "Obesity Class I [30 - 35)", 
+           "Obesity Class II [35 - 40)", "Obesity Class III (>= 40)")
+names(mins) <- names
+names(maxes) <- names
 
 p <- lapply(plist, function (df) {
   bc <- unique(df$BMI_class)
-  nb <- unique(df$nmeasures_bin)
+  nb <- unique(df$nobs_bin)
   res <- ggplot(subset(df, !df$outlier), 
                 aes(x = age_years, y = primarycare_BMI, group = eid,
                     col = sex)) +
     facet_wrap(~sex, nrow = 2, scales = "free") +
     geom_point(col = "#ebebeb") +
     geom_line(col = "#ebebeb", size = 0.7) +
+    geom_hline(yintercept = mins[bc], linetype = "dashed") +
+    geom_hline(yintercept = maxes[bc], linetype = "dashed") +
     geom_point(data = subset(df, df$outlier), 
                aes(x = age_years, y = primarycare_BMI, group = eid,
                    col = sex)) +
@@ -139,74 +103,90 @@ p <- lapply(plist, function (df) {
               aes(x = age_years, y = primarycare_BMI, group = eid,
                   col = sex)) +
     labs(x = "Age (years)", y = "BMI", title = paste("UKBB", bc, 
-                                                     "Primary care", nb, "Measurements",
+                                                     "Primary care", nb, 
+                                                     "Measurements",
                                                      sep = " "))
   return (res)
 })
 
-pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/indiv_outliers/seqlogFC_outliers.pdf",
+pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/indiv_outliers/combined_outliers.pdf",
     onefile = T)
 print(p)
 dev.off()
 
-# Method 2 - Largest sequential logFC ----
+# Remove noisy observation for individuals identified as outliers ----
 
-# First arrange the measurements by age (they should already be sorted anyway)
-# lag from dplyr gets the value in the previous row
-seq_change <- BMI %>% group_by(eid) %>%
-  arrange(age_years, .by_group = T) %>%
-  mutate(seqlogFC = log2(abs(primarycare_BMI - lag(primarycare_BMI)) / 
-                           lag(primarycare_BMI)))
+outliers <- outliers %>% group_by(eid) %>% 
+  mutate(med_primarycare = median(primarycare_BMI),
+         dist_to_med = abs(primarycare_BMI - med_primarycare)) 
+# If there were only two observations, calculate the distance to mean UKBB BMI
+outliers$dist_to_med[which(outliers$n_obs < 3)] <- 
+  abs(outliers$primarycare_BMI[which(outliers$n_obs < 3)] - 
+        outliers$mean_UKBB_BMI[which(outliers$n_obs < 3)])
 
-# Get max value of change for each individual
-indivs <- seq_change %>% group_by(eid, sex, mean_UKBB_BMI) %>% 
-  summarise(n_obs = n(),
-            max_logFC = max(seqlogFC, na.rm = T))
+outliers <- outliers %>% mutate(remove = dist_to_med == max(dist_to_med))
 
-# Subset only those individuals for whom we were able to calculate logFC
-indivs <- subset(indivs, is.finite(indivs$max_logFC))
+cleaned <- merge(BMI, outliers[, c("eid", "event_dt", "primarycare_BMI",
+                                   "remove")], 
+                 all.x = T)
+cleaned$remove[is.na(cleaned$remove)] <- F
+cleaned <- subset(cleaned, !cleaned$remove)
 
-# Same plots as for logFC (method 1) and all following steps are the same
+# Repeat the above steps with the cleaned BMI data for a second round ----
 
-# Method 3 - >= 2 large sequential logFC ----
+BMI2 <- cleaned[, c(1:7)]
 
-# First arrange the measurements by age (they should already be sorted anyway)
-# lag from dplyr gets the value in the previous row
-seq_change <- BMI %>% group_by(eid) %>%
-  arrange(age_years, .by_group = T) %>%
-  mutate(seqlogFC = log2(abs(primarycare_BMI - lag(primarycare_BMI)) / 
-                           lag(primarycare_BMI)))
+# Number of BMI measurements
+BMI2 <- BMI2 %>% group_by(eid) %>% mutate(n_obs = n())
 
-# Get every logFC recorded
-all_jumps <- seq_change$seqlogFC[is.finite(seq_change$seqlogFC)]
+# Group by number of measurements
+breakpoints <- c(-Inf, 1, 5, 10, 15, Inf)
+names <- c("1", "2-5", "6-10", "11-15", "16+")
+BMI2$nobs_bin <- cut(BMI2$n_obs, breaks = breakpoints, labels = names)
 
-# Summary:
-summary(all_jumps)
-p95_popn <- quantile(all_jumps, 0.95)[[1]]
+# Group by mean UKBIOBANK BMI obesity class
+breakpoints <- c(-Inf, 18.5, 25, 30, 35, 40, Inf)
+names <- c("Underweight (< 18.5)", "Normal weight [18.5 - 25)", 
+           "Pre-obesity [25 - 30)", "Obesity Class I [30 - 35)", 
+           "Obesity Class II [35 - 40)", "Obesity Class III (>= 40)")
+BMI2$BMI_class <- cut(BMI2$mean_UKBB_BMI, breaks = breakpoints, 
+                     include.lowest = T, right = F,
+                     labels = names)
 
-# Get number of jumps larger than p95 for each individual
-indivs <- seq_change %>% group_by(eid, sex, mean_UKBB_BMI) %>% 
-  summarise(n_obs = n(), 
-            n_large_jumps = length(which(seqlogFC > p95_popn)))
+# Plot trajectories in each sex, obesity class, number of measures 
+# in order to find the last few noisy values:
 
-# Plots same as for methods 1&2, but plot on population level
+plist <- BMI2 %>% group_by(nobs_bin, BMI_class) %>% group_split()
 
-# Calculate thresholds ----
+# For lines showing UKBIOBANK obesity class thresholds
+mins <- c(-Inf, 18.5, 25, 30, 35, 40)
+maxes <- c(18.5, 25, 30, 35, 40, Inf)
+names <- c("Underweight (< 18.5)", "Normal weight [18.5 - 25)", 
+           "Pre-obesity [25 - 30)", "Obesity Class I [30 - 35)", 
+           "Obesity Class II [35 - 40)", "Obesity Class III (>= 40)")
+names(mins) <- names
+names(maxes) <- names
 
-# Only keep finite logFC
-seq_change <- subset(seq_change, is.finite(seq_change$seqlogFC))
-# Calculate extreme values
-thresholds <- seq_change %>% group_by(sex, nmeasures_bin, BMI_class) %>%
-  summarise(q99 = quantile(seqlogFC, 0.99)[[1]])
-write.table(thresholds, "/well/lindgren/UKBIOBANK/samvida/BMI/indiv_outliers_seqlogFC.txt",
-            sep = "\t", row.names = F, quote = F)
+p <- lapply(plist, function (df) {
+  bc <- unique(df$BMI_class)
+  nb <- unique(df$nobs_bin)
+  res <- ggplot(df, aes(x = age_years, y = primarycare_BMI, group = eid,
+                    col = sex)) +
+    facet_wrap(~sex, nrow = 2, scales = "free") +
+    geom_point(col = "#ebebeb") +
+    geom_line(col = "#ebebeb", size = 0.7) +
+    geom_hline(yintercept = mins[bc], linetype = "dashed") +
+    geom_hline(yintercept = maxes[bc], linetype = "dashed") +
+    labs(x = "Age (years)", y = "BMI", title = paste("UKBB", bc, 
+                                                     "Primary care", nb, 
+                                                     "Measurements",
+                                                     sep = " "))
+  return (res)
+})
 
-# Identify outlier individuals
+pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/indiv_outliers/trajectories.pdf",
+    onefile = T)
+print(p)
+dev.off()
 
-indivs <- seq_change %>% group_by(sex, nmeasures_bin, BMI_class) %>%
-  mutate(q99 = quantile(seqlogFC, 0.99)[[1]]) 
 
-indivs <- indivs %>% group_by(eid, sex, nmeasures_bin, BMI_class, n_obs) %>%
-  summarise(n_large_jumps = length(which(seqlogFC > q99)))
-
-outliers <- indivs[which(indivs$n_large_jumps > 1), "eid"]
