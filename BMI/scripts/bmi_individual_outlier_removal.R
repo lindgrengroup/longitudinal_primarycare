@@ -132,7 +132,9 @@ cleaned <- merge(BMI, outliers[, c("eid", "event_dt", "primarycare_BMI",
 cleaned$remove[is.na(cleaned$remove)] <- F
 cleaned <- subset(cleaned, !cleaned$remove)
 
-# Repeat the above steps with the cleaned BMI data for a second round ----
+# Look at the cleaned BMI data ----
+
+## Get and supplement data ----
 
 BMI2 <- cleaned[, c(1:7)]
 
@@ -150,11 +152,19 @@ names <- c("Underweight (< 18.5)", "Normal weight [18.5 - 25)",
            "Pre-obesity [25 - 30)", "Obesity Class I [30 - 35)", 
            "Obesity Class II [35 - 40)", "Obesity Class III (>= 40)")
 BMI2$BMI_class <- cut(BMI2$mean_UKBB_BMI, breaks = breakpoints, 
-                     include.lowest = T, right = F,
-                     labels = names)
+                      include.lowest = T, right = F,
+                      labels = names)
 
-# Plot trajectories in each sex, obesity class, number of measures 
-# in order to find the last few noisy values:
+# Plot trajectories for all individuals ----
+
+# Randomly assign 20 trajectories per group to be highlighted
+
+highlight <- BMI2 %>% distinct(eid, sex, nobs_bin, BMI_class) %>%
+  group_by(sex, nobs_bin, BMI_class) %>%
+  sample_n(size = min(n(), 20))
+
+BMI2$highlight <- F
+BMI2$highlight[BMI2$eid %in% highlight$eid] <- T
 
 plist <- BMI2 %>% group_by(nobs_bin, BMI_class) %>% group_split()
 
@@ -170,13 +180,21 @@ names(maxes) <- names
 p <- lapply(plist, function (df) {
   bc <- unique(df$BMI_class)
   nb <- unique(df$nobs_bin)
-  res <- ggplot(df, aes(x = age_years, y = primarycare_BMI, group = eid,
+  res <- ggplot(subset(df, !df$highlight), 
+                aes(x = age_years, y = primarycare_BMI, group = eid,
                     col = sex)) +
     facet_wrap(~sex, nrow = 2, scales = "free") +
     geom_point(col = "#ebebeb") +
     geom_line(col = "#ebebeb", size = 0.7) +
     geom_hline(yintercept = mins[bc], linetype = "dashed") +
     geom_hline(yintercept = maxes[bc], linetype = "dashed") +
+    geom_point(data = subset(df, df$highlight), 
+               aes(x = age_years, y = primarycare_BMI, group = eid,
+                   col = sex)) +
+    geom_line(data = subset(df, df$highlight), 
+              aes(x = age_years, y = primarycare_BMI, group = eid,
+                  col = sex)) +
+    ylim(c(10, 85)) +
     labs(x = "Age (years)", y = "BMI", title = paste("UKBB", bc, 
                                                      "Primary care", nb, 
                                                      "Measurements",
@@ -188,5 +206,8 @@ pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/indiv_outliers/trajectories.pdf"
     onefile = T)
 print(p)
 dev.off()
+
+write.table(BMI2[, 1:7], "/well/lindgren/UKBIOBANK/samvida/BMI/BMI_primarycare_indiv_clean.txt",
+            sep = "\t", quote = F, row.names = F)
 
 
