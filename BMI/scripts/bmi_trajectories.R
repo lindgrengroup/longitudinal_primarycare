@@ -87,6 +87,12 @@ breakpoints <- c(-Inf, 5, 10, 15, Inf)
 names <- c("2-5", "6-10", "11-15", "16+")
 BMI$nobs_bin <- cut(BMI$n_obs, breaks = breakpoints, labels = names)
 
+# Rank-based inverse normal transform the data
+BMImodel <- lm(BMI ~ 1, data = BMI, na.action = na.exclude)
+BMI$BMI_RINT <- residuals(BMImodel)
+BMI$BMI_RINT <- qnorm((rank(BMI$BMI_RINT, na.last = "keep") - 0.5) / 
+                        sum(!is.na(BMI$BMI_RINT)))
+
 # Randomly sample trajectories in each nobs_bin ----
 
 pids <- BMI %>% distinct(eid, sex, nobs_bin) %>%
@@ -97,6 +103,8 @@ pdata <- BMI[BMI$eid %in% pids$eid, ]
 
 pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/trajectories/sample_by_nobs.pdf",
     onefile = T)
+
+# BMI
 
 # Females
 ggplot(subset(pdata, pdata$sex == "F"), 
@@ -113,6 +121,24 @@ ggplot(subset(pdata, pdata$sex == "M"),
   geom_point(col = "#00BFC4") +
   geom_line(col = "#00BFC4", size = 0.7) +
   labs(x = "Age (years)", y = "BMI")
+
+# BMI-INT
+
+ggplot(subset(pdata, pdata$sex == "F"), 
+       aes(x = age_years, y = BMI_RINT, group = eid)) +
+  facet_wrap(~nobs_bin, nrow = 3) +
+  geom_point(col = "#F8766D") +
+  geom_line(col = "#F8766D", size = 0.7) +
+  labs(x = "Age (years)", y = "BMI-RINT")
+
+# Males
+ggplot(subset(pdata, pdata$sex == "M"), 
+       aes(x = age_years, y = BMI_RINT, group = eid)) +
+  facet_wrap(~nobs_bin, nrow = 3) +
+  geom_point(col = "#00BFC4") +
+  geom_line(col = "#00BFC4", size = 0.7) +
+  labs(x = "Age (years)", y = "BMI-RINT")
+
 
 dev.off()
 
@@ -137,6 +163,8 @@ pdata <- change[change$eid %in% pids$eid, ]
 pdf("/well/lindgren/UKBIOBANK/samvida/BMI/plots/trajectories/sample_by_change.pdf",
     onefile = T)
 
+# BMI
+
 # Females
 ggplot(subset(pdata, pdata$sex == "F"), 
        aes(x = age_years, y = BMI, group = eid, 
@@ -157,6 +185,30 @@ ggplot(subset(pdata, pdata$sex == "M"),
   geom_line(size = 0.7) +
   scale_color_brewer(palette = "Dark2") +
   labs(x = "Age (years)", y = "BMI", col = "BMI change",
+       title = "Males")
+
+# BMI-RINT
+
+# Females
+ggplot(subset(pdata, pdata$sex == "F"), 
+       aes(x = age_years, y = BMI_RINT, group = eid, 
+           col = change_class)) +
+  facet_wrap(~nobs_bin, nrow = 3) +
+  geom_point() +
+  geom_line(size = 0.7) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(x = "Age (years)", y = "BMI-RINT", col = "BMI change",
+       title = "Females")
+
+# Males
+ggplot(subset(pdata, pdata$sex == "M"), 
+       aes(x = age_years, y = BMI_RINT, group = eid, 
+           col = change_class)) +
+  facet_wrap(~nobs_bin, nrow = 3) +
+  geom_point() +
+  geom_line(size = 0.7) +
+  scale_color_brewer(palette = "Dark2") +
+  labs(x = "Age (years)", y = "BMI-RINT", col = "BMI change",
        title = "Males")
 
 dev.off()
