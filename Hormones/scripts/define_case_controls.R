@@ -10,7 +10,7 @@ CC_RATIO = 4 # case-control ratio 1:4
 # Read data ----
 
 # Read gp_clinical file
-gp_clinical <- readRDS("/well/lindgren/UKBIOBANK/samvida/gp_clinical_annotated_sex_dob.rds")
+gp_clinical <- readRDS("/well/lindgren/UKBIOBANK/samvida/gp_clinical_annotated.rds")
 
 # Keep demographic information
 demo_info <- gp_clinical %>% distinct(eid, sex, dob, mean_UKBB_BMI)
@@ -18,9 +18,12 @@ demo_info$case <- F
 
 # Relevant read codes for cases
 
-# LH: plasma and serum
-case_read2_codes <- c("443f.", "443e.", "4433")
-case_read3_codes <- c("XaELa", "XM0lv", "X80Fu", "XE25I")
+# GROUP 1: LUTEINISING HORMONE AND FOLLICLE STIMULATING HORMONE
+case_read2_codes <- c("46J6.", "46J7.", "4434", "4433", "443f.", "443i.",
+                      "44342", "44332", "4Q23.", "443e.", "443h.")
+case_read3_codes <- c("4433", "4434", "46J6.", "46J7.", "X7722", "X80Fa",
+                      "X80Fu", "XaELa", "XaELZ", "XaX4U", "XaX4V", "XE25I",
+                      "XE25J", "XM0lv", "XM0lx")
 
 SEXES <- c("F", "M")
 
@@ -52,9 +55,6 @@ control_eids_s2 <- control_eids_s2$eid
 # Strategy 3: Matched controls
 # a. DOB (+/- 6 months) & 
 # b. UKBIOBANK BMI (+/- 1 unit of BMI)
-
-############ WRITE A PIECE HERE TO FIGURE OUT HOW WIDE THE MATCHING CRITERIA #
-# SHOULD BE BASED ON NUMBER OF MATCHES PER CASE ##############################
 
 findMatchedControls <- function (case_eid) {
   # Get case demographics
@@ -89,8 +89,11 @@ control_eids_s3 <- lapply(case_eids, function (id) findMatchedControls(id) )
 control_eids_s3 <- unique(unlist(control_eids_s3))
 
 # Save list of IDs for downstream analyses
-LH_eids <- list(case_eids,
-                control_eids_s1,
-                control_eids_s2,
-                control_eids_s3)
-saveRDS(LH_eids, "/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH/case_control_ids.rds")
+eids <- list(case_eids,
+             control_eids_s1,
+             control_eids_s2,
+             control_eids_s3)
+names(eids) <- c("case_eids", "control_eids_s1", 
+                 "control_eids_s2", "control_eids_s3")
+
+saveRDS(eids, "/well/lindgren/UKBIOBANK/samvida/hormone_ehr/LH_FSH_case_control_ids.rds")
