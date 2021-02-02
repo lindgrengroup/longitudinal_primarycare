@@ -65,17 +65,52 @@ hormone_recorded <- bind_rows(hormone_recorded)
 
 # Calculate distance matrix between hormones ----
 
-# Jaccard index (intersection / union metric)
+# Split by sex
+SEXES <- c("F", "M")
+EIDSF <- demo_info$eid[demo_info$sex == "F"]
 
-mat <- data.matrix(hormone_recorded)
-mat <- t(mat)
+hormone_recorded$eid <- EIDS
+hormone_recorded$sex <- ifelse(hormone_recorded$eid %in% EIDSF, "F", "M")
 
-jacc_dist <- dist.binary(mat, method = 1, diag = T) 
+hormone_recorded <- split(hormone_recorded, hormone_recorded$sex)
+names(hormone_recorded) <- SEXES
 
-jacc_similarity <- 1 - as.matrix(jacc_dist)
-write.table(jacc_similarity, "similarity_matrix_hormones.txt", sep = "\t",
-            quote = F, row.names = T)
+# Calculate Jaccard dissimilarity index (intersection / union metric)
 
-pdf("similarity_matrix_hormones.pdf")
-pheatmap(jacc_similarity)
-dev.off()
+jacc_dist <- lapply(hormone_recorded, function (df) {
+  
+  # Remove hormones (columns) for which no individual in the matrix 
+  # has a measurement
+  df <- df[, HORMONES]
+  keep <- which(colSums(df) > 0)
+  
+  mat <- data.matrix(df[, keep])
+  mat <- t(mat)
+  
+  return (dist.binary(mat, method = 1, diag = T))
+})
+names(jacc_dist) <- SEXES
+
+# Cluster hormones and print ----
+
+for (s in SEXES) {
+  # Write matrix
+  sim <- 1 - as.matrix(jacc_dist[[s]])
+  # write.table(sim, paste0("similarity_matrix_hormones_", s, ".txt"), 
+  #             sep = "\t", quote = F, row.names = T)
+  
+  # Cluster (agglomerative with complete linkage)
+  h <- hclust(jacc_dist[[s]], method = "complete")
+  
+  # Print heatmaps and dendrograms
+  pdf(paste0("similarity_matrix_hormones_", s, ".pdf"), onefile = T)
+  pheatmap(sim, cluster_rows = F, cluster_cols = F,
+           color = colorRampPalette(c("white", "red"))(100))
+  plot(h, main = paste("Hormone clustering in", s))
+  dev.off()
+}
+
+
+
+  
+  
