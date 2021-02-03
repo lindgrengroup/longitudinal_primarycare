@@ -12,7 +12,7 @@ library(pheatmap)
 gp_clinical <- readRDS("/well/lindgren/UKBIOBANK/samvida/gp_clinical_annotated.rds")
 
 # Remove individuals who have withdrawn consent
-withdrawn <- read.table("/well/lindgren/UKBIOBANK/DATA/QC/w11867_20200820.csv", 
+withdrawn <- read.table("/well/lindgren/UKBIOBANK/DATA/QC/w11867_20210201.csv", 
                         header = F)
 gp_clinical <- subset(gp_clinical, !gp_clinical$eid %in% withdrawn$V1)
 
@@ -22,7 +22,8 @@ demo_info <- gp_clinical %>% distinct(eid, sex, dob, mean_UKBB_BMI)
 # Read curated list of hormones with V2 and V3 codes
 
 hormone_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/hormones_v2v3_codes.txt", 
-                            sep = "\t", header = T, na.strings = "")
+                            sep = "\t", header = T, quote = "", fill = F, 
+                            comment.char = "~")
 
 HORMONES <- unique(hormone_codes$Group)
 all_v3 <- unique(hormone_codes$ctv3)
@@ -95,22 +96,17 @@ names(jacc_dist) <- SEXES
 
 for (s in SEXES) {
   # Write matrix
-  sim <- 1 - as.matrix(jacc_dist[[s]])
-  # write.table(sim, paste0("similarity_matrix_hormones_", s, ".txt"), 
-  #             sep = "\t", quote = F, row.names = T)
+  mat <- as.matrix(jacc_dist[[s]])
+  write.table(mat, paste0("jaccard_dist_matrix_hormones_", s, ".txt"),
+              sep = "\t", quote = F, row.names = T)
   
   # Cluster (agglomerative with complete linkage)
   h <- hclust(jacc_dist[[s]], method = "complete")
   
   # Print heatmaps and dendrograms
-  pdf(paste0("similarity_matrix_hormones_", s, ".pdf"), onefile = T)
-  pheatmap(sim, cluster_rows = F, cluster_cols = F,
-           color = colorRampPalette(c("white", "red"))(100))
+  pdf(paste0("jaccard_dist_matrix_hormones_", s, ".pdf"), onefile = T)
+  pheatmap(mat, cluster_rows = F, cluster_cols = F,
+           color = colorRampPalette(c("red", "white"))(100))
   plot(h, main = paste("Hormone clustering in", s))
   dev.off()
 }
-
-
-
-  
-  

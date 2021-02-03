@@ -22,7 +22,8 @@ demo_info <- gp_clinical %>% distinct(eid, sex, dob, mean_UKBB_BMI)
 # Read merged list of V2 and V3 codes
 
 read_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/merged_v2v3_codes.txt", 
-                            sep = "\t", header = T, na.strings = "")
+                         sep = "\t", header = T, quote = "", fill = F,
+                         comment.char = "~")
 
 # Create binary response matrix for individual x read code ----
 
