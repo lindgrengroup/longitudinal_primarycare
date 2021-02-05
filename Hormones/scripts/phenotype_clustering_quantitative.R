@@ -2,7 +2,7 @@
 # Author: Samvida S. Venkatesh
 
 library(tidyverse)
-theme_set(theme_bw())
+library(cluster)
 library(pheatmap)
 
 # Read and clean data ----
@@ -31,38 +31,32 @@ gp_clinical$quant_value <-
           return (median(as.numeric(x[nums]))) 
           })
 
-# Read curated list of hormones with V2 and V3 codes
+# Read V2 and V3 codes
 
-hormone_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/hormones_v2v3_codes.txt", 
-                            sep = "\t", header = T, quote = "", fill = F,
-                            comment.char = "~")
-
-# Replace blanks with NA
-hormone_codes[hormone_codes == ""] <- NA
-# Assign unique code to each V2 and V3 code
-hormone_codes$unique_code <- 1:nrow(hormone_codes)
+read_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/merged_v2v3_codes.txt",
+                         sep = "\t", header = T, stringsAsFactors = F,
+                         quote = "", fill = F, comment.char = "~")
 
 # Add unique code from read 2
-gp_clin_new <- gp_clinical
-match_ind <- match(gp_clin_new$read_2, hormone_codes$READV2_CODE)
-gp_clin_new$unique_code_v2 <- ifelse(is.na(match_ind), NA, 
-                                     hormone_codes$unique_code[match_ind])
+match_ind <- match(gp_clinical$read_2, read_codes$READV2_CODE)
+gp_clinical$unique_code_v2 <- ifelse(is.na(match_ind), NA, 
+                                     read_codes$unique_code[match_ind])
 
 # Add unique code from read 3
-match_ind <- match(gp_clin_new$read_3, hormone_codes$ctv3)
-gp_clin_new$unique_code_v3 <- ifelse(is.na(match_ind), NA, 
-                                     hormone_codes$unique_code[match_ind])
+match_ind <- match(gp_clinical$read_3, read_codes$READV3_CODE)
+gp_clinical$unique_code_v3 <- ifelse(is.na(match_ind), NA, 
+                                     read_codes$unique_code[match_ind])
 
 # Merge unique codes, only keeping those which are in the code-description
 # file for interpretability
-gp_clin_new$unique_code <- 
-  ifelse(is.na(gp_clin_new$unique_code_v2) & is.na(gp_clin_new$unique_code_v3), 
-         NA, ifelse(is.na(gp_clin_new$unique_code_v2), gp_clin_new$unique_code_v3,
-                    gp_clin_new$unique_code_v2))
+gp_clinical$unique_code <- 
+  ifelse(is.na(gp_clinical$unique_code_v2) & is.na(gp_clinical$unique_code_v3), 
+         NA, ifelse(is.na(gp_clinical$unique_code_v2), gp_clinical$unique_code_v3,
+                    gp_clinical$unique_code_v2))
 
-gp_clin_new <- subset(gp_clin_new, !is.na(gp_clin_new$unique_code))
+gp_clinical <- subset(gp_clinical, !is.na(gp_clinical$unique_code))
 
-ALL_CODES <- as.character(unique(gp_clin_new$unique_code))
+ALL_CODES <- as.character(unique(gp_clinical$unique_code))
 
 # IGNORING TEMPORALITY ----
 
@@ -70,14 +64,14 @@ ALL_CODES <- as.character(unique(gp_clin_new$unique_code))
 
 # Calculate median measurement of each hormone in each individual
 
-indivs <- gp_clin_new %>% group_by(eid, unique_code) %>% 
+indivs <- gp_clinical %>% group_by(eid, unique_code) %>% 
   summarise(median_value = median(quant_value))
 
 response_matrix <- pivot_wider(indivs, id_cols = eid, 
                                names_from = unique_code, 
                                values_from = median_value)
 
-## Calculate distance matrix between hormones ----
+## Calculate distance matrix between read codes ----
 
 # Split by sex
 SEXES <- c("F", "M")
@@ -88,46 +82,43 @@ response_matrix <- list(F = response_matrix[response_matrix$eid %in% EIDSF, ],
 
 codes_sex <- lapply(response_matrix, function (df) {
   df <- df[, ALL_CODES]
-  # Remove codes that have no values in any individual
-  keep <- apply(df, 2, function (x) { !all(is.na(x)) })
+  # Remove codes that are recorded in fewer than 200 individuals
+  keep <- apply(df, 2, function (x) { length(which(is.na(x))) > 200 })
   return (ALL_CODES[keep])
 })
 names(codes_sex) <- SEXES
 
-# Calculate Euclidean distance after normalising each variable
+# Calculate Gower distance after normalising each variable
 
-euclidean_dist <- lapply(SEXES, function (s) {
+quant_dist <- lapply(SEXES, function (s) {
   
   mat <- data.matrix(response_matrix[[s]][, codes_sex[[s]]])
   # Scale each hormone
   mat <- t(scale(mat))
-  dist_mat <- as.matrix(dist(mat, method = "euclidean", diag = T))
-  rownames(dist_mat) <- codes_sex[[s]]
-  colnames(dist_mat) <- codes_sex[[s]]
-  return (dist_mat)
+
+  return (return(daisy(mat, metric = "gower")))
   
 })
-names(euclidean_dist) <- SEXES
+names(quant_dist) <- SEXES
 
-## Print heatmap of similarity ----
+## Print heatmap of distance ----
 
 for (s in SEXES) {
-  mat <- euclidean_dist[[s]]
-  rownames(mat) <- hormone_codes$description[match(rownames(mat), 
-                                                   hormone_codes$unique_code)]
-  colnames(mat) <- hormone_codes$description[match(colnames(mat), 
-                                                   hormone_codes$unique_code)]
+  mat <- as.matrix(quant_dist[[s]])
+  name_desc <- hormone_codes$description[match(codes_sex[[s]], 
+                                               hormone_codes$unique_code)]
+  rownames(mat) <- name_desc
+  colnames(mat) <- name_desc
   # Write matrix
-  write.table(mat, paste0("euclidean_dist_matrix_hormones_", s, ".txt"), 
+  write.table(mat, paste0("quant_dist_matrix_", s, ".txt"), 
               sep = "\t", quote = F, row.names = T)
   
   # Cluster (agglomerative with complete linkage)
-  h <- hclust(mat, method = "complete")
+  h <- hclust(quant_dist[[s]], method = "complete")
   
   # Print heatmap 
-  pdf(paste0("euclidean_dist_matrix_hormones_", s, ".pdf"), onefile = T)
-  pheatmap(mat, cluster_rows = F, cluster_cols = F,
-           color = colorRampPalette(c("red", "white"))(100))
-  plot(h, main = paste("Hormone clustering in", s))
+  pdf(paste0("quant_dist_matrix_", s, ".pdf"), onefile = T)
+  pheatmap(mat, color = colorRampPalette(c("red", "white"))(100))
+  plot(h, main = paste("Read code clustering in", s))
   dev.off()
 }

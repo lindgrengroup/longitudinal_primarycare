@@ -1,9 +1,8 @@
 # Date: 01/02/2021
 # Author: Samvida S. Venkatesh
 
-library(tidyverse)
-theme_set(theme_bw())
-library(ade4)
+library(dplyr)
+library(cluster)
 library(pheatmap)
 
 # Read data ----
@@ -24,6 +23,8 @@ demo_info <- gp_clinical %>% distinct(eid, sex, dob, mean_UKBB_BMI)
 hormone_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/hormones_v2v3_codes.txt", 
                             sep = "\t", header = T, quote = "", fill = F, 
                             comment.char = "~")
+
+hormone_codes[hormone_codes == ""] <- NA
 
 HORMONES <- unique(hormone_codes$Group)
 all_v3 <- unique(hormone_codes$ctv3)
@@ -78,35 +79,44 @@ names(hormone_recorded) <- SEXES
 
 # Calculate Jaccard dissimilarity index (intersection / union metric)
 
-jacc_dist <- lapply(hormone_recorded, function (df) {
+binary_dist <- lapply(hormone_recorded, function (df) {
   
-  # Remove hormones (columns) for which no individual in the matrix 
-  # has a measurement
+  # Remove hormones (columns) for which fewer than 200 individuals in the matrix 
+  # have a measurement
+  eids <- df$eid
   df <- df[, HORMONES]
-  keep <- which(colSums(df) > 0)
+  keepCols <- which(colSums(df) > 200)
   
-  mat <- data.matrix(df[, keep])
-  mat <- t(mat)
+  df <- apply(df[, keepCols], 2, function (x) {as.numeric(x)} )
   
-  return (dist.binary(mat, method = 1, diag = T))
+  # Remove individuals (rows) without a measurement of any of the remaining
+  # hormones
+  keepRows <- which(rowSums(df) > 0)
+  df <- df[keepRows, ]
+  
+  mat <- t(df)
+  
+  rownames(mat) <- HORMONES[keepCols]
+  colnames(mat) <- eids[keepRows]
+  
+  return (daisy(mat, metric = "gower", type = list(asymm = 1:ncol(mat))))
 })
-names(jacc_dist) <- SEXES
+names(binary_dist) <- SEXES
 
 # Cluster hormones and print ----
 
 for (s in SEXES) {
   # Write matrix
-  mat <- as.matrix(jacc_dist[[s]])
-  write.table(mat, paste0("jaccard_dist_matrix_hormones_", s, ".txt"),
+  mat <- as.matrix(binary_dist[[s]])
+  write.table(mat, paste0("binary_dist_matrix_hormones_", s, ".txt"),
               sep = "\t", quote = F, row.names = T)
   
   # Cluster (agglomerative with complete linkage)
-  h <- hclust(jacc_dist[[s]], method = "complete")
+  h <- hclust(binary_dist[[s]], method = "complete")
   
   # Print heatmaps and dendrograms
-  pdf(paste0("jaccard_dist_matrix_hormones_", s, ".pdf"), onefile = T)
-  pheatmap(mat, cluster_rows = F, cluster_cols = F,
-           color = colorRampPalette(c("red", "white"))(100))
+  pdf(paste0("binary_dist_matrix_hormones_", s, ".pdf"), onefile = T)
+  pheatmap(mat, color = colorRampPalette(c("red", "white"))(100))
   plot(h, main = paste("Hormone clustering in", s))
   dev.off()
 }
