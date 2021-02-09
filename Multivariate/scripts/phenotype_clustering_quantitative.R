@@ -3,7 +3,9 @@
 
 library(tidyverse)
 theme_set(theme_bw())
-library(pheatmap)
+library(cluster)
+
+set.seed(020221)
 
 # Read and clean data ----
 
@@ -14,6 +16,12 @@ gp_clinical <- readRDS("/well/lindgren/UKBIOBANK/samvida/gp_clinical_annotated.r
 withdrawn <- read.table("/well/lindgren/UKBIOBANK/DATA/QC/w11867_20210201.csv", 
                         header = F)
 gp_clinical <- subset(gp_clinical, !gp_clinical$eid %in% withdrawn$V1)
+
+# Randomly subset 10,000 people for initial analyses
+all_ids <- unique(gp_clinical$eid)
+keep_ids <- sample(all_ids, 10000, replace = F)
+
+gp_clinical <- subset(gp_clinical, gp_clinical$eid %in% keep_ids)
 
 # Keep demographic information
 demo_info <- gp_clinical %>% distinct(eid, sex, dob, mean_UKBB_BMI)
@@ -31,103 +39,93 @@ gp_clinical$quant_value <-
           return (median(as.numeric(x[nums]))) 
           })
 
-# Read curated list of hormones with V2 and V3 codes
+# Read merged list of V2 and V3 codes
 
-hormone_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/hormones_v2v3_codes.txt", 
-                            sep = "\t", header = T, quote = "", fill = F,
-                            comment.char = "~")
-
-# Replace blanks with NA
-hormone_codes[hormone_codes == ""] <- NA
-# Assign unique code to each V2 and V3 code
-hormone_codes$unique_code <- 1:nrow(hormone_codes)
+read_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/merged_v2v3_codes.txt", 
+                         sep = "\t", header = T, quote = "", fill = F,
+                         comment.char = "~")
 
 # Add unique code from read 2
-gp_clin_new <- gp_clinical
-match_ind <- match(gp_clin_new$read_2, hormone_codes$READV2_CODE)
-gp_clin_new$unique_code_v2 <- ifelse(is.na(match_ind), NA, 
-                                     hormone_codes$unique_code[match_ind])
+gp_clinical <- gp_clinical[, c("eid", "event_dt", "read_2", "read_3",
+                               "quant_value")]
+match_ind <- match(gp_clinical$read_2, read_codes$READV2_CODE)
+gp_clinical$unique_code_v2 <- ifelse(is.na(match_ind), NA, 
+                                     read_codes$unique_code[match_ind])
 
 # Add unique code from read 3
-match_ind <- match(gp_clin_new$read_3, hormone_codes$ctv3)
-gp_clin_new$unique_code_v3 <- ifelse(is.na(match_ind), NA, 
-                                     hormone_codes$unique_code[match_ind])
+match_ind <- match(gp_clinical$read_3, read_codes$READV3_CODE)
+gp_clinical$unique_code_v3 <- ifelse(is.na(match_ind), NA, 
+                                     read_codes$unique_code[match_ind])
 
 # Merge unique codes, only keeping those which are in the code-description
 # file for interpretability
-gp_clin_new$unique_code <- 
-  ifelse(is.na(gp_clin_new$unique_code_v2) & is.na(gp_clin_new$unique_code_v3), 
-         NA, ifelse(is.na(gp_clin_new$unique_code_v2), gp_clin_new$unique_code_v3,
-                    gp_clin_new$unique_code_v2))
+gp_clinical$unique_code <- 
+  ifelse(is.na(gp_clinical$unique_code_v2) & is.na(gp_clinical$unique_code_v3), 
+         NA, ifelse(is.na(gp_clinical$unique_code_v2), gp_clinical$unique_code_v3,
+                    gp_clinical$unique_code_v2))
 
-gp_clin_new <- subset(gp_clin_new, !is.na(gp_clin_new$unique_code))
+gp_clinical <- subset(gp_clinical, !is.na(gp_clinical$unique_code))
 
-ALL_CODES <- as.character(unique(gp_clin_new$unique_code))
+ALL_CODES <- unique(gp_clinical$unique_code)
 
 # IGNORING TEMPORALITY ----
 
 ## Build response matrix ----
 
-# Calculate median measurement of each hormone in each individual
+# Calculate median measurement of each trait in each individual
 
-indivs <- gp_clin_new %>% group_by(eid, unique_code) %>% 
+indivs <- gp_clinical %>% group_by(eid, unique_code) %>% 
   summarise(median_value = median(quant_value))
 
 response_matrix <- pivot_wider(indivs, id_cols = eid, 
                                names_from = unique_code, 
                                values_from = median_value)
+EIDS <- response_matrix$eid
+response_matrix <- data.matrix(response_matrix[, -1])
+rownames(response_matrix) <- EIDS
 
 ## Calculate distance matrix between hormones ----
+
+# Sex-combined
+
+# Only keep codes that have been measured in at least 200 individuals in
+# the data
+keepCols <- apply(response_matrix, 2, function (x) length(which(!is.na(x))) > 200)
+codenames <- ALL_CODES[keepCols]
+mat <- response_matrix[, keepCols]
+# Only keep individuals who have at least one of the codes measured
+keepRows <- apply(mat, 1, function (x) !all(is.na(x)))
+mat <- mat[keepRows, ]
+# Scale each trait
+mat <- t(scale(mat))
+rownames(mat) <- codenames
+sex_comb <- daisy(mat, metric = "gower")
 
 # Split by sex
 SEXES <- c("F", "M")
 EIDSF <- demo_info$eid[demo_info$sex == "F"]
 
-response_matrix <- list(F = response_matrix[response_matrix$eid %in% EIDSF, ],
-                       M = response_matrix[!response_matrix$eid %in% EIDSF, ])
+response_matrix <- list(F = response_matrix[rownames(response_matrix) %in% EIDSF, ],
+                       M = response_matrix[!rownames(response_matrix) %in% EIDSF, ])
 
-codes_sex <- lapply(response_matrix, function (df) {
-  df <- df[, ALL_CODES]
-  # Remove codes that have no values in any individual
-  keep <- apply(df, 2, function (x) { !all(is.na(x)) })
-  return (ALL_CODES[keep])
-})
-names(codes_sex) <- SEXES
-
-# Calculate Euclidean distance after normalising each variable
-
-euclidean_dist <- lapply(SEXES, function (s) {
+quant_dist <- lapply(SEXES, function (s) {
   
-  mat <- data.matrix(response_matrix[[s]][, codes_sex[[s]]])
-  # Scale each hormone
+  mat <- response_matrix[[s]]
+  keepCols <- apply(mat, 2, function (x) length(which(!is.na(x))) > 200)
+  codenames <- ALL_CODES[keepCols]
+  mat <- mat[, keepCols]
+  # Only keep individuals who have at least one of the codes measured
+  keepRows <- apply(mat, 1, function (x) !all(is.na(x)))
+  mat <- mat[keepRows, ]
+  # Scale each trait
   mat <- t(scale(mat))
-  dist_mat <- as.matrix(dist(mat, method = "euclidean", diag = T))
-  rownames(dist_mat) <- codes_sex[[s]]
-  colnames(dist_mat) <- codes_sex[[s]]
-  return (dist_mat)
+  rownames(mat) <- codenames
+  
+  return (daisy(mat, metric = "gower"))
   
 })
-names(euclidean_dist) <- SEXES
+names(quant_dist) <- SEXES
 
-## Print heatmap of similarity ----
+quant_dist[["sex_comb"]] <- sex_comb
 
-for (s in SEXES) {
-  mat <- euclidean_dist[[s]]
-  rownames(mat) <- hormone_codes$description[match(rownames(mat), 
-                                                   hormone_codes$unique_code)]
-  colnames(mat) <- hormone_codes$description[match(colnames(mat), 
-                                                   hormone_codes$unique_code)]
-  # Write matrix
-  write.table(mat, paste0("euclidean_dist_matrix_hormones_", s, ".txt"), 
-              sep = "\t", quote = F, row.names = T)
-  
-  # Cluster (agglomerative with complete linkage)
-  h <- hclust(mat, method = "complete")
-  
-  # Print heatmap 
-  pdf(paste0("euclidean_dist_matrix_hormones_", s, ".pdf"), onefile = T)
-  pheatmap(mat, cluster_rows = F, cluster_cols = F,
-           color = colorRampPalette(c("red", "white"))(100))
-  plot(h, main = paste("Hormone clustering in", s))
-  dev.off()
-}
+saveRDS(quant_dist, "/well/lindgren/UKBIOBANK/samvida/multivariate/quant_dist_matrix.rds")

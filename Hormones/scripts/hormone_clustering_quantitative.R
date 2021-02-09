@@ -2,8 +2,8 @@
 # Author: Samvida S. Venkatesh
 
 library(tidyverse)
+theme_set(theme_bw())
 library(cluster)
-library(pheatmap)
 
 # Read and clean data ----
 
@@ -18,6 +18,26 @@ gp_clinical <- subset(gp_clinical, !gp_clinical$eid %in% withdrawn$V1)
 # Keep demographic information
 demo_info <- gp_clinical %>% distinct(eid, sex, dob, mean_UKBB_BMI)
 
+# Read curated list of hormones with V2 and V3 codes
+
+hormone_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/hormones_v2v3_codes.txt", 
+                            sep = "\t", header = T, quote = "", fill = F, 
+                            comment.char = "~")
+
+hormone_codes[hormone_codes == ""] <- NA
+
+all_v3 <- unique(hormone_codes$ctv3)
+all_v2 <- unique(hormone_codes$READV2_CODE)
+
+# Subset gp clinical file to only those with measurement of at least
+# one hormone in our list
+
+keep <- which(gp_clinical$read_3 %in% all_v3)
+keep <- c(keep, which(gp_clinical$read_2 %in% all_v2))
+keep <- unique(keep)
+
+gp_clinical <- gp_clinical[keep, ]
+
 # Subset to keep only codes with quantitative measurement values 
 gp_clinical$quant <- apply(gp_clinical[, c("value1", "value2", "value3")], 1, 
                            function (x) { any(!is.na(as.numeric(x))) } )
@@ -29,23 +49,21 @@ gp_clinical$quant_value <-
         function (x) {
           nums <- !is.na(as.numeric(x))
           return (median(as.numeric(x[nums]))) 
-          })
+        })
 
-# Read V2 and V3 codes
-
-read_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/merged_v2v3_codes.txt",
-                         sep = "\t", header = T, stringsAsFactors = F,
-                         quote = "", fill = F, comment.char = "~")
+# Assign unique code for hormone
 
 # Add unique code from read 2
-match_ind <- match(gp_clinical$read_2, read_codes$READV2_CODE)
+gp_clinical <- gp_clinical[, c("eid", "event_dt", "read_2", "read_3", 
+                               "quant_value")]
+match_ind <- match(gp_clinical$read_2, hormone_codes$READV2_CODE)
 gp_clinical$unique_code_v2 <- ifelse(is.na(match_ind), NA, 
-                                     read_codes$unique_code[match_ind])
+                                     hormone_codes$unique_code[match_ind])
 
 # Add unique code from read 3
-match_ind <- match(gp_clinical$read_3, read_codes$READV3_CODE)
+match_ind <- match(gp_clinical$read_3, hormone_codes$ctv3)
 gp_clinical$unique_code_v3 <- ifelse(is.na(match_ind), NA, 
-                                     read_codes$unique_code[match_ind])
+                                     hormone_codes$unique_code[match_ind])
 
 # Merge unique codes, only keeping those which are in the code-description
 # file for interpretability
@@ -56,7 +74,7 @@ gp_clinical$unique_code <-
 
 gp_clinical <- subset(gp_clinical, !is.na(gp_clinical$unique_code))
 
-ALL_CODES <- as.character(unique(gp_clinical$unique_code))
+ALL_CODES <- unique(gp_clinical$unique_code)
 
 # IGNORING TEMPORALITY ----
 
@@ -73,30 +91,23 @@ response_matrix <- pivot_wider(indivs, id_cols = eid,
 
 ## Calculate distance matrix between read codes ----
 
-# Split by sex
-SEXES <- c("F", "M")
-EIDSF <- demo_info$eid[demo_info$sex == "F"]
-
-response_matrix <- list(F = response_matrix[response_matrix$eid %in% EIDSF, ],
-                       M = response_matrix[!response_matrix$eid %in% EIDSF, ])
-
-codes_sex <- lapply(response_matrix, function (df) {
-  df <- df[, ALL_CODES]
-  # Remove codes that are recorded in fewer than 200 individuals
-  keep <- apply(df, 2, function (x) { length(which(is.na(x))) > 200 })
-  return (ALL_CODES[keep])
-})
-names(codes_sex) <- SEXES
-
-# Calculate Gower distance after normalising each variable
+response_matrix <- list(F = response_matrix[rownames(response_matrix) %in% EIDSF, ],
+                        M = response_matrix[!rownames(response_matrix) %in% EIDSF, ])
 
 quant_dist <- lapply(SEXES, function (s) {
   
-  mat <- data.matrix(response_matrix[[s]][, codes_sex[[s]]])
-  # Scale each hormone
+  mat <- response_matrix[[s]]
+  keepCols <- apply(mat, 2, function (x) length(which(!is.na(x))) > 200)
+  codenames <- ALL_CODES[keepCols]
+  mat <- mat[, keepCols]
+  # Only keep individuals who have at least one of the codes measured
+  keepRows <- apply(mat, 1, function (x) !all(is.na(x)))
+  mat <- mat[keepRows, ]
+  # Scale each trait
   mat <- t(scale(mat))
-
-  return (return(daisy(mat, metric = "gower")))
+  rownames(mat) <- codenames
+  
+  return (daisy(mat, metric = "gower"))
   
 })
 names(quant_dist) <- SEXES

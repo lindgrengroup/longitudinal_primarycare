@@ -1,7 +1,8 @@
 # Date: 02/02/2021
 # Author: Samvida S. Venkatesh
 
-library(dplyr)
+library(tidyverse)
+theme_set(theme_bw())
 library(cluster)
 
 set.seed(020221)
@@ -114,3 +115,56 @@ names(binary_dist) <- SEXES
 binary_dist[["sex_comb"]] <- sex_comb
 
 saveRDS(binary_dist, "/well/lindgren/UKBIOBANK/samvida/multivariate/binary_dist_matrix.rds")
+
+# Cluster codes ----
+
+SEXES <- names(binary_dist)
+
+hclusters <- lapply(binary_dist, function (d) {
+  hclust(d, method = "complete")
+})
+
+c10 <- lapply(SEXES, function (s) {
+  # Set labels by cutting hierarchical cluster into N 
+  groups <- cutree(hclusters[[s]], k = 15)
+  mat <- as.matrix(binary_dist[[s]])
+  # Add code description
+  df <- data.frame(group = groups, unique_code = colnames(mat)) %>% 
+    mutate(description = 
+             read_codes$DESC[match(unique_code, read_codes$unique_code)])
+  # Split matrix into the groups described by hierarchical clustering
+  # and plot heatmaps
+  pdf(paste0("plots/binary_hclust_", s, ".pdf"))
+  hmap_list <- lapply(1:15, function (i) {
+    gp <- which(groups == i)
+    res <- mat[gp, gp]
+    annot_desc <- read_codes$DESC[match(colnames(res), read_codes$unique_code)]
+    annot_desc <- ifelse(nchar(annot_desc) > 40, 
+                         paste0(substr(annot_desc, 1, 37), "..."),
+                         annot_desc)
+    colnames(res) <- annot_desc
+    rownames(res) <- annot_desc
+    hmap <- pheatmap(res, scale = "none",
+                     show_colnames = F, treeheight_col = 0,
+                     fontsize_row = 8,
+                     color = colorRampPalette(c("red", "white"))(100))
+    hmap
+    return (hmap)
+  })
+  dev.off()
+  return (list(code_clusters = df,
+               heatmaps = hmap_list))
+})
+names(c10) <- SEXES
+
+# Bind together the clustering results
+res <- merge(c10[["sex_comb"]]$code_clusters,
+             c10[["F"]]$code_clusters, by = c("unique_code", "description"),
+             all = T)
+res <- merge(res,
+             c10[["M"]]$code_clusters, by = c("unique_code", "description"),
+             all = T)
+colnames(res) <- c("unique_code", "description", "sex_combined_cluster",
+                   "F_cluster", "M_cluster")
+write.table(res, "results/binary_hclusters.txt", sep = "\t", quote = F,
+            row.names = F)
