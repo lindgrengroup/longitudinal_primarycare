@@ -60,7 +60,8 @@ gp_clinical <- merge(gp_clinical, ukbb_bmi[, c("eid", "mean_UKBB_BMI")],
 
 # Calculate individual age at event ----
 
-gp_clinical$event_dt <- as.Date(gp_clinical$event_dt, "%d/%m/%Y")
+gp_clinical$event_dt <- as.Date(gp_clinical$event_dt, "%Y-%m-%d")
+gp_clinical$dob <- as.Date(gp_clinical$dob, "%Y-%m-%d")
 
 # Remove inconsistencies (NA in event date, event date before date-of-birth, 
 # and event date after 2020)
