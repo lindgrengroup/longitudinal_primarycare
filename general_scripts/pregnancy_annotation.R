@@ -121,5 +121,7 @@ preg_EIDDATES <- preg_EIDDATES %>%
   group_by(eid, ind) %>%
   summarise(start = first(start), end = last(end)) 
 
+preg_EIDDATES <- preg_EIDDATES[complete.cases(preg_EIDDATES), ]
+
 write.table(preg_EIDDATES, "/well/lindgren/UKBIOBANK/samvida/general_resources/pregnancy_records.txt",
             sep = "\t", row.names = F, quote = F)
