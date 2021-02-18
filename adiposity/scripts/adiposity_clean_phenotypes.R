@@ -8,6 +8,7 @@ library(lubridate)
 
 # Adiposity phenotypes
 adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/raw_adiposity.rds")
+PHENOTYPES <- names(adiposity)
 
 # Bariatric surgery codes
 bariatric_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/bariatric_surgery_records.txt",
@@ -47,25 +48,24 @@ ageFilter <- function (df, qc_log_file) {
 
 barSurgeryFilter <- function (df, qc_log_file) {
   
-  # Record post-bariatric surgery flag
-  cleaned <- df
-  # Flag individuals with history of bariatric surgery
+  # Exclude individuals with history of bariatric surgery
   bar_hist_EIDS <- bariatric_codes$eid[is.na(bariatric_codes$event_dt)]
   # Record date of surgery for individuals with that information
-  cleaned$post_bariatric_surgery_flag <- 
-    bariatric_codes$event_dt[match(cleaned$eid, bariatric_codes$eid)]
-  cleaned$post_bariatric_surgery_flag <- cleaned$event_dt > 
-    cleaned$post_bariatric_surgery_flag | cleaned$eid %in% bar_hist_EIDS
+  df$post_bariatric_surgery_flag <- 
+    bariatric_codes$event_dt[match(df$eid, bariatric_codes$eid)]
+  df$post_bariatric_surgery_flag <- df$event_dt > 
+    df$post_bariatric_surgery_flag | df$eid %in% bar_hist_EIDS
+  df$post_bariatric_surgery_flag[is.na(df$post_bariatric_surgery_flag)] <- F
   
-  indivs_flagged <- unique(cleaned$eid[which(cleaned$post_bariatric_surgery_flag)])
+  cleaned <- subset(df, !df$post_bariatric_surgery_flag)
   
   # Report QC metrics
   sink(qc_log_file, append = T)
-  cat(paste0("**FILTER** FLAGGED, Measured post-bariatric surgery: ", "\n",
+  cat(paste0("**FILTER** EXCLUDED, Measured post-bariatric surgery: ", "\n",
              "\t", "Number of measurements = ", 
-             sum(cleaned$post_bariatric_surgery_flag, na.rm = T), "\n",
+             sum(df$post_bariatric_surgery_flag, na.rm = T), "\n",
              "\t", "Number of individuals = ", 
-             length(indivs_flagged), "\n"))
+             length(unique(df$eid)) - length(unique(cleaned$eid)), "\n"))
   sink()
   
   return (cleaned)
@@ -105,6 +105,39 @@ pregFilter <- function (df, qc_log_file) {
   
   return (cleaned)
   
+}
+
+## Implausible values ----
+
+IMPLAUSIBLE_MINS <- c(15, 40, 10, 0.5)
+IMPLAUSIBLE_MAXES <- c(200, 160, 70, 1.4)
+names(IMPLAUSIBLE_MINS) <- PHENOTYPES
+names(IMPLAUSIBLE_MAXES) <- PHENOTYPES
+
+implausibleFilter <- function (df, p, qc_log_file) {
+  # Remove implausible values defined above
+  remove_mins <- df[df$value <= IMPLAUSIBLE_MINS[p], ]
+  remove_maxes <- df[df$value >= IMPLAUSIBLE_MAXES[p], ]
+  
+  cleaned <- subset(df, df$value > IMPLAUSIBLE_MINS[p] & 
+                      df$value < IMPLAUSIBLE_MAXES[p])
+  
+  # Report QC metrics
+  sink(qc_log_file, append = T)
+  cat(paste0("**FILTER** EXCLUDED, Implausible value below ", 
+             IMPLAUSIBLE_MINS[p], ":", "\n",
+             "\t", "Number of measurements = ", 
+             dim(remove_mins)[1], "\n",
+             "\t", "Number of individuals = ", 
+             sum(!unique(remove_mins$eid) %in% unique(cleaned$eid)), "\n",
+             "**FILTER** EXCLUDED, Implausible value above ", 
+             IMPLAUSIBLE_MAXES[p], ":", "\n",
+             "\t", "Number of measurements = ", 
+             dim(remove_maxes)[1], "\n",
+             "\t", "Number of individuals = ", 
+             sum(!unique(remove_maxes$eid) %in% unique(cleaned$eid)), "\n"))
+  sink()
+  return (cleaned)
 }
 
 ## Extreme values ----
@@ -147,7 +180,6 @@ longitFilter <- function (df, qc_log_file) {
 
 # Apply QC filters ----
 
-PHENOTYPES <- names(adiposity)
 cleaned_adiposity <- lapply(PHENOTYPES, function (p) {
   
   log_file_p <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/log_files/qc_log_file_",
@@ -155,6 +187,7 @@ cleaned_adiposity <- lapply(PHENOTYPES, function (p) {
   cleaned <- ageFilter(adiposity[[p]], log_file_p)
   cleaned <- barSurgeryFilter(cleaned, log_file_p)
   cleaned <- pregFilter(cleaned, log_file_p)
+  cleaned <- implausibleFilter(cleaned, p, log_file_p)
   cleaned <- extremeFilter(cleaned, log_file_p)
   cleaned <- longitFilter(cleaned, log_file_p)
   
