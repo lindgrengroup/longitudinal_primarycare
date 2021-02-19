@@ -1,6 +1,8 @@
 Scripts in this folder:
 
-
+1. **1_get_phenotypes.R** - Gathers primary care trait measurements and adds same traits from UKBIOBANK, removes individuals without repeat measures.
+2. **2_clean_phenotypes.R** - For each trait, QC on age, implausible and extreme values, and removes individuals without repeat measures. Flags pregnancy.
+3. **3_plot_QC.R** - Visual inspection for unrealistically large jumps between time-points. Removes measurements causing unrealistic jump.
 
 ARCHIVED:
 
