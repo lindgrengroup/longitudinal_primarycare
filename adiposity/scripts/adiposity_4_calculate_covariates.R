@@ -65,19 +65,13 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
                                            dat_sub$event_dt))
         # If the value is weight, keep as is, flip BMI to negative so we know
         # not to calculate BMI again
-        res <- ifelse(dat_sub$type == "weight", dat_sub$value[closest_measure],
+        res <- ifelse(dat_sub$type[closest_measure] == "weight", 
+                      dat_sub$value[closest_measure],
                       -dat_sub$value[closest_measure])
       } else res <- NA
       return (res)
     })
   }
-  
-  sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
-  cat(paste0("**FILTER** EXCLUDED, No baseline weight/BMI: ", 
-             length(which(is.na(calc_covars$baseline_adipo))), "\n"))
-  sink()
-  
-  calc_covars <- subset(calc_covars, !is.na(calc_covars$baseline_adipo))
   
   # Merge with previously calculated covariates
   cleaned <- merge(calc_covars, general_covars, by = "eid")
@@ -91,17 +85,37 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
              dim(calc_covars)[1] - dim(cleaned)[1], "\n"))
   sink()
   
+  # Remove individuals without a height measurement
+  sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
+  cat(paste0("**FILTER** EXCLUDED, No height: ", 
+             length(which(is.na(cleaned$height))), "\n"))
+  sink()
+  cleaned <- subset(cleaned, !is.na(cleaned$height))
+  
   # Convert baseline weight to baseline BMI
   # Calculate BMI from weight (kg) and height (cm) or simply flip BMI sign
   cleaned$baseline_BMI <- ifelse(cleaned$baseline_adipo < 0, 
-                                 cleaned$baseline_adipo,
+                                 -cleaned$baseline_adipo,
                                  cleaned$baseline_adipo / (cleaned$height/100)^2) 
   
-  cleaned <- cleaned[, c("eid", "sex", "ancestry",
-                         "baseline_age", "age_sq", 
-                         "height", "baseline_BMI", "FUyrs", 
-                         "genotyping_array", paste0("PC", 1:NPCs))]
-  return(cleaned)
+  sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
+  cat(paste0("**FILTER** EXCLUDED, No baseline BMI: ", 
+             length(which(is.na(cleaned$baseline_BMI))), "\n"))
+  sink()
+  cleaned <- subset(cleaned, !is.na(cleaned$baseline_BMI))
+  
+  # Remove individuals missing any other covariate
+  res <- cleaned[, c("eid", "sex", "ancestry",
+                 "baseline_age", "age_sq", 
+                 "height", "baseline_BMI", "FUyrs", 
+                 "genotyping_array", paste0("PC", 1:NPCs))]
+  res <- res[complete.cases(res), ]
+  sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
+  cat(paste0("**FILTER** EXCLUDED, Missing any other covariate: ", 
+             dim(cleaned)[1] - dim(res)[1], "\n"))
+  sink()
+  
+  return(res)
 })
 names(QCd_covars) <- PHENOTYPES
 
@@ -110,17 +124,10 @@ names(QCd_covars) <- PHENOTYPES
 for (p in PHENOTYPES) {
   sink(paste0("log_files/stratified_counts_", p, ".txt"), append = T)
   cat(paste0("Number of individuals: ", "\n"))
-  with(QCd_covars[[p]], table(ancestry, sex))
+  print(with(QCd_covars[[p]], table(ancestry, sex)))
   cat("\n")
   sink()
 }
 
-stratified_covars <- lapply(QCd_covars, function (df) {
-  res <- df %>% group_by(sex, ancestry) %>% group_split()
-  names(res) <- lapply(res, function (x) paste(unique(x$ancestry), 
-                                               unique(x$sex), sep = "_"))
-  return (res)
-})
-
 # Save
-saveRDS(stratified_covars, "/well/lindgren/UKBIOBANK/samvida/adiposity/stratified_covars.rds")
+saveRDS(QCd_covars, "/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_covars.rds")
