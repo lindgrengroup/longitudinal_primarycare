@@ -21,26 +21,27 @@ bariatric_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resource
                               stringsAsFactors = F)
 bariatric_codes$event_dt <- as.Date(bariatric_codes$event_dt, "%Y-%m-%d")
 
-# Pregnancy codes
-pregnancy_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/pregnancy_records.txt",
-                              sep = "\t", header = T, comment.char = "$",
-                              stringsAsFactors = F)
-pregnancy_codes$start <- as.Date(pregnancy_codes$start, "%Y-%m-%d")
-pregnancy_codes$end <- as.Date(pregnancy_codes$end, "%Y-%m-%d")
-pregnancy_codes$preg_interval <- interval(pregnancy_codes$start, 
-                                          pregnancy_codes$end)
-pregnancy_intervals <- split(pregnancy_codes[, "preg_interval"],
-                             pregnancy_codes$eid)
+# # Pregnancy codes
+# pregnancy_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/pregnancy_records.txt",
+#                               sep = "\t", header = T, comment.char = "$",
+#                               stringsAsFactors = F)
+# pregnancy_codes$start <- as.Date(pregnancy_codes$start, "%Y-%m-%d")
+# pregnancy_codes$end <- as.Date(pregnancy_codes$end, "%Y-%m-%d")
+# pregnancy_codes$preg_interval <- interval(pregnancy_codes$start, 
+#                                           pregnancy_codes$end)
+# pregnancy_intervals <- split(pregnancy_codes[, "preg_interval"],
+#                              pregnancy_codes$eid)
 
 # Convert weight measures to BMI and vice-versa ----
 
 # weight to BMI
 weight_to_BMI <- adiposity$weight
 weight_to_BMI$height <- general_covars[match(weight_to_BMI$eid, 
-                                                    general_covars$eid), "height"]
+                                             general_covars$eid), "height"]
 weight_to_BMI <- weight_to_BMI %>% mutate(weight = value,
                                           BMI = value / (height/100)^2)
 weight_to_BMI$value <- weight_to_BMI$BMI
+weight_to_BMI <- weight_to_BMI[complete.cases(weight_to_BMI$value), ]
 
 weight_to_BMI <- bind_rows(adiposity$BMI, 
                            weight_to_BMI[, colnames(adiposity$BMI)]) %>%
@@ -54,6 +55,7 @@ BMI_to_weight$height <- general_covars[match(BMI_to_weight$eid,
 BMI_to_weight <- BMI_to_weight %>% mutate(BMI = value,
                                           weight = value * (height/100)^2)
 BMI_to_weight$value <- BMI_to_weight$weight
+BMI_to_weight <- BMI_to_weight[complete.cases(BMI_to_weight$value), ]
 
 BMI_to_weight <- bind_rows(adiposity$weight, 
                            BMI_to_weight[, colnames(adiposity$weight)]) %>%
@@ -105,40 +107,40 @@ barSurgeryFilter <- function (df, qc_log_file) {
   
 }
 
-## Pregnancy ----
-
-pregFilter <- function (df, qc_log_file) {
-  
-  no_preg <- subset(df, !df$eid %in% pregnancy_codes$eid)
-  possible_preg <- subset(df, df$eid %in% pregnancy_codes$eid)
-  
-  # Record pregnancy interval
-  possible_preg$eid <- as.character(possible_preg$eid)
-  # Adapted code from: https://github.com/tidyverse/lubridate/issues/658
-  possible_preg$preg_flag <- 
-    unlist(lapply(sapply(1:dim(possible_preg)[1], 
-                         function(i) possible_preg$event_dt[i] %within% 
-                           pregnancy_intervals[possible_preg$eid[i]]), 
-                  function (x) any(x)))
-  
-  # Combine 
-  no_preg$preg_flag <- F
-  cleaned <- bind_rows(no_preg, possible_preg) %>% arrange(eid, event_dt)
-  
-  indivs_flagged <- unique(cleaned$eid[which(cleaned$preg_flag)])
-  
-  # Report QC metrics
-  sink(qc_log_file, append = T)
-  cat(paste0("**FILTER** FLAGGED, Measured during pregnancy: ", "\n",
-             "\t", "Number of measurements = ", 
-             sum(cleaned$preg_flag, na.rm = T), "\n",
-             "\t", "Number of individuals = ", 
-             length(indivs_flagged), "\n"))
-  sink()
-  
-  return (cleaned)
-  
-}
+# ## Pregnancy ----
+# 
+# pregFilter <- function (df, qc_log_file) {
+#   
+#   no_preg <- subset(df, !df$eid %in% pregnancy_codes$eid)
+#   possible_preg <- subset(df, df$eid %in% pregnancy_codes$eid)
+#   
+#   # Record pregnancy interval
+#   possible_preg$eid <- as.character(possible_preg$eid)
+#   # Adapted code from: https://github.com/tidyverse/lubridate/issues/658
+#   possible_preg$preg_flag <- 
+#     unlist(lapply(sapply(1:dim(possible_preg)[1], 
+#                          function(i) possible_preg$event_dt[i] %within% 
+#                            pregnancy_intervals[possible_preg$eid[i]]), 
+#                   function (x) any(x)))
+#   
+#   # Combine 
+#   no_preg$preg_flag <- F
+#   cleaned <- bind_rows(no_preg, possible_preg) %>% arrange(eid, event_dt)
+#   
+#   indivs_flagged <- unique(cleaned$eid[which(cleaned$preg_flag)])
+#   
+#   # Report QC metrics
+#   sink(qc_log_file, append = T)
+#   cat(paste0("**FILTER** FLAGGED, Measured during pregnancy: ", "\n",
+#              "\t", "Number of measurements = ", 
+#              sum(cleaned$preg_flag, na.rm = T), "\n",
+#              "\t", "Number of individuals = ", 
+#              length(indivs_flagged), "\n"))
+#   sink()
+#   
+#   return (cleaned)
+#   
+# }
 
 ## Implausible values ----
 
@@ -219,7 +221,7 @@ cleaned_adiposity <- lapply(PHENOTYPES, function (p) {
                        p, ".txt")
   cleaned <- ageFilter(adiposity[[p]], log_file_p)
   cleaned <- barSurgeryFilter(cleaned, log_file_p)
-  cleaned <- pregFilter(cleaned, log_file_p)
+  #cleaned <- pregFilter(cleaned, log_file_p)
   cleaned <- implausibleFilter(cleaned, p, log_file_p)
   cleaned <- extremeFilter(cleaned, log_file_p)
   cleaned <- longitFilter(cleaned, log_file_p)
