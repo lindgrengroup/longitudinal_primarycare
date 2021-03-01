@@ -10,11 +10,6 @@ library(lubridate)
 adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/raw_adiposity.rds")
 PHENOTYPES <- names(adiposity)
 
-# Covariates file 
-general_covars <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_covariates.txt",
-                             sep = "\t", header = T, comment.char = "$",
-                             stringsAsFactors = F)
-
 # Bariatric surgery codes
 bariatric_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/bariatric_surgery_records.txt",
                               sep = "\t", header = T, comment.char = "$",
@@ -31,34 +26,6 @@ pregnancy_codes$preg_interval <- interval(pregnancy_codes$start,
                                           pregnancy_codes$end)
 pregnancy_intervals <- split(pregnancy_codes[, "preg_interval"],
                              pregnancy_codes$eid)
-
-# Convert weight measures to BMI and vice-versa ----
-
-# weight to BMI
-weight_to_BMI <- adiposity$weight
-weight_to_BMI$height <- general_covars[match(weight_to_BMI$eid, 
-                                                    general_covars$eid), "height"]
-weight_to_BMI <- weight_to_BMI %>% mutate(weight = value,
-                                          BMI = value / (height/100)^2)
-weight_to_BMI$value <- weight_to_BMI$BMI
-
-weight_to_BMI <- bind_rows(adiposity$BMI, 
-                           weight_to_BMI[, colnames(adiposity$BMI)]) %>%
-  arrange(eid, event_dt)
-adiposity$BMI <- weight_to_BMI
-
-# BMI to weight
-BMI_to_weight <- adiposity$BMI
-BMI_to_weight$height <- general_covars[match(BMI_to_weight$eid, 
-                                             general_covars$eid), "height"]
-BMI_to_weight <- BMI_to_weight %>% mutate(BMI = value,
-                                          weight = value * (height/100)^2)
-BMI_to_weight$value <- BMI_to_weight$weight
-
-BMI_to_weight <- bind_rows(adiposity$weight, 
-                           BMI_to_weight[, colnames(adiposity$weight)]) %>%
-  arrange(eid, event_dt)
-adiposity$weight <- BMI_to_weight
 
 # Functions to clean data ----
 

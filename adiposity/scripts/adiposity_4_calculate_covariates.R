@@ -16,65 +16,43 @@ PHENOTYPES <- names(adiposity)
 
 NPCs = 21
 
-# Get weight and BMI data to calculate baseline BMI from 
-# weight or BMI measurement closest to baseline event date
-QCd_for_baseline <- adiposity$weight
-QCd_for_baseline$type <- "weight"
-tmp <- adiposity$BMI 
-tmp$type <- "BMI"
-QCd_for_baseline <- bind_rows(QCd_for_baseline, tmp)
+# Get BMI data to calculate baseline
+QCd_for_baseline <- adiposity$BMI
 QCd_for_baseline <- QCd_for_baseline %>% arrange(eid, event_dt)
 QCd_for_baseline <- split(QCd_for_baseline[, c("event_dt", "type", "value")], 
                           f = QCd_for_baseline$eid)
 
-QCd_covars <- lapply(PHENOTYPES, function (p) {
+QCd_covars <- lapply(PHENOTYPES, function (p) { 
   df <- adiposity[[p]]
   # Calculate baseline and follow-up years covariates
+  calc_covars <- df %>% group_by(eid) %>% 
+    arrange(eid, event_dt) %>%
+    summarise(baseline_date = first(event_dt),
+              baseline_age = first(age_event),
+              age_sq = baseline_age^2,
+              FUyrs = interval(first(event_dt), last(event_dt)) / years(1))
   
-  # For weight and BMI just get first value for baseline
-  # Keep BMI separate from weight as weight needs to be used to calculate BMI
-  if (p == "BMI") {
-    calc_covars <- df %>% group_by(eid) %>% 
-      arrange(eid, event_dt) %>%
-      summarise(baseline_date = first(event_dt),
-                baseline_age = first(age_event),
-                age_sq = baseline_age^2,
-                FUyrs = interval(first(event_dt), last(event_dt)) / years(1),
-                baseline_adipo = -first(value))
-  } else if (p == "weight") {
-    calc_covars <- df %>% group_by(eid) %>% 
-      arrange(eid, event_dt) %>%
-      summarise(baseline_date = first(event_dt),
-                baseline_age = first(age_event),
-                age_sq = baseline_age^2,
-                FUyrs = interval(first(event_dt), last(event_dt)) / years(1),
-                baseline_adipo = first(value))
-  } else {
-    calc_covars <- df %>% group_by(eid) %>% 
-      arrange(eid, event_dt) %>%
-      summarise(baseline_date = first(event_dt),
-                baseline_age = first(age_event),
-                age_sq = baseline_age^2,
-                FUyrs = interval(first(event_dt), last(event_dt)) / years(1))
-    
-    # Get baseline weight or BMI (nearest) from baseline file
-    calc_covars$baseline_adipo <- sapply(1:dim(calc_covars)[1], function (i) {
-      dat_sub <- QCd_for_baseline[[calc_covars$eid[i]]]
-      if (!is.null(dat_sub)) {
-        closest_measure <- which.min(abs(calc_covars$baseline_date[i] - 
-                                           dat_sub$event_dt))
-        # If the value is weight, keep as is, flip BMI to negative so we know
-        # not to calculate BMI again
-        res <- ifelse(dat_sub$type[closest_measure] == "weight", 
-                      dat_sub$value[closest_measure],
-                      -dat_sub$value[closest_measure])
-      } else res <- NA
-      return (res)
-    })
-  }
+  # Get baseline BMI from file (nearest BMI measure to first adiposity)
+  calc_covars$baseline_BMI <- sapply(1:dim(calc_covars)[1], function (i) {
+    dat_sub <- QCd_for_baseline[[calc_covars$eid[i]]]
+    if (!is.null(dat_sub)) {
+      closest_measure <- which.min(abs(calc_covars$baseline_date[i] - 
+                                         dat_sub$event_dt))
+      res <- dat_sub$value[closest_measure]
+    } else res <- NA
+    return (res)
+  })
   
   # Merge with previously calculated covariates
   cleaned <- merge(calc_covars, general_covars, by = "eid")
+  
+  # Remove observations missing baseline BMI
+  sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
+  cat(paste0("**FILTER** EXCLUDED, No baseline BMI: ", 
+             length(which(is.na(cleaned$baseline_BMI))), "\n"))
+  sink()
+  cleaned <- subset(cleaned, !is.na(cleaned$baseline_BMI))
+  
   # Set missing and inconsistent ancestry to "other"
   cleaned$ancestry <- ifelse(cleaned$ancestry == "missing or inconsistent",
                              "other", cleaned$ancestry)
@@ -92,23 +70,11 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
   sink()
   cleaned <- subset(cleaned, !is.na(cleaned$height))
   
-  # Convert baseline weight to baseline BMI
-  # Calculate BMI from weight (kg) and height (cm) or simply flip BMI sign
-  cleaned$baseline_BMI <- ifelse(cleaned$baseline_adipo < 0, 
-                                 -cleaned$baseline_adipo,
-                                 cleaned$baseline_adipo / (cleaned$height/100)^2) 
-  
-  sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
-  cat(paste0("**FILTER** EXCLUDED, No baseline BMI: ", 
-             length(which(is.na(cleaned$baseline_BMI))), "\n"))
-  sink()
-  cleaned <- subset(cleaned, !is.na(cleaned$baseline_BMI))
-  
   # Remove individuals missing any other covariate
   res <- cleaned[, c("eid", "sex", "ancestry",
-                 "baseline_age", "age_sq", 
-                 "height", "baseline_BMI", "FUyrs", 
-                 "genotyping_array", paste0("PC", 1:NPCs))]
+                     "baseline_age", "age_sq", 
+                     "height", "baseline_BMI", "FUyrs", 
+                     "genotyping_array", paste0("PC", 1:NPCs))]
   res <- res[complete.cases(res), ]
   sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
   cat(paste0("**FILTER** EXCLUDED, Missing any other covariate: ", 
@@ -117,6 +83,7 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
   
   return(res)
 })
+
 names(QCd_covars) <- PHENOTYPES
 
 # Stratify on sex and ancestry ----
