@@ -40,6 +40,7 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
                 baseline_age = first(age_event),
                 age_sq = baseline_age^2,
                 FUyrs = interval(first(event_dt), last(event_dt)) / years(1),
+                FU_n = n(),
                 baseline_adipo = -first(value))
   } else if (p == "weight") {
     calc_covars <- df %>% group_by(eid) %>% 
@@ -48,6 +49,7 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
                 baseline_age = first(age_event),
                 age_sq = baseline_age^2,
                 FUyrs = interval(first(event_dt), last(event_dt)) / years(1),
+                FU_n = n(),
                 baseline_adipo = first(value))
   } else {
     calc_covars <- df %>% group_by(eid) %>% 
@@ -55,7 +57,8 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
       summarise(baseline_date = first(event_dt),
                 baseline_age = first(age_event),
                 age_sq = baseline_age^2,
-                FUyrs = interval(first(event_dt), last(event_dt)) / years(1))
+                FUyrs = interval(first(event_dt), last(event_dt)) / years(1),
+                FU_n = n())
     
     # Get baseline weight or BMI (nearest) from baseline file
     calc_covars$baseline_adipo <- sapply(1:dim(calc_covars)[1], function (i) {
@@ -107,7 +110,7 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
   # Remove individuals missing any other covariate
   res <- cleaned[, c("eid", "sex", "ancestry",
                      "baseline_age", "age_sq", 
-                     "height", "baseline_BMI", "FUyrs", 
+                     "height", "baseline_BMI", "FUyrs", "FU_n",
                      "genotyping_array", paste0("PC", 1:NPCs))]
   res <- res[complete.cases(res), ]
   sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
