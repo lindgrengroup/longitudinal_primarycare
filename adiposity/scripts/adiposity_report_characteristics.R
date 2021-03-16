@@ -6,12 +6,19 @@ library(tidyverse)
 library(RColorBrewer)
 theme_set(theme_bw())
 
+set.seed(020321)
+
 # Read stratified raw slope, adiposity, and covariate data ----
 
 raw_slopes <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_raw_slopes.rds")
+adj_slopes <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_adj_slopes.rds")
 adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/QCd_adiposity.rds")
 PHENOTYPES <- names(raw_slopes)
 STRATA <- unique(unlist(lapply(raw_slopes, function (x) names(x) )))
+
+# Re-create full adiposity (non-stratified) df for some plots
+long_adiposity <- lapply(adiposity, function (x) bind_rows(x) )
+names(long_adiposity) <- PHENOTYPES
 
 # Construct demographic characteristics tables -----
 
@@ -48,8 +55,8 @@ demo_table <- lapply(PHENOTYPES, function (p) {
   adipo_summary <- adipo %>% group_by(sex, ancestry) %>% 
     summarise(median_bl_value = median(bl_value), 
               iqr_bl_value = paste(quantile(bl_value, 0.25), 
-                                 quantile(bl_value, 0.75),
-                                 sep = ", "))
+                                   quantile(bl_value, 0.75),
+                                   sep = ", "))
   summary_df <- merge(summary_df, adipo_summary, by = c("sex", "ancestry"))
   
   write.table(summary_df, paste0("results/descriptive_factors_", p, ".txt"),
@@ -260,8 +267,8 @@ names(binned_adipo) <- PHENOTYPES
 
 traj_plots <- lapply(PHENOTYPES, function (p) {
   res <- ggplot(binned_adipo[[p]], aes(x = age_bin, y = mean_value,
-                                group = ancestry,
-                                color = ancestry, fill = ancestry)) +
+                                       group = ancestry,
+                                       color = ancestry, fill = ancestry)) +
     facet_wrap(~sex, nrow = 2) +
     geom_point() +
     geom_path() +
@@ -289,7 +296,7 @@ rs_table <- lapply(PHENOTYPES, function (p) {
     summarise(median_slope = median(raw_slope), 
               iqr_slope = paste(quantile(raw_slope, 0.25), 
                                 quantile(raw_slope, 0.75),
-                                 sep = ", "))
+                                sep = ", "))
   write.table(summary_df, paste0("results/raw_slope_summaries_", p, ".txt"),
               sep = "\t", quote = F, row.names = F)
   return (summary_df)
@@ -317,3 +324,204 @@ pdf(paste0("plots/raw_slopes/raw_slopes_distributions.pdf"),
     onefile = T)
 print(rs_distributions)
 dev.off()
+
+# Plot trajectories of sample individuals at the tails of raw slope distribution ----
+
+rs_tail_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(STRATA, function (s) {
+    rs_df <- raw_slopes[[p]][[s]]
+    top_ids <- rs_df$eid[rs_df$raw_slope > quantile(rs_df$raw_slope, 0.95)]
+    top_ids <- sample(top_ids, min(length(top_ids), 5), replace = F)
+    bottom_ids <- rs_df$eid[rs_df$raw_slope < quantile(rs_df$raw_slope, 0.05)]
+    bottom_ids <- sample(bottom_ids, min(length(bottom_ids), 5), replace = F)
+    
+    plot_df <- long_adiposity[[p]]
+    plot_df <- subset(plot_df, 
+                      plot_df$eid %in% top_ids | plot_df$eid %in% bottom_ids)
+    plot_df$tail <- ifelse(plot_df$eid %in% top_ids, "top", "bottom")
+    
+    p <- ggplot(plot_df, aes(x = age_event, y = value, 
+                             group = eid, color = tail)) +
+      geom_line() +
+      geom_point() +
+      scale_color_manual(values = c("top" = "#984EA3", "bottom" = "#E41A1C"), 
+                         guide = F) +
+      labs(x = "age (years)", y = "Adiposity trait value", 
+           title = s)
+    return (p)
+  })
+  names(res) <- STRATA
+  pdf(paste0("plots/trajectories/raw_slope_tail_trajectories_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(rs_tail_trajectories) <- PHENOTYPES
+
+# Plot mean (binned) trajectories by raw slope quartile ----
+
+rs_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(STRATA, function (s) {
+    rs <- raw_slopes[[p]][[s]]
+    rs$q <- cut(rs$raw_slope, quantile(rs$raw_slope), include.lowest = T,
+                labels = paste0("q", 1:4))
+    df <- long_adiposity[[p]]
+    df <- subset(df, df$eid %in% rs$eid)
+    df$q <- rs$q[match(df$eid, rs$eid)]
+    
+    # Calculate mean and SE in each 5-year interval within each quartile
+    age_bin_cuts <- seq(20, 80, by = 5)
+    df$age_bin <- cut(df$age_event, age_bin_cuts, include.lowest = T)
+    plot_df <- df %>% group_by(q, age_bin) %>% 
+      summarise(count = n(),
+                mean_value = mean(value),
+                se_value = sd(value)/sqrt(count))
+    
+    # Plot 
+    p <- ggplot(plot_df, aes(x = age_bin, y = mean_value,
+                             group = q, color = q, fill = q)) +
+      geom_point() +
+      geom_path() +
+      geom_ribbon(aes(ymin = mean_value - se_value, 
+                      ymax = mean_value + se_value),
+                  alpha = 0.2) +
+      scale_fill_brewer(palette = "Set1") +
+      scale_color_brewer(palette = "Set1") +
+      labs(x = "Age bin (years)", y = "Mean (S.E.) of adiposity",
+           title = s)
+    return (p)
+  })
+  names(res) <- STRATA
+  pdf(paste0("plots/trajectories/raw_slope_binned_trajectories_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(rs_quartile_trajectories) <- PHENOTYPES
+
+# Plot trajectories of sample individuals at the tails of adj slope distribution ----
+
+as_tail_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(STRATA, function (s) {
+    rs_df <- adj_slopes[[p]][[s]]
+    top_ids <- rs_df$eid[rs_df$resid4 > quantile(rs_df$resid4, 0.95)]
+    top_ids <- sample(top_ids, min(length(top_ids), 5), replace = F)
+    bottom_ids <- rs_df$eid[rs_df$resid4 < quantile(rs_df$resid4, 0.05)]
+    bottom_ids <- sample(bottom_ids, min(length(bottom_ids), 5), replace = F)
+    
+    plot_df <- long_adiposity[[p]]
+    plot_df <- subset(plot_df, 
+                      plot_df$eid %in% top_ids | plot_df$eid %in% bottom_ids)
+    plot_df$tail <- ifelse(plot_df$eid %in% top_ids, "top", "bottom")
+    
+    p <- ggplot(plot_df, aes(x = age_event, y = value, 
+                             group = eid, color = tail)) +
+      geom_line() +
+      geom_point() +
+      scale_color_manual(values = c("top" = "#984EA3", "bottom" = "#E41A1C"), 
+                         guide = F) +
+      labs(x = "age (years)", y = "Adiposity trait value", 
+           title = s)
+    return (p)
+  })
+  names(res) <- STRATA
+  pdf(paste0("plots/trajectories/adj_slope_tail_trajectories_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(as_tail_trajectories) <- PHENOTYPES
+
+# Plot mean (binned) trajectories by adj slope quartile ----
+
+as_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(STRATA, function (s) {
+    rs <- adj_slopes[[p]][[s]]
+    rs$q <- cut(rs$resid4, quantile(rs$resid4), include.lowest = T,
+                labels = paste0("q", 1:4))
+    df <- long_adiposity[[p]]
+    df <- subset(df, df$eid %in% rs$eid)
+    df$q <- rs$q[match(df$eid, rs$eid)]
+    
+    # Calculate mean and SE in each 5-year interval within each quartile
+    age_bin_cuts <- seq(20, 80, by = 5)
+    df$age_bin <- cut(df$age_event, age_bin_cuts, include.lowest = T)
+    plot_df <- df %>% group_by(q, age_bin) %>% 
+      summarise(count = n(),
+                mean_value = mean(value),
+                se_value = sd(value)/sqrt(count))
+    
+    # Plot 
+    p <- ggplot(plot_df, aes(x = age_bin, y = mean_value,
+                             group = q, color = q, fill = q)) +
+      geom_point() +
+      geom_path() +
+      geom_ribbon(aes(ymin = mean_value - se_value, 
+                      ymax = mean_value + se_value),
+                  alpha = 0.2) +
+      scale_fill_brewer(palette = "Set1") +
+      scale_color_brewer(palette = "Set1") +
+      labs(x = "Age bin (years)", y = "Mean (S.E.) of adiposity",
+           title = s)
+    return (p)
+  })
+  names(res) <- STRATA
+  pdf(paste0("plots/trajectories/adj_slope_binned_trajectories_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(as_quartile_trajectories) <- PHENOTYPES
+
+# Plot mean (binned) trajectories by gainer status ----
+
+gainer_status_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(STRATA, function (s) {
+    rs <- adj_slopes[[p]][[s]]
+    df <- long_adiposity[[p]]
+    df <- subset(df, df$eid %in% rs$eid)
+    df$gainer <- rs$gainer[match(df$eid, rs$eid)]
+    
+    # Calculate mean and SE in each 5-year interval within gainers/non-gainers
+    age_bin_cuts <- seq(20, 80, by = 5)
+    df$age_bin <- cut(df$age_event, age_bin_cuts, include.lowest = T)
+    plot_df <- df %>% group_by(gainer, age_bin) %>% 
+      summarise(count = n(),
+                mean_value = mean(value),
+                se_value = sd(value)/sqrt(count))
+    
+    plot_df$ancestry <- strsplit(s, "_")[[1]][[1]]
+    plot_df$sexplot <- strsplit(s, "_")[[1]][[2]]
+    return (plot_df)
+  })
+  res <- bind_rows(res)
+  res <- split(res, res$ancestry)
+  res_plots <- lapply(res, function (a) {
+    # Plot 
+    res_plots <- ggplot(a, aes(x = age_bin, y = mean_value,
+                               group = gainer, color = gainer, fill = gainer)) +
+      facet_wrap(~sexplot, nrow = 3) +
+      geom_point() +
+      geom_path() +
+      geom_ribbon(aes(ymin = mean_value - se_value, 
+                      ymax = mean_value + se_value),
+                  alpha = 0.2) +
+      scale_color_manual(values = c("TRUE" = "#984EA3", "FALSE" = "#E41A1C"), 
+                         guide = F) +
+      scale_fill_manual(values = c("TRUE" = "#984EA3", "FALSE" = "#E41A1C"), 
+                        guide = F) +
+      labs(x = "Age bin (years)", y = "Mean (S.E.) of adiposity",
+           title = unique(a$ancestry))
+    return (res_plots)
+  })
+  pdf(paste0("plots/trajectories/gainer_status_binned_trajectories_", p, ".pdf"),
+      onefile = T)
+  print(res_plots)
+  dev.off()
+  return (res_plots)
+})
+names(gainer_status_trajectories) <- PHENOTYPES

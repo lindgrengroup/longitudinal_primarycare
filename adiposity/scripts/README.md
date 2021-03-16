@@ -5,8 +5,9 @@ Scripts in this folder:
 3. **3_plot_QC.R** - Visual inspection for unrealistically large jumps between time-points. Remove measurements causing unrealistic jump.
 4. **4_calculate_covariates.R** - Calculate individual-level phenotyping (baseline age, baseline BMI, follow-up years, etc.) and genotyping (array, PCs) covariates. Stratify on sex and ancestry.
 5. **5_raw_slopes.R** - Perform mixed effects regression with fixed and random effects for individual and age, regressing adiposity trait on age. Calculate BLUP for raw slope for each individual, remove outliers > 5 S.D. away from mean in each stratum. 
-6. **6_adjust_slopes.R** - Run linear models to adjust raw slopes for a range of covariates with nested models. Calculate variance explained by baseline model covariates and compare models with ANOVA.  
-7. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data, slopes, and adjusted slopes, etc. .
+6. **6_adjust_slopes.R** - Run linear models to adjust raw slopes for a range of covariates with nested models. Calculate variance explained by baseline model covariates and compare models with ANOVA.
+7. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data, raw slopes (and trajectories), and adjusted slopes (and trajectories).
+
 ARCHIVED:
 
 1. **bmi_basic_stats.R** - Gathers primary care BMI measures, adds information from UKBIOBANK on sex, date of birth, and mean UKBIOBANK BMI, calculates age at measurement; then plots basic information such as age distribution, sex distribution, etc. of primary care BMI measures
