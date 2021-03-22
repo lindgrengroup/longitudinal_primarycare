@@ -78,14 +78,19 @@ slope_summaries <- lapply(PHENOTYPES, function (p) {
   res <- subset(res, !res$slope_outlier_flag)
   
   # Split into sex- and ancestry-defined strata
-  res <- res %>% group_by(sex, ancestry) %>% group_split(.keep = T)
-  names(res) <- lapply(res, function (x) paste(unique(x$ancestry), unique(x$sex),
+  ss <- res %>% group_by(sex, ancestry) %>% group_split(.keep = T)
+  names(ss) <- lapply(ss, function (x) paste(unique(x$ancestry), unique(x$sex),
                                                sep = "_"))
-  
+  # Also create a sex-combined stratum
+  sc <- res %>% group_by(ancestry) %>% group_split(.keep = T)
+  names(sc) <- lapply(sc, function (x) paste(unique(x$ancestry), "sexcomb",
+                                             sep = "_"))
+  res <- c(ss, sc)
   return (res)
 })
 names(slope_summaries) <- PHENOTYPES
 
+# Save raw slopes list with sex-combined dataframes
 saveRDS(slope_summaries, "/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_raw_slopes.rds")
 
 # Stratify adiposity data and save QCd data ----
