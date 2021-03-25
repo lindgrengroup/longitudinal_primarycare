@@ -27,28 +27,20 @@ qc$eid <- fam[, 1]
 
 # Merge QC file with phenotype file 
 NPCS = 21
-pheno$genotyping_array <- qc$genotyping.array[match(pheno$eid, qc$eid)]
 PCs <- paste0("PC", 1:NPCS)
 pheno[, PCs] <- qc[match(pheno$eid, qc$eid), PCs]
 
 covars <- pheno[, 
                 c("eid", 
                   "f.21000.0.0", "f.21000.1.0", "f.21000.2.0",
-                  "f.50.0.0", "f.50.1.0", "f.50.2.0", 
-                  "f.22010.0.0", "genotyping_array", PCs)]
+                  "f.50.0.0", "f.50.1.0", "f.50.2.0", PCs)]
 colnames(covars) <- c("eid", 
                       "ancestry.1", "ancestry.2", "ancestry.3",
-                      "height.1", "height.2", "height.3",
-                      "UKBB_recommended_excl", "genotyping_array", PCs)
+                      "height.1", "height.2", "height.3", PCs)
 
 # Merge QC file with covars
 covars$Submitted.Gender <- qc$Submitted.Gender[match(covars$eid, qc$eid)]
 covars$Inferred.Gender <- qc$Inferred.Gender[match(covars$eid, qc$eid)]
-covars$het.missing.outliers <- qc$het.missing.outliers[match(covars$eid, qc$eid)]
-covars$in.Phasing.Input.chr1_22 <- qc$in.Phasing.Input.chr1_22[match(covars$eid, 
-                                                                    qc$eid)]
-covars$putative.sex.chromosome.aneuploidy <- 
-  qc$putative.sex.chromosome.aneuploidy[match(covars$eid, qc$eid)]
 
 # Clean data ----
 
@@ -58,18 +50,6 @@ cleaned <- covars
 cleaned <- subset(cleaned, !is.na(cleaned$Submitted.Gender) & 
                     !is.na(cleaned$Inferred.Gender) & 
                     cleaned$Submitted.Gender == cleaned$Inferred.Gender)
-
-# Genotyping QC
-cleaned <- subset(cleaned, !is.na(cleaned$het.missing.outliers) & 
-                    cleaned$het.missing.outliers != 1)
-cleaned <- subset(cleaned, !is.na(cleaned$in.Phasing.Input.chr1_22) & 
-                    cleaned$in.Phasing.Input.chr1_22 != 0)
-cleaned <- subset(cleaned, !is.na(cleaned$putative.sex.chromosome.aneuploid) & 
-                    cleaned$putative.sex.chromosome.aneuploid != 1)
-
-# UKBB recommended exclusion
-remove <- which(cleaned$UKBB_recommended_excl == 1)
-cleaned <- cleaned[-remove, ]
 
 # Calculate covariates ----
 
@@ -96,10 +76,9 @@ covars$height <- apply(select(covars, starts_with("height")), 1,
                        function (x) median(as.numeric(x), na.rm = T) )
 
 covars <- covars[, c("eid", 
-                     "sex", "ancestry", "height", 
-                     "genotyping_array", PCs)]
+                     "sex", "ancestry", "height", PCs)]
 
-write.table(covars, "/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_covariates.txt",
+write.table(covars, "/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_demographic_covariates.txt",
             sep = "\t", quote = F, row.names = F)
 
 
