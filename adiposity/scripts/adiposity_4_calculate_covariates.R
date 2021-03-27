@@ -6,8 +6,16 @@ library(lubridate)
 
 # Read files ----
 
-adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/QCd_adiposity.rds")
-general_covars <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_covariates.txt",
+adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/visually_QCd_adiposity.rds")
+# Ensure that IDs are saved as character rather than factor because
+# otherwise merging with covariates will be incorrect
+adiposity <- lapply(adiposity, function (x) {
+  x$eid <- as.character(x$eid)
+  return (x)
+})
+saveRDS(adiposity, "/well/lindgren/UKBIOBANK/samvida/adiposity/visually_QCd_adiposity.rds")
+
+general_covars <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_demographic_covariates.txt",
                              sep = "\t", header = T, comment.char = "$",
                              stringsAsFactors = F)
 PHENOTYPES <- names(adiposity)
@@ -87,7 +95,7 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
   
   sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
   cat(paste0("**FILTER** EXCLUDED, General QC failed
-             (genotyping, relatedness, recommended exclusions): ", "\n",
+             (example: sex mismatch): ", "\n",
              dim(calc_covars)[1] - dim(cleaned)[1], "\n"))
   sink()
   
@@ -114,14 +122,14 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
   res <- cleaned[, c("eid", "sex", "ancestry",
                      "baseline_age", "age_sq", 
                      "height", "baseline_BMI", "baseline_trait",
-                     "FUyrs", "FU_n",
-                     "genotyping_array", paste0("PC", 1:NPCs))]
+                     "FUyrs", "FU_n", paste0("PC", 1:NPCs))]
   res <- res[complete.cases(res), ]
   sink(paste0("log_files/covariate_QC_", p, ".txt"), append = T)
   cat(paste0("**FILTER** EXCLUDED, Missing any other covariate: ", 
              dim(cleaned)[1] - dim(res)[1], "\n"))
   sink()
   
+  res$eid <- as.character(res$eid)
   return(res)
 })
 names(QCd_covars) <- PHENOTYPES
@@ -137,4 +145,4 @@ for (p in PHENOTYPES) {
 }
 
 # Save
-saveRDS(QCd_covars, "/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_covars.rds")
+saveRDS(QCd_covars, "/well/lindgren/UKBIOBANK/samvida/adiposity/model_covariates.rds")

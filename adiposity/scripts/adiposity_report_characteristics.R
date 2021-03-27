@@ -8,13 +8,15 @@ theme_set(theme_bw())
 
 set.seed(020321)
 
-# Read stratified raw slope, adiposity, and covariate data ----
+# Read stratified slope, adiposity, and covariate data ----
 
-raw_slopes <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_raw_slopes.rds")
+raw_slopes <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/raw_slopes_and_covars.rds")
 adj_slopes <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_adj_slopes.rds")
-adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/QCd_adiposity.rds")
+adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/stratified_adiposity.rds")
 PHENOTYPES <- names(raw_slopes)
 STRATA <- unique(unlist(lapply(raw_slopes, function (x) names(x) )))
+SC_STRATA <- STRATA[grepl("sexcomb", STRATA)]
+SS_STRATA <- STRATA[!grepl("sexcomb", STRATA)]
 
 # Re-create full adiposity (non-stratified) df for some plots
 long_adiposity <- lapply(adiposity, function (x) bind_rows(x) )
@@ -23,8 +25,8 @@ names(long_adiposity) <- PHENOTYPES
 # Construct demographic characteristics tables -----
 
 demo_table <- lapply(PHENOTYPES, function (p) {
-  pheno <- lapply(raw_slopes[[p]], function (s) {
-    s[, c("eid", "sex", "ancestry", "FU_n", "FUyrs", "baseline_age", "height",
+  pheno <- lapply(SS_STRATA, function (s) {
+    raw_slopes[[p]][[s]][, c("eid", "sex", "ancestry", "FU_n", "FUyrs", "baseline_age", "height",
           "baseline_BMI")]
   })
   df <- bind_rows(pheno)
@@ -59,7 +61,7 @@ demo_table <- lapply(PHENOTYPES, function (p) {
                                    sep = ", "))
   summary_df <- merge(summary_df, adipo_summary, by = c("sex", "ancestry"))
   
-  write.table(summary_df, paste0("results/descriptive_factors_", p, ".txt"),
+  write.table(summary_df, paste0("results/descriptive_factors/descriptive_factors_", p, ".txt"),
               sep = "\t", quote = F, row.names = F)
   return (summary_df)
 })
@@ -110,9 +112,10 @@ popn_sex_pies <- lapply(PHENOTYPES, function (p) {
 # Box and violin plots of distributions ----
 
 plot_distributions <- lapply(PHENOTYPES, function (p) {
-  pheno <- lapply(raw_slopes[[p]], function (s) {
-    s[, c("eid", "sex", "ancestry", "FU_n", "FUyrs", "baseline_age", "height",
-          "baseline_BMI")]
+  pheno <- lapply(SS_STRATA, function (s) {
+    raw_slopes[[p]][[s]][, c("eid", "sex", "ancestry", "FU_n", "FUyrs", 
+                             "baseline_age", "height", 
+                             "baseline_BMI", "baseline_trait")]
   })
   df <- bind_rows(pheno)
   
@@ -175,16 +178,7 @@ plot_distributions <- lapply(PHENOTYPES, function (p) {
     theme(legend.position = "none")
   
   # Baseline adiposity trait
-  adipo <- lapply(STRATA, function (s) {
-    res <- adiposity[[p]][[s]][, c("eid", "age_event", "value")]
-    res <- res %>% group_by(eid) %>% arrange(age_event) %>% 
-      summarise(bl_value = first(value)) 
-    res$ancestry <- strsplit(s, "_")[[1]][1]
-    res$sex <- strsplit(s, "_")[[1]][2]
-    return (res)
-  })
-  adipo <- bind_rows(adipo)
-  bl_adipo <- ggplot(adipo, aes(x = ancestry, y = bl_value)) +
+  bl_trait <- ggplot(df, aes(x = ancestry, y = baseline_trait)) +
     facet_wrap(~sex, nrow = 2) +
     geom_violin(aes(fill = ancestry), position = position_dodge(1)) +
     geom_boxplot(width = 0.1) + 
@@ -201,7 +195,7 @@ plot_distributions <- lapply(PHENOTYPES, function (p) {
   print(bl_age)
   print(med_height)
   print(bl_BMI)
-  print(bl_adipo)
+  print(bl_trait)
   dev.off()
   return ()
 })
@@ -250,7 +244,7 @@ dev.off()
 age_bin_cuts <- seq(20, 80, by = 5)
 
 binned_adipo <- lapply(PHENOTYPES, function (p) {
-  res <- lapply(STRATA, function (s) {
+  res <- lapply(SS_STRATA, function (s) {
     df <- adiposity[[p]][[s]]
     df$age_bin <- cut(df$age_event, age_bin_cuts, include.lowest = T)
     res <- df %>% group_by(age_bin) %>% summarise(count = n(),
@@ -282,14 +276,15 @@ traj_plots <- lapply(PHENOTYPES, function (p) {
 })
 names(traj_plots) <- PHENOTYPES
 
-pdf("plots/trajectories/binned_raw_data.pdf", onefile = T)
+pdf("plots/descriptive_factors/binned_mean_trajectories.pdf", onefile = T)
 print(traj_plots)
 dev.off()
+
 # Construct raw slope summary table ----
 
 rs_table <- lapply(PHENOTYPES, function (p) {
-  pheno <- lapply(raw_slopes[[p]], function (s) {
-    s[, c("eid", "sex", "ancestry", "raw_slope")]
+  pheno <- lapply(SS_STRATA, function (s) {
+    raw_slopes[[p]][[s]][, c("eid", "sex", "ancestry", "raw_slope")]
   })
   df <- bind_rows(pheno)
   summary_df <- df %>% group_by(sex, ancestry) %>% 
@@ -297,7 +292,7 @@ rs_table <- lapply(PHENOTYPES, function (p) {
               iqr_slope = paste(quantile(raw_slope, 0.25), 
                                 quantile(raw_slope, 0.75),
                                 sep = ", "))
-  write.table(summary_df, paste0("results/raw_slope_summaries_", p, ".txt"),
+  write.table(summary_df, paste0("results/raw_slopes/raw_slope_summaries_", p, ".txt"),
               sep = "\t", quote = F, row.names = F)
   return (summary_df)
 })
@@ -305,8 +300,8 @@ rs_table <- lapply(PHENOTYPES, function (p) {
 # Plot violin distribution of raw slopes ----
 
 rs_distributions <- lapply(PHENOTYPES, function (p) {
-  pheno <- lapply(raw_slopes[[p]], function (s) {
-    s[, c("eid", "sex", "ancestry", "raw_slope")]
+  pheno <- lapply(SS_STRATA, function (s) {
+    raw_slopes[[p]][[s]][, c("eid", "sex", "ancestry", "raw_slope")]
   })
   df <- bind_rows(pheno)
   res <- ggplot(df, aes(x = ancestry, y = raw_slope)) +
@@ -328,7 +323,7 @@ dev.off()
 # Plot trajectories of sample individuals at the tails of raw slope distribution ----
 
 rs_tail_trajectories <- lapply(PHENOTYPES, function (p) {
-  res <- lapply(STRATA, function (s) {
+  res <- lapply(SS_STRATA, function (s) {
     rs_df <- raw_slopes[[p]][[s]]
     top_ids <- rs_df$eid[rs_df$raw_slope > quantile(rs_df$raw_slope, 0.95)]
     top_ids <- sample(top_ids, min(length(top_ids), 5), replace = F)
@@ -350,8 +345,8 @@ rs_tail_trajectories <- lapply(PHENOTYPES, function (p) {
            title = s)
     return (p)
   })
-  names(res) <- STRATA
-  pdf(paste0("plots/trajectories/raw_slope_tail_trajectories_", p, ".pdf"),
+  names(res) <- SS_STRATA
+  pdf(paste0("plots/raw_slopes/tail_trajectories_", p, ".pdf"),
       onefile = T)
   print(res)
   dev.off()
@@ -362,7 +357,7 @@ names(rs_tail_trajectories) <- PHENOTYPES
 # Plot mean (binned) trajectories by raw slope quartile ----
 
 rs_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
-  res <- lapply(STRATA, function (s) {
+  res <- lapply(SS_STRATA, function (s) {
     rs <- raw_slopes[[p]][[s]]
     rs$q <- cut(rs$raw_slope, quantile(rs$raw_slope), include.lowest = T,
                 labels = paste0("q", 1:4))
@@ -392,14 +387,80 @@ rs_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
            title = s)
     return (p)
   })
-  names(res) <- STRATA
-  pdf(paste0("plots/trajectories/raw_slope_binned_trajectories_", p, ".pdf"),
+  names(res) <- SS_STRATA
+  pdf(paste0("plots/raw_slopes/mean_trajectories_quartile_", p, ".pdf"),
       onefile = T)
   print(res)
   dev.off()
   return (res)
 })
 names(rs_quartile_trajectories) <- PHENOTYPES
+
+
+# DEBUGGING: # Plot characteristics of q1 vs q4 by raw slope, white ----
+
+rs_white_descriptive <- lapply(PHENOTYPES, function (p) {
+  df <- lapply(c("white_F", "white_M"), function (s) {
+    rs <- raw_slopes[[p]][[s]]
+    rs$q <- cut(rs$raw_slope, quantile(rs$raw_slope), include.lowest = T,
+                labels = paste0("q", 1:4))
+    rs <- subset(rs, rs$q %in% c("q1", "q4"))
+    return (rs)
+  })
+  df <- bind_rows(df)
+  
+  # Number of follow-up measures
+  FU_n <- ggplot(df, aes(x = q, y = FU_n, fill = q)) +
+    facet_wrap(~sex, ncol = 2) +
+    geom_boxplot(position = position_dodge(1)) +
+    scale_fill_manual(values = c("q4" = "#984EA3", "q1" = "#E41A1C")) + 
+    labs(x = "raw slope quartile", y = "# repeat measures") +
+    theme(legend.position = "none")
+  
+  # Number of years of follow up
+  FUyrs <- ggplot(df, aes(x = q, y = FUyrs, fill = q)) +
+    facet_wrap(~sex, ncol = 2) +
+    geom_boxplot(position = position_dodge(1)) +
+    scale_fill_manual(values = c("q4" = "#984EA3", "q1" = "#E41A1C")) + 
+    labs(x = "raw slope quartile", y = "# follow-up years") +
+    theme(legend.position = "none")
+  
+  # Baseline age
+  bl_age <- ggplot(df, aes(x = q, y = baseline_age, fill = q)) +
+    facet_wrap(~sex, ncol = 2) +
+    geom_boxplot(position = position_dodge(1)) +
+    scale_fill_manual(values = c("q4" = "#984EA3", "q1" = "#E41A1C")) + 
+    labs(x = "raw slope quartile", y = "baseline age") +
+    theme(legend.position = "none")
+  
+  # Baseline BMI
+  bl_BMI <- ggplot(df, aes(x = q, y = baseline_BMI)) +
+    facet_wrap(~sex, ncol = 2) +
+    geom_violin(aes(fill = q), position = position_dodge(1)) +
+    geom_boxplot(width = 0.1) + 
+    scale_fill_manual(values = c("q4" = "#984EA3", "q1" = "#E41A1C")) + 
+    labs(x = "raw slope quartile", y = "baseline BMI (kg/m2)") +
+    theme(legend.position = "none")
+  
+  # Baseline adiposity trait
+  bl_trait <- ggplot(df, aes(x = q, y = baseline_trait)) +
+    facet_wrap(~sex, ncol = 2) +
+    geom_violin(aes(fill = q), position = position_dodge(1)) +
+    geom_boxplot(width = 0.1) + 
+    scale_fill_manual(values = c("q4" = "#984EA3", "q1" = "#E41A1C")) + 
+    labs(x = "raw slope quartile", y = "baseline trait") +
+    theme(legend.position = "none")
+  
+  pdf(paste0("plots/raw_slopes/white_q1_v_q4_covariate_distributions_", p, ".pdf"),
+      onefile = T)
+  print(FU_n)
+  print(FUyrs)
+  print(bl_age)
+  print(bl_BMI)
+  print(bl_trait)
+  dev.off()
+  return ()
+})
 
 # Plot trajectories of sample individuals at the tails of adj slope distribution ----
 
@@ -503,7 +564,7 @@ gainer_status_trajectories <- lapply(PHENOTYPES, function (p) {
   res_plots <- lapply(res, function (a) {
     # Plot 
     res_plots <- ggplot(a, aes(x = age_bin, y = mean_value,
-                               group = gainer, color = gainer, fill = gainer)) +
+                             group = gainer, color = gainer, fill = gainer)) +
       facet_wrap(~sexplot, nrow = 3) +
       geom_point() +
       geom_path() +
@@ -513,7 +574,7 @@ gainer_status_trajectories <- lapply(PHENOTYPES, function (p) {
       scale_color_manual(values = c("TRUE" = "#984EA3", "FALSE" = "#E41A1C"), 
                          guide = F) +
       scale_fill_manual(values = c("TRUE" = "#984EA3", "FALSE" = "#E41A1C"), 
-                        guide = F) +
+                         guide = F) +
       labs(x = "Age bin (years)", y = "Mean (S.E.) of adiposity",
            title = unique(a$ancestry))
     return (res_plots)

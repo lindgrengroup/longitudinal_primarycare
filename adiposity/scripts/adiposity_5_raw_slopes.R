@@ -10,8 +10,8 @@ library(tidyverse)
 
 # Read files ----
 
-adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/QCd_adiposity.rds")
-covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_covars.rds")
+adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/visually_QCd_adiposity.rds")
+covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/model_covariates.rds")
 PHENOTYPES <- names(adiposity)
 
 NPCs <- 21
@@ -65,6 +65,8 @@ slope_summaries <- lapply(PHENOTYPES, function (p) {
                sum(slopes$slope_outlier_flag), "\n"))
     sink()
     
+    slopes$eid <- as.character(slopes$eid)
+    
     return (slopes)
     
   })
@@ -91,7 +93,7 @@ slope_summaries <- lapply(PHENOTYPES, function (p) {
 names(slope_summaries) <- PHENOTYPES
 
 # Save raw slopes list with sex-combined dataframes
-saveRDS(slope_summaries, "/well/lindgren/UKBIOBANK/samvida/adiposity/adiposity_raw_slopes.rds")
+saveRDS(slope_summaries, "/well/lindgren/UKBIOBANK/samvida/adiposity/raw_slopes_and_covars.rds")
 
 # Stratify adiposity data and save QCd data ----
 
@@ -105,7 +107,7 @@ QCd_adipo <- lapply(PHENOTYPES, function (p) {
 })
 names(QCd_adipo) <- PHENOTYPES
 
-saveRDS(QCd_adipo, "/well/lindgren/UKBIOBANK/samvida/adiposity/QCd_adiposity.rds")
+saveRDS(QCd_adipo, "/well/lindgren/UKBIOBANK/samvida/adiposity/stratified_adiposity.rds")
 
 # # Plot trajectories of individuals with extreme slopes ----
 # 
