@@ -467,9 +467,9 @@ rs_white_descriptive <- lapply(PHENOTYPES, function (p) {
 as_tail_trajectories <- lapply(PHENOTYPES, function (p) {
   res <- lapply(STRATA, function (s) {
     rs_df <- adj_slopes[[p]][[s]]
-    top_ids <- rs_df$eid[rs_df$resid4 > quantile(rs_df$resid4, 0.95)]
+    top_ids <- rs_df$eid[rs_df$residual > quantile(rs_df$residual, 0.95)]
     top_ids <- sample(top_ids, min(length(top_ids), 5), replace = F)
-    bottom_ids <- rs_df$eid[rs_df$resid4 < quantile(rs_df$resid4, 0.05)]
+    bottom_ids <- rs_df$eid[rs_df$residual < quantile(rs_df$residual, 0.05)]
     bottom_ids <- sample(bottom_ids, min(length(bottom_ids), 5), replace = F)
     
     plot_df <- long_adiposity[[p]]
@@ -488,7 +488,7 @@ as_tail_trajectories <- lapply(PHENOTYPES, function (p) {
     return (p)
   })
   names(res) <- STRATA
-  pdf(paste0("plots/trajectories/adj_slope_tail_trajectories_", p, ".pdf"),
+  pdf(paste0("plots/adjusted_slopes/tail_trajectories_", p, ".pdf"),
       onefile = T)
   print(res)
   dev.off()
@@ -501,7 +501,7 @@ names(as_tail_trajectories) <- PHENOTYPES
 as_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
   res <- lapply(STRATA, function (s) {
     rs <- adj_slopes[[p]][[s]]
-    rs$q <- cut(rs$resid4, quantile(rs$resid4), include.lowest = T,
+    rs$q <- cut(rs$residual, quantile(rs$residual), include.lowest = T,
                 labels = paste0("q", 1:4))
     df <- long_adiposity[[p]]
     df <- subset(df, df$eid %in% rs$eid)
@@ -530,7 +530,7 @@ as_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
     return (p)
   })
   names(res) <- STRATA
-  pdf(paste0("plots/trajectories/adj_slope_binned_trajectories_", p, ".pdf"),
+  pdf(paste0("plots/adjusted_slopes/mean_trajectories_quartile_", p, ".pdf"),
       onefile = T)
   print(res)
   dev.off()
@@ -579,7 +579,7 @@ gainer_status_trajectories <- lapply(PHENOTYPES, function (p) {
            title = unique(a$ancestry))
     return (res_plots)
   })
-  pdf(paste0("plots/trajectories/gainer_status_binned_trajectories_", p, ".pdf"),
+  pdf(paste0("plots/adjusted_slopes/mean_trajectories_gainer_status_", p, ".pdf"),
       onefile = T)
   print(res_plots)
   dev.off()
