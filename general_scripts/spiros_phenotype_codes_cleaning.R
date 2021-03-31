@@ -1,5 +1,5 @@
 # Author: Samvida S. Venkatesh
-# Date: 30/02/21
+# Date: 30/03/21
 
 library(tidyverse)
 
@@ -20,6 +20,16 @@ merged_icd <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/mer
                          sep = "\t", header = T, 
                          quote = "", fill = F, comment.char = "~")
 
+# Create new column for dictionary with annotated file names ----
+
+dictionary$annot_CPRD <- gsub(".csv", ".txt", dictionary$CPRD) 
+dictionary$annot_CPRD <- paste0("annot_", dictionary$annot_CPRD)
+dictionary$annot_ICD <- gsub(".csv", ".txt", dictionary$ICD) 
+dictionary$annot_ICD <- paste0("annot_", dictionary$annot_ICD)
+
+write.table(dictionary, "/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/annot_dictionary.txt",
+            sep = "\t", quote = F, row.names = F)
+
 # Add read3 codes to read2 ----
 
 merged_read_codes <- lapply(1:length(PHENOTYPES), function (i) {
@@ -33,9 +43,9 @@ merged_read_codes <- lapply(1:length(PHENOTYPES), function (i) {
     res <- merge(df, merged_v2v3[, c("READV2_CODE", "READV3_CODE")],
                  by = "READV2_CODE", all.x = T, all.y = F)
     write.table(res, 
-                paste0("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/primary_care/annot_",
-                       dictionary$CPRD[i]),
-                sep = ",", quote = F, row.names = F)
+                paste0("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/primary_care/",
+                       dictionary$annot_CPRD[i]),
+                sep = "\t", quote = F, row.names = F)
   } else res <- NA
   return (res)
 })
@@ -66,9 +76,9 @@ merged_ICD_codes <- lapply(1:length(PHENOTYPES), function (i) {
     res <- bind_rows(matched_res)
     res <- distinct(res)
     write.table(res,
-                paste0("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/secondary_care/annot_",
-                       dictionary$ICD[i]),
-                sep = ",", quote = F, row.names = F)
+                paste0("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/secondary_care/",
+                       dictionary$annot_ICD[i]),
+                sep = "\t", quote = F, row.names = F)
   } else res <- NA
   return (res)
 })
