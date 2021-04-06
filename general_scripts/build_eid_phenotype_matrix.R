@@ -8,7 +8,7 @@ library(tidyverse)
 # Read dictionary to get to phenotype lists
 dictionary <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/annot_dictionary.txt",
                        sep = "\t", header = T, stringsAsFactors = F)
-PHENOTYPES <- dictionary$phenotype
+UNIQ <- dictionary$unique_code
 
 # Read GP clinical file
 primary_care <- read.table("/well/lindgren/UKBIOBANK/DATA/PHENOTYPE/PRIMARY_CARE/gp_clinical.txt",
@@ -22,6 +22,7 @@ secondary_care <- read.table("/well/lindgren/UKBIOBANK/DATA/PHENOTYPE/PHENOTYPE_
                              stringsAsFactors = F)
 colnames(secondary_care) <- gsub("X", "f.", colnames(secondary_care))
 colnames(secondary_care)[1] <- "eid"
+
 # Subset to ICD-relevant columns
 # f.41202.x.x - main ICD10 diagnosis
 # f.41204.x.x - secondary ICD10 diagnosis
@@ -29,6 +30,7 @@ colnames(secondary_care)[1] <- "eid"
 # f.40002.x.x - contributory (secondary) cause of death ICD10
 # f.41203.x.x - main ICD9 diagnosis
 # f.41205.x.x - secondary ICD9 diagnosis
+
 ICD9_cols <- c(grep("^f.41203.", colnames(secondary_care)),
                grep("^f.41205.", colnames(secondary_care)))
 ICD10_cols <- c(grep("^f.41202.", colnames(secondary_care)),
@@ -49,8 +51,8 @@ ICD10_cols <- c(grep("^f.41202.", colnames(secondary_care)),
 
 ALL_EIDS <- unique(c(unique(primary_care$eid), secondary_care$eid))
 
-result_matrix <- lapply(1:nrow(dictionary), function (i) {
-  pheno <- dictionary$phenotype[i]
+result_matrix <- lapply(1:length(UNIQ), function (i) {
+  uniq <- dictionary$unique_code[i]
   
   # Get phenotype code list for primary care (when the file exists)
   if (dictionary$CPRD[i] != "") {
@@ -94,17 +96,22 @@ result_matrix <- lapply(1:nrow(dictionary), function (i) {
   
   # Get the list of all IDs with phenotype in primary OR secondary care
   match_ids <- unique(c(match_ids_primary, match_ids_secondary))
-  res <- ALL_EIDS %in% match_ids
+  res <- as.numeric(ALL_EIDS %in% match_ids)
   names(res) <- ALL_EIDS
   
   return (res)
 })
-names(result_matrix) <- PHENOTYPES
+
 result_matrix <- bind_rows(result_matrix)
-result_matrix$phenotype <- PHENOTYPES
-result_matrix <- result_matrix[, c("phenotype", ALL_EIDS)]
+# transpose to get EID x disease
+result_matrix <- t(result_matrix)
+colnames(result_matrix) <- UNIQ
+result_matrix$eid <- ALL_EIDS
+result_matrix <- result_matrix[, c("eid", UNIQ)]
+
+dim(result_matrix)
 
 # Save results
 write.table(result_matrix, 
             "/well/lindgren/UKBIOBANK/samvida/general_resources/eid_phenotype_matrix.txt",
-            sep = "\t", quote = F, row.names = F)
+            sep = "\t", quote = F, row.names = F, col.names = T)

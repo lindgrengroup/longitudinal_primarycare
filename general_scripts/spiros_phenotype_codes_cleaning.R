@@ -23,12 +23,18 @@ merged_icd <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/mer
 # Create new column for dictionary with annotated file names ----
 
 dictionary$annot_CPRD <- gsub(".csv", ".txt", dictionary$CPRD) 
-dictionary$annot_CPRD <- paste0("annot_", dictionary$annot_CPRD)
+dictionary$annot_CPRD <- ifelse(dictionary$annot_CPRD == "", "", 
+                                paste0("annot_", dictionary$annot_CPRD))
 dictionary$annot_ICD <- gsub(".csv", ".txt", dictionary$ICD) 
-dictionary$annot_ICD <- paste0("annot_", dictionary$annot_ICD)
+dictionary$annot_ICD <- ifelse(dictionary$annot_ICD == "", "", 
+                               paste0("annot_", dictionary$annot_ICD))
+
+# Assign code to each phenotype so we don't need the phenotype name
+# Can map back to this file later
+dictionary$unique_code <- 1:nrow(dictionary)
 
 write.table(dictionary, "/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/annot_dictionary.txt",
-            sep = "\t", quote = F, row.names = F)
+            sep = "\t", quote = T, row.names = F)
 
 # Add read3 codes to read2 ----
 
