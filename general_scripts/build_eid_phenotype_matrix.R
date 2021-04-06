@@ -59,7 +59,7 @@ result_matrix <- lapply(1:length(UNIQ), function (i) {
     primary_care_codes <- read.table(paste0("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/primary_care/",
                                             dictionary$annot_CPRD[i]), 
                                      header = T, sep = "\t", stringsAsFactors = F,
-                                     quote = "")
+                                     quote = "", comment.char = "~")
     codes_V2 <- unique(primary_care_codes$READV2_CODE)
     codes_V2 <- codes_V2[codes_V2 != ""]
     codes_V3 <- unique(primary_care_codes$READV3_CODE)
@@ -76,7 +76,7 @@ result_matrix <- lapply(1:length(UNIQ), function (i) {
                                               dictionary$annot_ICD[i]), 
                                        header = T, sep = "\t", 
                                        stringsAsFactors = F,
-                                       quote = "")
+                                       quote = "", comment.char = "~")
     codes_ICD9 <- unique(secondary_care_codes$ICD9)
     codes_ICD9 <- codes_ICD9[codes_ICD9 != ""]
     codes_ICD10 <- unique(c(secondary_care_codes$ICD10, 
@@ -104,12 +104,10 @@ result_matrix <- lapply(1:length(UNIQ), function (i) {
 
 result_matrix <- bind_rows(result_matrix)
 # transpose to get EID x disease
-result_matrix <- t(result_matrix)
+result_matrix <- as.data.frame(t(result_matrix))
 colnames(result_matrix) <- UNIQ
 result_matrix$eid <- ALL_EIDS
 result_matrix <- result_matrix[, c("eid", UNIQ)]
-
-dim(result_matrix)
 
 # Save results
 write.table(result_matrix, 
