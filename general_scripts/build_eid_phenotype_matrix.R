@@ -61,9 +61,9 @@ result_matrix <- lapply(1:length(UNIQ), function (i) {
                                      header = T, sep = "\t", stringsAsFactors = F,
                                      quote = "", comment.char = "~")
     codes_V2 <- unique(primary_care_codes$READV2_CODE)
-    codes_V2 <- codes_V2[codes_V2 != ""]
+    codes_V2 <- codes_V2[codes_V2 != "" & !is.na(codes_V2)]
     codes_V3 <- unique(primary_care_codes$READV3_CODE)
-    codes_V3 <- codes_V2[codes_V3 != ""]
+    codes_V3 <- codes_V2[codes_V3 != "" & !is.na(codes_V3)]
     # Get IDs of individuals with these codes recorded in primary care
     match_ids_primary <- 
       unique(primary_care$eid[primary_care$read_2 %in% codes_V2 | 
@@ -78,10 +78,10 @@ result_matrix <- lapply(1:length(UNIQ), function (i) {
                                        stringsAsFactors = F,
                                        quote = "", comment.char = "~")
     codes_ICD9 <- unique(secondary_care_codes$ICD9)
-    codes_ICD9 <- codes_ICD9[codes_ICD9 != ""]
+    codes_ICD9 <- codes_ICD9[codes_ICD9 != "" & !is.na(codes_ICD9)]
     codes_ICD10 <- unique(c(secondary_care_codes$ICD10, 
                             secondary_care_codes$orig_ICD10code))
-    codes_ICD10 <- codes_ICD10[codes_ICD10 != ""]
+    codes_ICD10 <- codes_ICD10[codes_ICD10 != "" & !is.na(codes_ICD10)]
     # Get IDs of individuals with these codes recorded in UKB
     match_ids_secondary <- apply(secondary_care, 1, function (eid_row) {
       if (any(codes_ICD9 %in% eid_row[ICD9_cols]) | 
