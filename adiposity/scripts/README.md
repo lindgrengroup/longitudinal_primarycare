@@ -8,8 +8,9 @@ Scripts in this folder:
 6. **6_adjust_slopes.R** - Run linear models to adjust raw slopes for a range of covariates with nested models. Calculate variance explained by baseline model covariates and compare models with ANOVA.
 7. **7_adjust_slope_groups.R** - Choose best model and calculate groups (gainers, quartiles, etc.).
 8. **phenotype_enrichment.R** - Fisher's enrichment test for disease codes (Spiros, primary + secondary care) in specific groups (ex. gainers) as compared to cohort.
-9. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data, raw slopes (and trajectories), and adjusted slopes (and trajectories).
-10. **focus_BMI_WHR_overlap.R** - Data summaries and enrichment tests for individuals with both BMI and WHR trajectories in the data.
+9. **prepare_GWAS.R** - Perform genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Get GWAS phenotype - RINTed adjusted slope - for QCd individuals in full cohort as well as in only gainers.
+10. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data, raw slopes (and trajectories), and adjusted slopes (and trajectories).
+11. **focus_BMI_WHR_overlap.R** - Data summaries and enrichment tests for individuals with both BMI and WHR trajectories in the data.
 
 ARCHIVED:
 
