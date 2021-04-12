@@ -280,6 +280,32 @@ pdf("plots/descriptive_factors/binned_mean_trajectories.pdf", onefile = T)
 print(traj_plots)
 dev.off()
 
+# Plot sample trajectories ----
+
+sample_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(SS_STRATA, function (s) {
+    df <- adiposity[[p]][[s]]
+    ids <- sample(df$eid, 10, replace = F)
+    
+    plot_df <- long_adiposity[[p]]
+    plot_df <- subset(plot_df, plot_df$eid %in% ids)
+    
+    p <- ggplot(plot_df, aes(x = age_event, y = value, group = eid)) +
+      geom_line() +
+      geom_point() +
+      labs(x = "age (years)", y = "Adiposity trait value", 
+           title = s)
+    return (p)
+  })
+  names(res) <- SS_STRATA
+  pdf(paste0("plots/descriptive_factors/sample_trajectories_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(sample_trajectories) <- PHENOTYPES
+
 # Construct raw slope summary table ----
 
 rs_table <- lapply(PHENOTYPES, function (p) {
@@ -395,6 +421,46 @@ rs_quartile_trajectories <- lapply(PHENOTYPES, function (p) {
   return (res)
 })
 names(rs_quartile_trajectories) <- PHENOTYPES
+
+# Plot correlations between raw slope and model covariates ----
+
+rs_correlations <- lapply(PHENOTYPES, function (p) {
+  
+  res <- lapply(SC_STRATA, function (s) {
+    df <- raw_slopes[[p]][[s]][, c("eid", "raw_slope", 
+                             "sex", "ancestry", 
+                             "FU_n", "FUyrs", 
+                             "baseline_age", "height", 
+                             "baseline_BMI", "baseline_trait")]
+    # Sample 1000 IDs to plot because otherwise too many to interpret
+    SAMPLE_IDS <- sample(df$eid, min(1000, nrow(df)), replace = F)
+    # But calculate correlations from all
+    plot_df <- pivot_longer(df, cols = c(FU_n, FUyrs, baseline_age, height,
+                                         baseline_BMI, baseline_trait),
+                            names_to = "covariate", values_to = "covariate_value")
+    point_plots <- subset(plot_df, plot_df$eid %in% SAMPLE_IDS)
+    
+    # Plot correlations 
+    res <- ggplot(plot_df, aes(x = covariate_value, y = raw_slope,
+                               color = sex, fill = sex)) +
+      facet_wrap(~covariate, ncol = 2, scales = "free_x") + 
+      geom_point(data = point_plots, 
+                 aes(x = covariate_value, y = raw_slope, color = sex),
+                 alpha = 0.5) +
+      geom_smooth(method = "lm") +
+      labs(x = "Covariate value", y = "Raw slope", 
+           title = paste(unique(df$ancestry), "ancestry"))
+    
+    return (res)
+  })
+  names(res) <- SC_STRATA
+  pdf(paste0("plots/raw_slopes/covariate_correlations_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(rs_correlations) <- PHENOTYPES
 
 
 # DEBUGGING: # Plot characteristics of q1 vs q4 by raw slope, white ----
