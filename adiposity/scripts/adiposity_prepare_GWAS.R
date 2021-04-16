@@ -312,6 +312,7 @@ passed_QC <- lapply(PHENOTYPES, function (p) {
 })
 passed_QC <- unique(unlist(passed_QC))
 
+passed_QC <- data.frame("FID" = passed_QC, "IID" = passed_QC)
 write.table(passed_QC, "GWAS/eids_passed_QC.txt", 
             sep = "\t", col.names = F, row.names = F, quote = F)
 
