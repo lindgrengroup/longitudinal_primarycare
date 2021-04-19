@@ -99,8 +99,14 @@ plot_mean_traj <- lapply(STRATA, function (s) {
     geom_ribbon(aes(ymin = mean_value - se_value, 
                     ymax = mean_value + se_value),
                 alpha = 0.2) +
-    scale_fill_brewer(palette = "Set1") +
-    scale_color_brewer(palette = "Set1") +
+    scale_fill_manual(values = c("BMIg-WHRg" = "#984EA3",
+                                 "BMIg-WHRl" = "#4DAF4A",
+                                 "BMIl-WHRg" = "#377EB8",
+                                 "BMIl-WHRl" = "#E41A1C")) +
+    scale_color_manual(values = c("BMIg-WHRg" = "#984EA3",
+                                  "BMIg-WHRl" = "#4DAF4A",
+                                  "BMIl-WHRg" = "#377EB8",
+                                  "BMIl-WHRl" = "#E41A1C")) +
     labs(x = "Age bin (years)", y = "Mean (S.E.) of adiposity",
          title = s)
   return (p)

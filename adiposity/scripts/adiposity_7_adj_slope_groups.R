@@ -8,7 +8,7 @@ theme_set(theme_bw())
 # Read stratified covariate data and adjustment models ----
 
 covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/raw_slopes_and_covars.rds")
-models <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/adj_slope_models.rds")
+models <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/final_adj_model.rds")
 
 PHENOTYPES <- names(models)
 STRATA <- names(models[[1]])
@@ -21,7 +21,7 @@ slope_resids <- lapply(PHENOTYPES, function (p) {
     covs <- covars[[p]][[s]]
     # Pick the residuals from the most suitable model
     res <- covs
-    res$residual <- ms$m4a3$residuals
+    res$residual <- ms$residuals
     # Flag the gainers 
     res$gainer <- res$residual > 0
     return (res)
