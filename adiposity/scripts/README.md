@@ -1,6 +1,6 @@
 Scripts in this folder:
 
-MAIN ANALYSES
+# MAIN ANALYSES
 1. **1_get_phenotypes.R** - Gather primary care trait measurements and adds same traits from UKBIOBANK, removes individuals without repeat measures.
 2. **2_clean_phenotypes.R** - For each trait, QC on age, implausible and extreme values, and remove individuals without repeat measures. Flags pregnancy. Inter-converts all BMI and weight measures.
 3. **3_plot_QC.R** - Visual inspection for unrealistically large jumps between time-points. Remove measurements causing unrealistic jump.
@@ -14,15 +14,15 @@ MAIN ANALYSES
 ## Latent GMMs
 5. 
 
-PLOTTING, DESCRIPTIVE TABLES, ETC.
+# PLOTTING, DESCRIPTIVE TABLES, ETC.
 1. **compare_adj_slope_models.R** - ANOVA, AIC, etc. to compare models for slope adjustment, plot mean trajectories by different model quartiles to compare effect of adjustment.
 2. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data, raw slopes (and trajectories), and adjusted slopes (and trajectories).
 
-PHENOTYPE ENRICHMENT
+# PHENOTYPE ENRICHMENT
 1. **female_phenotype_enrichment.R** - Get age at menarche, age at menopause, and number of live births from UKB to compare distributions in different slope quartiles in women.
 2. **phenotype_enrichment.R** - Fisher's enrichment test for disease codes (Spiros, primary + secondary care) in specific groups (ex. gainers) as compared to cohort.
 
-GWAS
+# GWAS
 1. **prepare_GWAS_sample_QC.R** - Perform genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Get GWAS phenotype - RINTed adjusted slope - for QCd individuals in full cohort as well as in only gainers.
 
 MULTIVARIATE ANALYSES, PLOTS, ENRICHMENT, ETC.
