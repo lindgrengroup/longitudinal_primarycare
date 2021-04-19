@@ -25,11 +25,11 @@ Scripts in this folder:
 # GWAS
 1. **prepare_GWAS_sample_QC.R** - Perform genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Get GWAS phenotype - RINTed adjusted slope - for QCd individuals in full cohort as well as in only gainers.
 
-MULTIVARIATE ANALYSES, PLOTS, ENRICHMENT, ETC.
+# MULTIVARIATE ANALYSES, PLOTS, ENRICHMENT, ETC.
 1. **focus_BMI_WHR_overlap.R** - Data summaries and enrichment tests for individuals with both BMI and WHR trajectories in the data.
 2. **multivariate_report_characteristics.R** - Data summaries, overlaps, and trajectories for individuals who have more than one adiposity trait measured in the data.
 
-ARCHIVED:
+# ARCHIVED:
 
 1. **bmi_basic_stats.R** - Gathers primary care BMI measures, adds information from UKBIOBANK on sex, date of birth, and mean UKBIOBANK BMI, calculates age at measurement; then plots basic information such as age distribution, sex distribution, etc. of primary care BMI measures
 2. **bmi_popn_outlier_removal.R** - Removes population-level noise by calculating thresholds based on UKBIOBANK-measured BMI and trajectories of extreme individuals 
