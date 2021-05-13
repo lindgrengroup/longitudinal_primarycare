@@ -35,7 +35,7 @@ slope_summaries <- lapply(PHENOTYPES, function (p) {
                                 sub_covars$ancestry == STRATA[[p]]$ancestry[si]]
     dat <- subset(adipo, adipo$eid %in% si_eids)
     # mixed effects model for adiposity on age
-    mixed_model <- lmer(value ~ age_event + (age_event | eid), 
+    mixed_model <- lmer(value ~ age_event + (1 + age_event | eid), 
                         data = dat, REML = F)
     # produce a new variable for the random slope
     rs <- ranef(mixed_model)$eid$age_event

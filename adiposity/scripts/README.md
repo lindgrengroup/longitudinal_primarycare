@@ -1,6 +1,8 @@
 Scripts in this folder:
 
 ## MAIN ANALYSES
+
+### General
 1. **1_get_phenotypes.R** - Gather primary care trait measurements and adds same traits from UKBIOBANK, removes individuals without repeat measures.
 2. **2_clean_phenotypes.R** - For each trait, QC on age, implausible and extreme values, and remove individuals without repeat measures. Flags pregnancy. Inter-converts all BMI and weight measures.
 3. **3_plot_QC.R** - Visual inspection for unrealistically large jumps between time-points. Remove measurements causing unrealistic jump.
@@ -11,7 +13,7 @@ Scripts in this folder:
 6. **6_adjust_slopes.R** - Run linear models to adjust raw slopes for a range of covariates with nested models. Calculate variance explained by baseline model covariates and compare models with ANOVA. (6a) picks the best model to carry forward.
 7. **7_adjust_slope_groups.R** - Calculate groups (gainers, quartiles, etc.).
 
-### Latent GMMs
+### Spline mixed models
 5. 
 
 ## PLOTTING, DESCRIPTIVE TABLES, ETC.
