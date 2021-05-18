@@ -14,7 +14,8 @@ Scripts in this folder:
 7. **7_adjust_slope_groups.R** - Calculate groups (gainers, quartiles, etc.).
 
 ### Spline mixed models
-5. 
+5. **5_raw_slopes.R** - Perform mixed effects regression with splines (NKNOTS = 8 for BMI and 3 for WHR) with fixed and random effects for individual and age, regressing adiposity trait on age. Calculate BLUP for raw slope for each individual, flag outliers > 5 S.D. away from mean in each stratum. (5a) plots the predictions from these models.
+6. **6_adjust_slopes.R** - Run linear models to adjust raw slopes for covariates picked above (baseline age, baseline age-squared, baseline adiposity trait, number of follow-up years and number of follow-up measures, first 21 genetic principal components, and sex in sex-combined analyses).
 
 ## PLOTTING, DESCRIPTIVE TABLES, ETC.
 1. **compare_adj_slope_models.R** - ANOVA, AIC, etc. to compare models for slope adjustment, plot mean trajectories by different model quartiles to compare effect of adjustment.
