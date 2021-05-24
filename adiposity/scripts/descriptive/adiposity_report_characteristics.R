@@ -306,6 +306,88 @@ sample_trajectories <- lapply(PHENOTYPES, function (p) {
 })
 names(sample_trajectories) <- PHENOTYPES
 
+# Plot change in trait vs mean trait (sample) ----
+
+change_mean_dfs <- lapply(PHENOTYPES, function (pheno) {
+  res <- long_adiposity[[pheno]] %>% group_by(eid) %>%
+    arrange(age_event, .by_group = T) %>% 
+    mutate(mean_value_t1t2 = (value + lag(value))/2,
+           value_change = value - lag(value),
+           age_change = age_event - lag(age_event),
+           value_change_t1t2 = value_change / age_change)
+})
+
+sample_trajectories <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(SS_STRATA, function (s) {
+    df <- adiposity[[p]][[s]]
+    ids <- sample(df$eid, 10, replace = F)
+    
+    plot_df <- change_mean_dfs[[p]]
+    plot_df <- subset(plot_df, plot_df$eid %in% ids)
+    
+    p <- ggplot(plot_df, aes(x = mean_value_t1t2, 
+                             y = value_change_t1t2, group = eid)) +
+      geom_line() +
+      geom_point() +
+      labs(x = "Mean adiposity trait value", y = "Change in adiposity / time", 
+           title = s)
+    return (p)
+  })
+  names(res) <- SS_STRATA
+  pdf(paste0("plots/descriptive_factors/sample_change_v_mean_", p, ".pdf"),
+      onefile = T)
+  print(res)
+  dev.off()
+  return (res)
+})
+names(sample_trajectories) <- PHENOTYPES
+
+# Plot change in trait vs mean trait (binned) ----
+
+binned_adipo <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(SS_STRATA, function (s) {
+    # Calculate mean and SE in each trait bin in each strata
+    df <- change_mean_dfs[[p]]
+    trait_bin_cuts <- seq(min(df$mean_value_t1t2, na.rm = T), 
+                          max(df$mean_value_t1t2, na.rm = T), 
+                          length.out = 11)
+    
+    df$trait_bin <- cut(df$mean_value_t1t2, trait_bin_cuts, include.lowest = T)
+    res <- df %>% group_by(trait_bin) %>% 
+      summarise(count = n(),
+                mean_change_value = mean(value_change_t1t2, na.rm = T),
+                se_value = sd(value_change_t1t2)/sqrt(count))
+    res$ancestry <- strsplit(s, "_")[[1]][1]
+    res$sex <- strsplit(s, "_")[[1]][2]
+    return (res)
+  })
+  res <- bind_rows(res)
+  return (res)
+})
+names(binned_adipo) <- PHENOTYPES
+
+traj_plots <- lapply(PHENOTYPES, function (p) {
+  
+  res <- ggplot(binned_adipo[[p]], aes(x = age_bin, y = mean_value,
+                                       group = ancestry,
+                                       color = ancestry, fill = ancestry)) +
+    facet_wrap(~sex, nrow = 2) +
+    geom_point() +
+    geom_path() +
+    geom_ribbon(aes(ymin = mean_value - se_value, ymax = mean_value + se_value),
+                alpha = 0.2) +
+    scale_fill_brewer(palette = "Dark2") +
+    scale_color_brewer(palette = "Dark2") +
+    labs(x = "Age bin (years)", y = "Mean (S.E.) of adiposity",
+         title = p)
+  return (res)
+})
+names(traj_plots) <- PHENOTYPES
+
+pdf("plots/descriptive_factors/binned_mean_trajectories.pdf", onefile = T)
+print(traj_plots)
+dev.off()
+
 # Construct raw slope summary table ----
 
 rs_table <- lapply(PHENOTYPES, function (p) {
@@ -652,3 +734,4 @@ gainer_status_trajectories <- lapply(PHENOTYPES, function (p) {
   return (res_plots)
 })
 names(gainer_status_trajectories) <- PHENOTYPES
+
