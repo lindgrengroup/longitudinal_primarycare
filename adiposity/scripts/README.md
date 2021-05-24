@@ -17,6 +17,10 @@ Scripts in this folder:
 5. **5_raw_slopes.R** - Perform mixed effects regression with splines (NKNOTS = 8 for BMI and 3 for WHR) with fixed and random effects for individual and age, regressing adiposity trait on age. Calculate BLUP for raw slope for each individual, flag outliers > 5 S.D. away from mean in each stratum. (5a) plots the predictions from these models.
 6. **6_adjust_slopes.R** - Run linear models to adjust raw BLUPs for covariates picked above (baseline age, baseline age-squared, baseline adiposity trait, number of follow-up years and number of follow-up measures, first 21 genetic principal components, and sex in sex-combined analyses).
 
+### Mixture models
+5. **5_baseline_models.R** - Run linear and spline mixed effects models in each sex- and ancestry-specific stratum (as above) with k = 1 to establish baseline model before increasing k. Outcome is adjusted trait value (adjusted for baseline age, baseline age-squared, baseline adiposity trait, number of follow-up years and number of follow-up measures, first 21 genetic principal components, and sex in sex-combined analyses) Calculate BIC to compare linear and spline models.
+6. **6_stepwise_models.R** - After picking best baseline model (linear), run stepflexmix to go through k = 1:10. Plot BIC for each k-value and save the best model (with lowest BIC).
+
 ## PLOTTING, DESCRIPTIVE TABLES, ETC.
 1. **compare_adj_slope_models.R** - ANOVA, AIC, etc. to compare models for BLUP adjustment, plot mean trajectories by different model quartiles to compare effect of adjustment.
 2. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data, raw BLUPs (and trajectories), and adjusted BLUPs (and trajectories).
