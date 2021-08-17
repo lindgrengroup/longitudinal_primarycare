@@ -7,7 +7,8 @@ library(tidyverse)
 
 # Read dictionary to get to phenotype lists
 dictionary <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/annot_dictionary.txt",
-                       sep = "\t", header = T, stringsAsFactors = F)
+                       sep = "\t", header = T, stringsAsFactors = F,
+                       quote = "")
 UNIQ <- dictionary$unique_code
 
 # Read GP clinical file
