@@ -1,0 +1,15 @@
+**FILTER** EXCLUDED, Age at measurement < 20 years: 
+	Number of measurements = 5
+	Number of individuals = 4
+**FILTER** EXCLUDED, Age at measurement > 80 years: 
+	Number of measurements = 0
+	Number of individuals = 0
+**FILTER** EXCLUDED, Implausible value below 0:
+	Number of measurements = 0
+	Number of individuals = 0
+**FILTER** EXCLUDED, Implausible value above 105.237:
+	Number of measurements = 42564
+	Number of individuals = 3534
+**FILTER** EXCLUDED, Value > 5 S.D. away from population mean: 
+	Number of measurements = 998
+	Number of individuals = 34

@@ -1,0 +1,10 @@
+**FILTER** EXCLUDED, Age at measurement < 20 years: 
+	Number of measurements = 0
+	Number of individuals = 0
+**FILTER** EXCLUDED, Age at measurement > 80 years: 
+	Number of measurements = 0
+	Number of individuals = 0
+**No UKB implausible values**
+**FILTER** EXCLUDED, Value > 5 S.D. away from population mean: 
+	Number of measurements = 1
+	Number of individuals = 1
