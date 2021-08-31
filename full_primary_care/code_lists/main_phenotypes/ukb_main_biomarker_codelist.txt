@@ -20,8 +20,8 @@ VitaminD	Biomarkers	30890	30891	30896
 Basophills	Main	30160	53	
 BMI	Main	21001	53	
 Eosinophills	Main	30150	53	
-FEV1	Biomarkers	20150	53	
-FVC	Biomarkers	20151	53	
+FEV1	Biomarkers	3063	53	
+FVC	Biomarkers	3062	53	
 Haemoglobinconc	Main	30020	53	
 Haematocritperc	Main	30030	53	
 Height	Main	50	53	
