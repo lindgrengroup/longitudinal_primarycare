@@ -7,8 +7,8 @@ set.seed(051021)
 
 # Read adiposity and covariates data ----
 
-adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/QCd_adiposity.rds")
-covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/covariates.rds")
+adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/QCd_adiposity.rds")
+covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/covariates.rds")
 
 PHENOTYPES <- names(adiposity)
 
@@ -58,9 +58,9 @@ lapply(PHENOTYPES, function (p) {
 # Save test and train sets ----
 
 saveRDS(test_adiposity, 
-        "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/TEST_SET_adiposity.rds")
+        "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/TEST_SET_adiposity.rds")
 saveRDS(train_adiposity, 
-        "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/TRAINING_SET_adiposity.rds")
+        "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/TRAINING_SET_adiposity.rds")
 
 
 

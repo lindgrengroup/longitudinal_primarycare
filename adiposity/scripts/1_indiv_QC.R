@@ -10,7 +10,7 @@ library(lubridate)
 dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data_passed_popn_QC.rds")
 
 # Start QC log file
-qc_log <- "/well/lindgren/UKBIOBANK/samvida/adiposity/log_files/gp_only_longit_filter.txt"
+qc_log <- "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/log_files/gp_only_longit_filter.txt"
 
 PHENOTYPES <- c("BMI", "WC", "Weight", "WHR")
 
@@ -134,4 +134,4 @@ lapply(PHENOTYPES, function (p) {
   sink()
 })
 
-saveRDS(cleaned_adiposity, "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/QCd_adiposity.rds")
+saveRDS(cleaned_adiposity, "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/QCd_adiposity.rds")

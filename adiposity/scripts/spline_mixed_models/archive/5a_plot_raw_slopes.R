@@ -3,6 +3,7 @@
 
 library(lme4)
 library(gamm4)
+#library(merTools)
 library(tidyverse)
 theme_set(theme_bw())
 library(RColorBrewer)
@@ -120,19 +121,22 @@ fe_plots <- lapply(PHENO, function (p) {
     res <- bind_rows(linear_dat, spline_dat)
     res$strata <- s
     
-    plot_res <- ggplot(res, aes(x = age_event, y = mean,
-                                colour = fit_type, fill = fit_type)) +
-      geom_line() +
-      geom_ribbon(aes(ymin = mean - 1.96*se,
-                      ymax = mean + 1.96*se), alpha = 0.2) +
-      scale_color_brewer(palette = "Set1") +
-      scale_fill_brewer(palette = "Set1") +
-      labs(x = "Age (years)", y = "Predicted mean fixed effect (95% CI)",
-           title = paste(p, s))
-    
-    return (plot_res)
+    return (res)
   })
-  return (plot_dat)
+  plot_dat <- bind_rows(plot_dat)
+  
+  plot_res <- ggplot(plot_dat, aes(x = age_event, y = mean,
+                                   colour = fit_type, fill = fit_type)) +
+    facet_wrap(~strata, ncol = 2, scales = "free") +
+    geom_line() +
+    geom_ribbon(aes(ymin = mean - 1.96*se,
+                    ymax = mean + 1.96*se), alpha = 0.2) +
+    scale_color_brewer(palette = "Set1") +
+    scale_fill_brewer(palette = "Set1") +
+    labs(x = "Age (years)", y = "Predicted mean fixed effect (95% CI)",
+         title = p)
+  
+  return (plot_res)
 })
 
 pdf("plots/raw_slopes/fixed_effects_model_predictions.pdf", onefile = T)

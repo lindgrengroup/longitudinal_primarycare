@@ -7,9 +7,9 @@ theme_set(theme_bw())
 
 # Read test set, training set, and covariates ----
 
-test_adipo <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/TEST_SET_adiposity.rds")
-train_adipo <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/TRAINING_SET_adiposity.rds")
-covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/covariates.rds")
+test_adipo <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/TEST_SET_adiposity.rds")
+train_adipo <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/TRAINING_SET_adiposity.rds")
+covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/covariates.rds")
 
 PHENOTYPES <- names(covars)
 

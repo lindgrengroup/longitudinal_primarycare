@@ -6,14 +6,14 @@ library(lubridate)
 
 # Read files ----
 
-adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/QCd_adiposity.rds")
+adiposity <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/QCd_adiposity.rds")
 general_covars <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_demographic_covariates.txt",
                              sep = "\t", header = T, comment.char = "$",
                              stringsAsFactors = F)
 PHENOTYPES <- names(adiposity)
 
 # QC log file
-qc_log <- "/well/lindgren/UKBIOBANK/samvida/adiposity/log_files/gp_only_covariate_QC.txt"
+qc_log <- "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/log_files/gp_only_covariate_QC.txt"
 
 # Design covariate files for each adiposity trait ----
 
@@ -52,4 +52,4 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
 names(QCd_covars) <- PHENOTYPES
 
 # Save
-saveRDS(QCd_covars, "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/covariates.rds")
+saveRDS(QCd_covars, "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/covariates.rds")

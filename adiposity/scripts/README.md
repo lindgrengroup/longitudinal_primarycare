@@ -6,10 +6,11 @@ Scripts in this folder:
 1. **1_indiv_QC.R** - Following population QC, perform individual-level QC to remove observations causing large jumps (measured by fold-change), and only retain individuals with longitudinal measurements. 
 2. **2_calculate_covariates.R** - Calculate individual-level phenotyping (baseline age, baseline BMI, follow-up years, etc.) and genotyping (array, PCs) covariates. 
 3. **3a_split_test_train.R** and **3b_characterise_test_train.R** - Split the adiposity data into test (20%) and training data; characterise baseline covariates of the two datasets to check that the test set represents similar population to training. 
+4. **4_format_data_for_models.R** - Combine covariates and adiposity longitudinal data into a single dataframe, then split by sex (F, M, both) for sex-specific and sex-combined analyses.
 
-### Spline mixed models
-6. **6_slopes.R** - Perform mixed effects regression for each trait on linear and non-linear (spline) terms for age in the fixed and random effects, with the best model calculated by BIC. Calculate random + fixed effect coefficients for age-related terms for each individual, remove outliers > 5 S.D. away from mean in each term. Plot model predictions. Parses trait as command line argument, so submit jobs with **6_submit_slopes.sh**
-7. **7_find_clusters.R** - Cluster the fixed + random effect coefficients generated in the previous script with mixture model clustering, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
+### Regression spline mixed models
+5. **5a_test_increasing_degrees.R** - Run polynomial spline effects of age (fixed and random effect) for increasing degrees (1:10) and plot heatmap of fixed effect coefficients to determine number of degrees in final model.
+
 
 ### Cross-sectional (baseline)
 6. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
@@ -52,4 +53,9 @@ Scripts in this folder:
 ### Mixture models - ARCHIVED
 1. **5_baseline_models.R** - Run linear and spline mixed effects models in each sex- and ancestry-specific stratum (as above) with k = 1 to establish baseline model before increasing k. Outcome is adjusted trait value (adjusted for baseline age, baseline age-squared, baseline adiposity trait, number of follow-up years and number of follow-up measures, first 21 genetic principal components, and sex in sex-combined analyses) Calculate BIC to compare linear and spline models.
 2. **6_stepwise_models.R** - After picking best baseline model (linear), run stepflexmix to go through k = 1:10. Plot BIC for each k-value and save the best model (with lowest BIC).
+
+### Spline mixed models - ARCHIVED
+1. **6_slopes.R** - Perform mixed effects regression for each trait on linear and non-linear (spline) terms for age in the fixed and random effects, with the best model calculated by BIC. Calculate random + fixed effect coefficients for age-related terms for each individual, remove outliers > 5 S.D. away from mean in each term. Plot model predictions. Parses trait as command line argument, so submit jobs with **6_submit_slopes.sh**
+2. **7_find_clusters.R** - Cluster the fixed + random effect coefficients generated in the previous script with mixture model clustering, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
+
 
