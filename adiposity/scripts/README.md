@@ -9,8 +9,8 @@ Scripts in this folder:
 4. **4_format_data_for_models.R** - Combine covariates and adiposity longitudinal data into a single dataframe, then split by sex (F, M, both) for sex-specific and sex-combined analyses.
 
 ### Regression spline mixed models
-5. **5a_test_increasing_degrees.R** - Run polynomial spline effects of age (fixed and random effect) for increasing degrees (1:10) and plot heatmap of fixed effect coefficients to determine number of degrees in final model.
-
+5. **5a_test_increasing_degrees.R** and **5b_apply_regression_models.R** - Run polynomial spline effects of age (fixed and random effect) for increasing degrees (1:10) and plot heatmap of fixed effect coefficients to determine number of degrees in final model. Once the polynomial degree is chosen (cubic), run natural cubic spline regression, adjusted for covariates, and save the random effect coefficients in each strata.
+6. **6_random_effect_distributions.R** - Plot coefficients of the random effect terms to check their distributions, and also test for association with baseline covariates. 
 
 ### Cross-sectional (baseline)
 6. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
