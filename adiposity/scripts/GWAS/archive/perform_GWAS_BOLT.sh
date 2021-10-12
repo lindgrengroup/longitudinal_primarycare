@@ -14,25 +14,27 @@ echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as use
 
 ##########################################################################################
 
-strata_name=`sed -n -e "$SGE_TASK_ID p" strata_filenames.txt`
+STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" strata_filenames.txt`
+FILE_NAME="$(echo $STRATA_NAME | cut -d'.' -f1)"
+TERM_NAME="$(echo $STRATA_NAME | cut -d'.' -f2)"
 
 /apps/well/bolt-lmm/2.3.2/bolt \
 --bed=/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_cal_chr{1:22}_v2.bed \
 --bim=/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_snp_chr{1:22}_v2.bim \
 --fam=/well/lindgren/UKBIOBANK/samvida/general_resources/BOLT-LMM/ukb11867_cal_chr1_v2_s488363_COL6NUMERIC.fam \
 --remove=/well/lindgren/UKBIOBANK/samvida/general_resources/BOLT-LMM/bolt.in_plink_but_not_imputed_AUTOSOMES.FID_IID.968.txt \
---phenoFile=slope_files/${strata_name}.txt \
---phenoCol=RINTed_resids \
---covarFile=slope_files/${strata_name}.txt \
---covarCol=genotyping_array \
+--phenoFile=traits_for_gwas/${FILE_NAME}.txt \
+--phenoCol=${TERM_NAME} \
 --LDscoresFile=/apps/well/bolt-lmm/2.3.2/tables/LDSCORE.1000G_EUR.tab.gz \
 --geneticMapFile=/apps/well/bolt-lmm/2.3.2/tables/genetic_map_hg19_withX.txt.gz \
 --lmm \
 --numThreads=8 \
---statsFile=BOLT_results/{strata_name}_assoc_cal.stats.gz \
+--statsFile=BOLT_results/${STRATA_NAME}_assoc_cal.stats.gz \
 --bgenFile=/well/lindgren/UKBIOBANK/DATA/IMPUTATION/ukb_imp_chr{1:22}_v3.bgen \
---bgenMinMAF=0.001 \
+--bgenMinMAF=0.0001 \
 --bgenMinINFO=0.3 \
 --sampleFile=/well/lindgren/UKBIOBANK/DATA/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
---statsFileBgenSnps=BOLT_results/${strata_name}_assoc_imp.stats.gz \
+--statsFileBgenSnps=BOLT_results/${STRATA_NAME}_assoc_imp.stats.gz \
 --verboseStats
+
+cat BOLT_results/${STRATA_NAME}_assoc_cal.stats.gz BOLT_results/${STRATA_NAME}_assoc_imp.stats.gz > BOLT_results/${STRATA_NAME}_assoc.stats.gz
