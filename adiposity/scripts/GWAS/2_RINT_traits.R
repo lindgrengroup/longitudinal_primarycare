@@ -16,39 +16,30 @@ rand_effs <- lapply(PHENOTYPES, function (p) {
 names(rand_effs) <- PHENOTYPES
 SEX_STRATA <- names(rand_effs[[1]])
 
+# IDs that passed sample QC for GWAS 
+qcd_ids <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/ids_passed_qc_211015.txt", 
+                      sep = "\t", header = T)
+
 # Covariates file (general and trait-specific) 
 covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/covariates.rds")
-PCs <- paste0("PC", 1:21)
-COVARS_LIST <- c("baseline_trait", "genotyping.array", "UKB_assmt_centre",
-                 PCs)
 
-# IDs that passed sample QC for GWAS 
-qcd_ids <- lapply(PHENOTYPES, function (p) {
-  res_list <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/", 
-                             p, "_ids_passed_qc_", sx, ".txt"),
-                      sep = "\t", header = T)
-    return (res)
-  })
-  names(res_list) <- SEX_STRATA
-  return (res_list)
-})
-names(qcd_ids) <- PHENOTYPES
+COVARS_LIST <- c("baseline_trait", "UKB_assmt_centre")
 
 # Keep ids that pass QC and relevant covariates ----
 
 full_dat <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
-    res <- rand_effs[[p]][[s]]
+    res <- rand_effs[[p]][[sx]]
     # Subset to ids that passed QC
-    res <- subset(res, res$eid %in% qcd_ids[[p]][[s]]$eid)
+    res <- subset(res, res$eid %in% qcd_ids$IID)
     # Remove (intercept) column as that's not used for GWAS
     res <- res[, which(colnames(res) != "(Intercept)")]
     # Merge in covariates
-    res <- merge(res, covars[[p]][, c("eid", "sex", PCs, "baseline_trait")],
+    res <- merge(res, covars[[p]][, c("eid", "sex", "baseline_trait")],
                  by = "eid")
-    # Merge in genotyping array
-    res <- merge(res, qcd_ids[[p]][[s]], by = "eid")
+    # Merge in UKB assessment centre
+    res <- merge(res, qcd_ids[, c("IID", "UKB_assmt_centre")], 
+                 by.x = "eid", by.y = "IID")
     return (res)
   })
   names(res_list) <- SEX_STRATA
@@ -65,7 +56,8 @@ adj_and_rint <- function (tm_name, sx, dat) {
   }
   # Formula for adjustment
   mod_formula <- 
-    formula(paste0(tm_name, " ~ ", paste(COVARS_LIST, collapse = " + ")))
+    formula(paste0(tm_name, " ~ ", paste(COVARS_LIST, 
+                                         collapse = " + ")))
   # Get residuals
   mod_resid <- lm(mod_formula, data = dat)$residuals
   # RINT
@@ -79,7 +71,8 @@ adj_and_rint <- function (tm_name, sx, dat) {
 adj_rint_slopes <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
     df <- full_dat[[p]][[sx]]
-    tms_to_rint <- colnames(df)[!colnames(df) %in% c("eid", "sex", COVARS_LIST)]
+    tms_to_rint <- colnames(df)[!colnames(df) %in% 
+                                  c("eid", "IID", "sex", COVARS_LIST)]
     rinted_cols <- lapply(tms_to_rint, function (tm) {
       return (adj_and_rint(tm, sx, df))
     })

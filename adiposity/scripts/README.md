@@ -14,7 +14,9 @@ Scripts in this folder:
 
 ### GWAS
 1. **1_sample_QC.R** - Genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Save sample ids that pass QC along with genotyping-related covariates, i.e. genotyping array and UKB assessment centre.
-2. **2_RINT_traits.R** - Get GWAS phenotype, i.e. adjust the spline coefficients for covariates (baseline trait value, sex, genetic PCs, genotyping array, and UKB assessment centre) and rank-based inverse normal transform the residuals within each sex strata.
+2. **2_RINT_traits.R** - Get GWAS phenotype, i.e. adjust the spline or LMM coefficients for covariates and rank-based inverse normal transform the residuals within each sex strata.
+3. **3_perform_GWAS_BOLT.sh** - Array job (for all traits and strata) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank. 
+4. **4_filter_GWAS_results.R** - Filter GWAS results based on MAF (>0.1%), HWE pvalue (>1E-06), missingness (<5%), remove implausible standard errors (>10), and duplicate SNPs. Plot QQ-plots in different MAF bins and plot overall Manhattan plot for results.
 
 ### Cross-sectional (baseline)
 6. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
