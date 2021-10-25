@@ -70,12 +70,12 @@ duplicate_snps <- function (qc_log, dat) {
   tmp <- dat
   tmp$marker_name <- paste0(tmp$CHROM, ":", tmp$GENPOS, ":", 
                             tmp$ALLELE1, tmp$ALLELE0)
-  tmp$dups <- duplicated(dat$marker_name, fromLast = F) | 
-                       duplicated(dat$marker_name, fromLast = T)
+  tmp$dups <- duplicated(tmp$marker_name, fromLast = F) | 
+    duplicated(tmp$marker_name, fromLast = T)
   res <- tmp %>% filter(!dups)
   
   res <- res[, colnames(dat)]
-
+  
   sink(qc_log, append = T)
   cat(paste0("\t", 
              "# SNPs removed due to duplicates: ", 
