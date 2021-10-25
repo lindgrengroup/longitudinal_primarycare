@@ -8,6 +8,11 @@ Scripts in this folder:
 3. **3a_split_test_train.R** and **3b_characterise_test_train.R** - Split the adiposity data into test (20%) and training data; characterise baseline covariates of the two datasets to check that the test set represents similar population to training. 
 4. **4_format_data_for_models.R** - Combine covariates and adiposity longitudinal data into a single dataframe, then split by sex (F, M, both) for sex-specific and sex-combined analyses.
 
+### Linear mixed models
+5. **5_apply_lmms.R** - Build linear mixed effects models for effect of time (from baseline measurement) on trait, allowing for fixed and random intercepts and slopes; adjust for covariates (sex and genetic PCs). Calculate best linear unbiased predictor (BLUP) as the fixed + random effect for each individual. 
+6. **6_BLUP_distributions.R** - Plot BLUPs to check their distributions, and test for association of BLUPs with baseline covariates.
+7. **7_predictive_accuracy.R** - Predict from models to held-out test dataset and calculate mean squared error and mean absolute error of predictions.
+
 ### Regression spline mixed models
 5. **5a_test_increasing_degrees.R** and **5b_apply_regression_models.R** - Run polynomial spline effects of age (fixed and random effect) for increasing degrees (1:10) and plot heatmap of fixed effect coefficients to determine number of degrees in final model. Once the polynomial degree is chosen (cubic), run natural cubic spline regression, adjusted for covariates, and save the random effect coefficients in each strata.
 6. **6_random_effect_distributions.R** - Plot coefficients of the random effect terms to check their distributions, and also test for association with baseline covariates. 
