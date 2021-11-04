@@ -3,14 +3,15 @@ Scripts in this folder:
 ## MAIN ANALYSES
 
 ### Linear mixed models
-1. **1_apply_lmms.R** and **1a** and **1b** - Build linear mixed effects models for effect of time (from baseline measurement) on trait, allowing for fixed and random intercepts and slopes; adjust for covariates (baseline age, age-squared, sex, genetic PCs, and data provider). Calculate best linear unbiased predictor (BLUP) as the fixed + random effect for each individual. 1(a) and 1(b) are visualisation tools to plot predictions from LMMs and distribution of BLUPs.
+1. **1_apply_lmms.R** - Build linear mixed effects models for effect of time (from baseline measurement) on trait, allowing for fixed and random intercepts and slopes; adjust for covariates (baseline age, age-squared, sex, genetic PCs, and data provider). Calculate best linear unbiased predictor (BLUP) as the fixed + random effect for each individual. 
+2. **2a_** and **2b_** - Visualisation tools to plot predictions from LMMs and distribution of BLUPs.
 
 ### Regression spline mixed models
 5. **5a_test_increasing_degrees.R** and **5b_apply_regression_models.R** - Run polynomial spline effects of age (fixed and random effect) for increasing degrees (1:10) and plot heatmap of fixed effect coefficients to determine number of degrees in final model. Once the polynomial degree is chosen (cubic), run natural cubic spline regression, adjusted for covariates, and save the random effect coefficients in each strata.
 6. **6_random_effect_distributions.R** - Plot coefficients of the random effect terms to check their distributions, and also test for association with baseline covariates. 
 
 ### GWAS
-1. **1_sample_QC.R** - Genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Save sample ids that pass QC along with genotyping-related covariates, i.e. genotyping array and UKB assessment centre.
+1. **1_sample_QC.R** - Genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Save sample ids that pass QC along with genotyping-related covariates, i.e. genotyping array and UKB assessment centre. This only needs to be run once for each strata, as all models share the same individuals.
 2. **2_RINT_traits.R** - Get GWAS phenotype, i.e. adjust the spline or LMM coefficients for covariates and rank-based inverse normal transform the residuals within each sex strata.
 3. **3_perform_GWAS_BOLT.sh** - Array job (for all traits and strata) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank. 
 4. **4_filter_GWAS_results.R** - Filter GWAS results based on MAF (>0.1%), HWE pvalue (>1E-06), missingness (<5%), remove implausible standard errors (>10), and duplicate SNPs. Plot QQ-plots in different MAF bins and plot overall Manhattan plot for results.

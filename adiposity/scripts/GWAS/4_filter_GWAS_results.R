@@ -17,7 +17,7 @@ args <- commandArgs(trailingOnly = T)
 STRATA <- args[1]
 
 filename <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_results/",
-                   STRATA, "_assoc.stats.gz")
+                   STRATA, "_lmm_assoc.stats.gz")
 
 log_file <- "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/log_files/post_GWAS_filtering.txt"
 
@@ -71,11 +71,11 @@ duplicate_snps <- function (qc_log, dat) {
   tmp$marker_name <- paste0(tmp$CHROM, ":", tmp$GENPOS, ":", 
                             tmp$ALLELE1, tmp$ALLELE0)
   tmp$dups <- duplicated(tmp$marker_name, fromLast = F) | 
-    duplicated(tmp$marker_name, fromLast = T)
+                       duplicated(tmp$marker_name, fromLast = T)
   res <- tmp %>% filter(!dups)
   
   res <- res[, colnames(dat)]
-  
+
   sink(qc_log, append = T)
   cat(paste0("\t", 
              "# SNPs removed due to duplicates: ", 
@@ -120,14 +120,14 @@ if (file.exists(filename)) {
   sink()
   
   saveRDS(cleaned, 
-          paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/GWAS/BOLT_filtered/", 
-                 STRATA, ".rds"))
+          paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_filtered/", 
+                 STRATA, "_lmm.rds"))
 }
 
 # QQ plots and lambdaGC in each MAF bin ----
 
 gwas_dat <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_filtered/", 
-                           STRATA, ".rds"))
+                           STRATA, "_lmm.rds"))
 
 maf_max_for_bins <- c(0.001, 0.01, 0.05, 0.1, 0.5)
 NBINS <- length(maf_max_for_bins) - 1
@@ -156,7 +156,7 @@ qq_plots <- lapply(1:NBINS, function (i) {
                         ", lambda = ", lambdaGC),
          x = "Expected -log10(P)", y = "Observed -log10(P)")
   ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/qq_", 
-                STRATA, "_mafbin_", i, ".png"),
+                STRATA, "_lmm_mafbin_", i, ".png"),
          qq_BOLT)
 })
 
@@ -206,6 +206,6 @@ man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(P_BOLT_LMM_INF))) +
         panel.grid.minor.x = element_blank())
 
 ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/manhattan_", 
-              STRATA, ".png"),
+              STRATA, "_lmm.png"),
        width = 10, height = 5, units = "in", man_BOLT)
 

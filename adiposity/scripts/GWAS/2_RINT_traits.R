@@ -5,40 +5,56 @@ library(tidyverse)
 
 # Read data ----
 
-PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt",
-                         sep = "\t", header = F, stringsAsFactors = F)$V1
+# Name of term to RINT 
+TERM_TO_RINT <- "(Intercept)"
+result_prefix <- "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/lmm_intercepts"
 
-# Random effect coefficients
-rand_effs <- lapply(PHENOTYPES, function (p) {
-  readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/random_effect_terms_",
+# BLUP files
+PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt")$V1
+blups <- lapply(PHENOTYPES, function (p) {
+  res <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_blups_",
                  p, ".rds"))
+  res$eid <- rownames(res)
+  res <- res[, c("eid", TERM_TO_RINT)]
+  return (res)
 })
-names(rand_effs) <- PHENOTYPES
-SEX_STRATA <- names(rand_effs[[1]])
+names(blups) <- PHENOTYPES
 
-# IDs that passed sample QC for GWAS 
-qcd_ids <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/ids_passed_qc_211015.txt", 
-                      sep = "\t", header = T)
+SEX_STRATA <- names(blups[[1]])
+NPCs <- 21
+
+# IDs that passed sample QC
+ids_passed_qc <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(SEX_STRATA, function (sx) {
+    read.table(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/sample_qc/", 
+                      p, "_", sx, "_ids_passed_qc.txt"),
+               sep = "\t", header = T)
+  })
+  names(res) <- SEX_STRATA
+  return (res)
+})
+names(ids_passed_qc) <- PHENOTYPES
 
 # Covariates file (general and trait-specific) 
-covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/data/covariates.rds")
+covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/covariates.rds")[PHENOTYPES]
 
-COVARS_LIST <- c("baseline_trait", "UKB_assmt_centre")
+COVARS_LIST <- c("baseline_age", "age_sq", "FUyrs", "FU_n", 
+                 "UKB_assmt_centre")
 
-# Keep ids that pass QC and relevant covariates ----
+# Extract BLUP terms and relevant covariates ----
 
 full_dat <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
-    res <- rand_effs[[p]][[sx]]
-    # Subset to ids that passed QC
-    res <- subset(res, res$eid %in% qcd_ids$IID)
-    # Remove (intercept) column as that's not used for GWAS
-    res <- res[, which(colnames(res) != "(Intercept)")]
+    # Filter to samples that passed QC (previously calculated)
+    res <- blups[[p]][[sx]] %>% 
+      filter(eid %in% ids_passed_qc[[p]][[sx]]$IID)
     # Merge in covariates
-    res <- merge(res, covars[[p]][, c("eid", "sex", "baseline_trait")],
+    res <- merge(res, covars[[p]][, c("eid", "sex", 
+                                      COVARS_LIST[!COVARS_LIST == "UKB_assmt_centre"])],
                  by = "eid")
     # Merge in UKB assessment centre
-    res <- merge(res, qcd_ids[, c("IID", "UKB_assmt_centre")], 
+    res <- merge(res, 
+                 ids_passed_qc[[p]][[sx]][, c("IID", "UKB_assmt_centre")], 
                  by.x = "eid", by.y = "IID")
     return (res)
   })
@@ -49,44 +65,32 @@ names(full_dat) <- PHENOTYPES
 
 # Adjust coefficients for covariates and RINT ----
 
-adj_and_rint <- function (tm_name, sx, dat) {
-  # For sex-combined strata, adjust for sex
-  if (sx == "sex_comb") {
-    COVARS_LIST <- c(COVARS_LIST, "sex")
-  }
-  # Formula for adjustment
-  mod_formula <- 
-    formula(paste0(tm_name, " ~ ", paste(COVARS_LIST, 
-                                         collapse = " + ")))
-  # Get residuals
-  mod_resid <- lm(mod_formula, data = dat)$residuals
-  # RINT
-  rinted_resid <- qnorm((rank(mod_resid) - 0.5) / sum(!is.na(mod_resid)))
-  # Return formatted data
-  res <- data.frame(eid = dat$eid, adj_tm = rinted_resid)
-  colnames(res)[2] <- paste0("adj_", tm_name)
-  return (res)
-}
-
 adj_rint_slopes <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
     df <- full_dat[[p]][[sx]]
-    tms_to_rint <- colnames(df)[!colnames(df) %in% 
-                                  c("eid", "IID", "sex", COVARS_LIST)]
-    rinted_cols <- lapply(tms_to_rint, function (tm) {
-      return (adj_and_rint(tm, sx, df))
-    })
-    rinted_cols <- rinted_cols %>% reduce(inner_join, by = "eid") %>%
-      mutate(FID = eid, IID = eid)
-    rinted_cols <- rinted_cols[, c("FID", "IID",
-                                   colnames(rinted_cols)[grep("^adj", 
-                                                              colnames(rinted_cols))])]
+    # For sex-combined strata, adjust for sex
+    if (sx == "sex_comb") {
+      COVARS_LIST <- c(COVARS_LIST, "sex")
+    }
+    # Formula for adjustment
+    mod_formula <- 
+      formula(paste0(TERM_TO_RINT, " ~ ", paste(COVARS_LIST, 
+                                           collapse = " + ")))
+    # Get residuals
+    mod_resid <- lm(mod_formula, data = df)$residuals
+    # RINT
+    rinted_resid <- qnorm((rank(mod_resid) - 0.5) / sum(!is.na(mod_resid)))
+    # Return formatted data
+    res <- data.frame(FID = df$eid, 
+                      IID = df$eid,
+                      adj_trait = rinted_resid) 
+    
     # Write results to table
-    write.table(rinted_cols,
-                paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/", 
-                       p, "_", sx, ".txt"),
+    write.table(res,
+                paste0(result_prefix, "_", p, "_", sx, ".txt"),
                 sep = "\t", row.names = F, quote = F)
-    return (rinted_cols)
+    return (res)
   })
+  return ()
 })
 

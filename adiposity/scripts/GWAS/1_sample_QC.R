@@ -5,21 +5,26 @@ library(tidyverse)
 
 # Read data ----
 
-PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt",
-                         sep = "\t", header = F, stringsAsFactors = F)$V1
+PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt")$V1
+ids <- lapply(PHENOTYPES, function (p) {
+  readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_blups_",
+                 p, ".rds"))
+})
+names(ids) <- PHENOTYPES
+
+SEX_STRATA <- c("F", "M", "sex_comb")
+NPCs <- 21
 
 # IDs to put through QC
 sample_ids <- lapply(PHENOTYPES, function (p) {
-  df_list <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/random_effect_terms_",
-                            p, ".rds"))
-  get_ids <- lapply(df_list, function (df) {
-    res <- data.frame(eid = df$eid)
+  get_ids <- lapply(SEX_STRATA, function (sx) {
+    res <- data.frame(eid = ids[[p]][[sx]]$eid)
     return (res)
   })
+  names(get_ids) <- SEX_STRATA
   return (get_ids)
 })
 names(sample_ids) <- PHENOTYPES
-SEX_STRATA <- names(sample_ids[[1]])
 
 # QC file from UKBB
 qc <- read.table("/well/lindgren/UKBIOBANK/DATA/QC/ukb_sqc_v2.txt", header = T, 
@@ -41,8 +46,8 @@ colnames(pheno)[1] <- "eid"
 # Prepare data for genotyping QC ----
 
 for_gen_QC <- lapply(PHENOTYPES, function (p) {
-  res <- lapply(SEX_STRATA, function (s) {
-    df <- sample_ids[[p]][[s]]
+  res <- lapply(SEX_STRATA, function (sx) {
+    df <- sample_ids[[p]][[sx]]
     # Merge QC file info with slopes
     df <- merge(df, qc[, c("eid", "Submitted.Gender", "Inferred.Gender",
                            "het.missing.outliers", "excess.relatives",
@@ -52,7 +57,8 @@ for_gen_QC <- lapply(PHENOTYPES, function (p) {
                            "sample.qc.missing.rate",
                            "in.kinship.table",
                            "excluded.from.kinship.inference",
-                           "genotyping.array")], by = "eid")
+                           "genotyping.array",
+                           paste0("PC", 1:NPCs))], by = "eid")
     # Merge phenotype file info 
     # (f.22001.0.0: genotyped and recommended exclusion)
     # (f.54.0.0: UKB assessment centre)
@@ -88,6 +94,7 @@ remove_withdrawn_ids <- function (data, qc_log_file) {
 
 remove_negative_ids <- function (data, qc_log_file) {
   
+  data$eid <- as.numeric(data$eid)
   cleaned <- subset(data, data$eid > 0)
   
   sink(qc_log_file, append = T)
@@ -276,11 +283,11 @@ ukb_recommended_excl <- function (data, qc_log_file) {
 # Perform genotyping QC ----
 
 qcd_slopes <- lapply(PHENOTYPES, function (p) {
-  res <- lapply(SEX_STRATA, function (s) {
+  res <- lapply(SEX_STRATA, function (sx) {
     # Stratum data
-    data <- for_gen_QC[[p]][[s]]
+    data <- for_gen_QC[[p]][[sx]]
     qc_log_file <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/log_files/",
-                          p, "_", s, ".txt")
+                          p, "_", sx, ".txt")
     
     # Print sample characteristics before QC
     sink(qc_log_file, append = T)
@@ -298,8 +305,8 @@ qcd_slopes <- lapply(PHENOTYPES, function (p) {
     cleaned <- keep_white_british_ancestry(cleaned, qc_log_file)
     cleaned <- qc_het_miss(cleaned, qc_log_file)
     cleaned <- qc_excess_related(cleaned, qc_log_file)
-    cleaned <- qc_related(cleaned, qc_log_file)
-    cleaned <- qc_kinship_table(cleaned, qc_log_file)
+    # cleaned <- qc_related(cleaned, qc_log_file)
+    # cleaned <- qc_kinship_table(cleaned, qc_log_file)
     cleaned <- ukb_recommended_excl(cleaned, qc_log_file)
     
     return (cleaned)
@@ -313,11 +320,14 @@ names(qcd_slopes) <- PHENOTYPES
 
 ids_for_gwas <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    to_write <- 
-      qcd_slopes[[p]][[sx]][, c("eid", "genotyping.array", "UKB_assmt_centre")]
+    to_write <- qcd_slopes[[p]][[sx]] %>% 
+      mutate(FID = eid, IID = eid) %>%
+      select(FID, IID, genotyping.array, UKB_assmt_centre,
+             paste0("PC", 1:NPCs))
+    
     write.table(to_write, 
-                paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/", 
-                       p, "_ids_passed_qc_", sx, ".txt"), 
+                paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/sample_qc/", 
+                       p, "_", sx, "_ids_passed_qc.txt"), 
                 sep = "\t", row.names = F, quote = F)
     return ()
   })
