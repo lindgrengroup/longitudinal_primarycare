@@ -75,7 +75,7 @@ assoc_plots <- lapply(PHENOTYPES, function (p) {
            title = paste0("BLUP vs baseline age in ",
                           sx, " phenotype: ", p))
     
-    bl_trait_plot <- ggplot(to_plot, 
+    bl_trait_plot <- ggplot(all_terms, 
                             aes(x = baseline_trait, y = BLUP)) +
       facet_wrap(~term, scales = "free") +
       geom_point() + 
@@ -84,7 +84,7 @@ assoc_plots <- lapply(PHENOTYPES, function (p) {
            title = paste0("BLUP vs baseline trait in ",
                           sx, " phenotype: ", p))
     
-    fu_n_plot <- ggplot(to_plot, 
+    fu_n_plot <- ggplot(all_terms, 
                         aes(x = FU_n, y = BLUP)) +
       facet_wrap(~term, scales = "free") +
       geom_point() + 
@@ -93,7 +93,7 @@ assoc_plots <- lapply(PHENOTYPES, function (p) {
            title = paste0("BLUP vs # follow-ups in ",
                           sx, " phenotype: ", p))
     
-    fu_yrs_plot <- ggplot(to_plot, 
+    fu_yrs_plot <- ggplot(all_terms, 
                           aes(x = FUyrs, y = BLUP)) +
       facet_wrap(~term, scales = "free") +
       geom_point() + 
