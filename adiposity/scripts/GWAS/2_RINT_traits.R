@@ -14,8 +14,11 @@ PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/phe
 blups <- lapply(PHENOTYPES, function (p) {
   res <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_blups_",
                  p, ".rds"))
-  res$eid <- rownames(res)
-  res <- res[, c("eid", TERM_TO_RINT)]
+  res <- lapply(res, function (df) {
+    df$eid <- rownames(df)
+    df <- df[, c("eid", TERM_TO_RINT)]
+    return (df)
+  })
   return (res)
 })
 names(blups) <- PHENOTYPES
