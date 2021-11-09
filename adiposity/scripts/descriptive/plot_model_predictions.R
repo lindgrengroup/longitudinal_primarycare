@@ -157,8 +157,6 @@ create_prediction_df <- function (p, sx, ids) {
   return (pred_df)
 }
 
-
-
 ## Function to create plots ----
 
 sex_col_palette <- c("#F8766D", "#00BFC4", "#C77CFF")
@@ -176,9 +174,9 @@ plot_predictions <- function (p, sx, ids) {
   
   res <- ggplot(plot_dat, aes(x = t)) +
     facet_wrap(~eid, ncol = 5) +
-    geom_line(aes(y = fit, colour = model_strata)) +
     geom_point(data = raw_dat, aes(y = value),
                colour = "black") +
+    geom_line(aes(y = fit, colour = model_strata)) +
     scale_color_manual(values = sex_col_palette) +
     labs(x = "Time from baseline measurement (years)",
          y = p)
