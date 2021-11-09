@@ -6,8 +6,8 @@
 #$ -cwd
 #$ -P lindgren.prjc -q short.qc
 #$ -pe shmem 1
-#$ -t 1-18 -tc 6
-#$ -N Baseline_flexmix
+#$ -t 1-4 -tc 2
+#$ -N Adiposity_model_trajectories
 #$ -j y
 
 echo "########################################################"
@@ -19,11 +19,11 @@ echo "Username: "`whoami`
 echo "Started date: "`date`
 echo "##########################################################"
 
-STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" strata_filenames.txt`
+PHENO_NAME=`sed -n -e "$SGE_TASK_ID p" pheno_names.txt`
 
 module load R-bundle-Bioconductor/3.9-foss-2019a-R-3.6.0
 
-Rscript 5_baseline_models.R BMI $STRATA_NAME
+Rscript 1_apply_lmms.R $PHENO_NAME
 
 echo "###########################################################"
 echo "Finished at: "`date`
