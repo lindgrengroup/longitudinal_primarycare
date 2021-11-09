@@ -18,7 +18,7 @@ NPCs <- 21
 # IDs to put through QC
 sample_ids <- lapply(PHENOTYPES, function (p) {
   get_ids <- lapply(SEX_STRATA, function (sx) {
-    res <- data.frame(eid = ids[[p]][[sx]]$eid)
+    res <- data.frame(eid = rownames(ids[[p]][[sx]]))
     return (res)
   })
   names(get_ids) <- SEX_STRATA
