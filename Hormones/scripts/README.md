@@ -1,5 +1,11 @@
 Scripts in this folder:
 
+## GWAS
+1. **1_prep_cross_sec.R** - Gather primary care hormone measures from pre-QCd data, see README in *../../full_primary_care/* for details on how this data was generated. Get cross-sectional value and age as earliest observed value closest to each individual's median. Split the data by sex and in each sex strata as well as sex-combined, adjust for covariates (age, age-squared), and rank-based inverse normal transform the values. 
+2. **2_sample_QC.R** - Genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Save sample ids that pass QC along with genotyping-related covariates, i.e. genotyping array and UKB assessment centre. Write QCd trait files. 
+3. **3_perform_GWAS_BOLT.sh** - Array job (for all traits and strata) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank. 
+
+## Archived
 1. **get_basic_stats.R** - Gathers primary care hormone measures; then plots basic information such as age distribution, sex distribution, etc.
 2. **plot_trajectories.R** - Plots trajectories for individuals stratified by number of observations, overall change in hormone levels, etc. ADD MORE AS MORE WAYS TO LOOK AT DATA
 3. **define_case_controls.R** - Defines case IDs and three strategies for control IDs: random population cohort, rando non-case cohort, and matched (age, BMI) with "cases" as individuals with specified hormone measure
