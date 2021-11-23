@@ -159,7 +159,7 @@ qq_plots <- lapply(1:NBINS, function (i) {
                         ", lambda = ", lambdaGC),
          x = "Expected -log10(P)", y = "Observed -log10(P)")
   ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/GWAS/plots/qq_", 
-                STRATA, "mafbin_", i, ".png"),
+                STRATA, "_mafbin_", i, ".png"),
          qq_BOLT)
 })
 
