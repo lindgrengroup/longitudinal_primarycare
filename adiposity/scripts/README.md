@@ -9,7 +9,7 @@ Scripts in this folder:
 1. **1_apply_splines.R** - Build cubic spline mixed effects models for effect of age on trait, allowing for fixed and random intercepts and splines. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (sex, genetic PCs, and data provider). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
 
 ### Cross-sectional (baseline)
-6. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
+1. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
 
 
 ## PLOTTING AND DESCRIPTIVE STATISTICS
@@ -25,14 +25,14 @@ Change these scripts for each set of models, linear, cubic splines, etc.) -
 ## GWAS
 
 1. **1_sample_QC.R** - Genotyping-related sample quality control (ex. remove individuals with reported and genotyped sex mismatches, retain only individuals in the white British ancestry subset, samples with poor heterozygosity or missingness, etc.). Save sample ids that pass QC along with genotyping-related covariates, i.e. genotyping array and UKB assessment centre. This only needs to be run once for each strata, as all models share the same individuals.
-2. **2_RINT_traits.R** - Get GWAS phenotype, i.e. adjust the spline or LMM coefficients for covariates and rank-based inverse normal transform the residuals within each sex strata.
-  **2a_RINT_traits_within_b0_quartiles.R** - Perform same adjustments and transformations as (2) within each quartile of intercepts from linear mixed models.
-  **2b_collate_traits_PLINK.R** - Format phenotype files for PLINK software association testing.
-3. **3_perform_GWAS_BOLT.sh** - Array job (for all traits and strata) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank. 
-  **3b_perform_variant_assocns_PLINK.sh** - Array job (for all traits and strata) to test for associations of slopes, intercepts, or other model parameters with a subset of metabolic and endocrine variants (see ../general_scripts/extract_gwascat_variants.R for how this was generated) under the generalised linear model framework in PLINK. 
-  **3c_perform_variant_assocns_b0_quartiles_PLINK.sh** - Same as (3b) but phenotypes are split into quartiles based on intercepts from linear mixed models, as found in (2a). 
-4. **4_filter_GWAS_results.R** - Filter GWAS results based on MAF (>0.1%), HWE pvalue (>1E-06), missingness (<5%), remove implausible standard errors (>10), and duplicate SNPs. Plot QQ-plots in different MAF bins and plot overall Manhattan plot for results.
-  **4b_ and 4c_plot_qq_manhattan.R** - QQ plots and Manhattan plots for associations of various model parameters with subset of metabolic and endocrine variants (as described in ../general_scripts/extract_gwascat_variants.R)
+2. **2_RINT_traits.R** - Get GWAS phenotype, i.e. adjust the spline or LMM coefficients for covariates and rank-based inverse normal transform the residuals within each sex strata.\
+**2a_RINT_traits_within_b0_quartiles.R** - Perform same adjustments and transformations as (2) within each quartile of intercepts from linear mixed models.\
+**2b_collate_traits_PLINK.R** - Format phenotype files for PLINK software association testing.
+3. **3_perform_GWAS_BOLT.sh** - Array job (for all traits and strata) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank. \
+**3b_perform_variant_assocns_PLINK.sh** - Array job (for all traits and strata) to test for associations of slopes, intercepts, or other model parameters with a subset of metabolic and endocrine variants (see ../general_scripts/extract_gwascat_variants.R for how this was generated) under the generalised linear model framework in PLINK. \
+**3c_perform_variant_assocns_b0_quartiles_PLINK.sh** - Same as (3b) but phenotypes are split into quartiles based on intercepts from linear mixed models, as found in (2a). 
+4. **4_filter_GWAS_results.R** - Filter GWAS results based on MAF (>0.1%), HWE pvalue (>1E-06), missingness (<5%), remove implausible standard errors (>10), and duplicate SNPs. Plot QQ-plots in different MAF bins and plot overall Manhattan plot for results.\
+**4b_ and 4c_plot_qq_manhattan.R** - QQ plots and Manhattan plots for associations of various model parameters with subset of metabolic and endocrine variants (as described in *../general_scripts/extract_gwascat_variants.R*)
 
 ## PHENOTYPE ENRICHMENT
 1. **female_phenotype_enrichment.R** - Get age at menarche, age at menopause, and number of live births from UKB to compare distributions in different clusters in female-specific analyses.
