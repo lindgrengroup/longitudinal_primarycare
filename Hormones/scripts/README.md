@@ -6,6 +6,11 @@ Scripts in this folder:
 3. **3_perform_GWAS_BOLT.sh** - Array job (for all traits and strata) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank.
 4. **4_filter_GWAS_results.R** - Filter GWAS results based on MAF (>0.1%), HWE pvalue (>1E-06), missingness (<5%), remove implausible standard errors (>10), and duplicate SNPs. Plot QQ-plots in different MAF bins and plot overall Manhattan plot for results.
 
+## Phenotype ascertainment
+1. **0_generate_controls.R** - Create list of potential controls for hormone ascertainment tests, which consists of individuals of White British ancestry with at least one record in GP data, but none of the 9 hormones tested.
+2. **1a_phenome_wide_enrichment.R** - Fisher's test for enrichment of 307 binary disease codes (see *../../samvida_general/UKB_scripts/build_eid_phenotype_matrix.R* for details on how these were generated) in "cases" with a hormone measured in GP data vs "controls" generated above. Both sex-specific and sex-combined analyses performed. Important: this is time-agnostic, and disease diagnosis may be recorded at any time relative to hormone measurement.
+3. **2a_plot_phenome_wide_enrichment.R** - Manhattan-style PheWAS plots for enrichment test p-values.
+
 ## Archived
 1. **get_basic_stats.R** - Gathers primary care hormone measures; then plots basic information such as age distribution, sex distribution, etc.
 2. **plot_trajectories.R** - Plots trajectories for individuals stratified by number of observations, overall change in hormone levels, etc. ADD MORE AS MORE WAYS TO LOOK AT DATA
