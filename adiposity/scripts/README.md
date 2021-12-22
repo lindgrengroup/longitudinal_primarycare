@@ -20,7 +20,7 @@ Scripts in this folder:
 ### Modelling results - 
 Change these scripts for each set of models, linear, cubic splines, etc.) - 
 1. **plot_BLUP_distributions.R** - Plot randomly selected subset of BLUPs from models to check distributions as well as relationships between BLUPs and model covariates.
-2. **plot_model_predictions.R** - Plot individual-level model predictions for randomly selected individuals, those with ve3ry few or many repeat measures, at the tails of model BLUPs, etc.  
+2. **plot_model_predictions.R** - Plot individual-level model predictions for randomly selected individuals, those with very few or many repeat measures, at the tails of model BLUPs, etc.  
 
 ## GWAS
 

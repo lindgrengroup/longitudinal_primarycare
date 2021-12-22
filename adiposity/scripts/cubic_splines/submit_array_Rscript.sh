@@ -23,7 +23,7 @@ PHENO_NAME=`sed -n -e "$SGE_TASK_ID p" pheno_names.txt`
 
 module load R-bundle-Bioconductor/3.9-foss-2019a-R-3.6.0
 
-Rscript 1_apply_splines.R $PHENO_NAME
+Rscript tmp.R $PHENO_NAME
 
 echo "###########################################################"
 echo "Finished at: "`date`

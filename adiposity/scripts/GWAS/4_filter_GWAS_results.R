@@ -107,7 +107,7 @@ qq_plots <- lapply(1:NBINS, function (i) {
                         ", lambda = ", lambdaGC),
          x = "Expected -log10(P)", y = "Observed -log10(P)")
   ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/",
-                STRATA, "qq_", STRATA, "_lmm_intercepts_mafbin_", i, ".png"),
+                STRATA, "/qq_", STRATA, "_lmm_intercepts_mafbin_", i, ".png"),
          qq_BOLT)
 })
 
@@ -157,6 +157,6 @@ man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(P_BOLT_LMM_INF))) +
         panel.grid.minor.x = element_blank())
 
 ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/",
-              STRATA, "manhattan_", STRATA, "_lmm_intercepts.png"),
+              STRATA, "/manhattan_", STRATA, "_lmm_intercepts.png"),
        width = 10, height = 5, units = "in", man_BOLT)
 
