@@ -28,6 +28,7 @@ GWAS_res <- read.table(GWAS_zip, sep = "\t", header = T,
 # Prepare columns for cleaning
 to_numeric <- c("CHR", "BP", "F_MISS", "A1FREQ", "BETA", "SE",
                 "CHISQ_BOLT_LMM_INF", "P_BOLT_LMM_INF", "P_LINREG")
+
 GWAS_res <- GWAS_res %>% as_tibble() %>%
   mutate(across(all_of(to_numeric), as.numeric)) %>%
   mutate(maf = ifelse(A1FREQ < 0.5, A1FREQ, 1-A1FREQ))
@@ -69,10 +70,22 @@ sink(log_file, append = T)
 cat(paste0("\t", "# SNPs post-QC: ", nrow(cleaned), "\n"))
 sink()
 
-write.table(cleaned, 
+# Print file formatted for FUMA and LocusZoom ----
+
+# Sort results by chromosome and position and rename SNP to "chrN:pos"
+cleaned <- cleaned %>% arrange(CHR, BP) %>%
+  mutate(SNP = ifelse(grepl("^rs", SNP), SNP, 
+                      paste0("chr", sub("_.*", "", SNP))))
+
+to_print <- cleaned[, c("SNP", "CHR", "BP", "ALLELE1", "ALLELE0",
+                        "A1FREQ", "BETA", "SE", "P_BOLT_LMM_INF")]
+# Make sure integers as printed as integers and not in scientific
+options(scipen = 999)
+write.table(to_print, 
             paste0("/well/lindgren/UKBIOBANK/samvida/hormone_ehr/GWAS/BOLT_filtered/", 
                    STRATA, ".txt"),
             sep = "\t", row.names = F, quote = F)
+options(scipen = 0)
 
 # QQ plots and lambdaGC in each MAF bin ----
 

@@ -20,6 +20,9 @@ STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" strata_filenames.txt`
 module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 Rscript 4_filter_GWAS_results.R $STRATA_NAME
 
+# Zip results
+gzip /well/lindgren/UKBIOBANK/samvida/hormone_ehr/GWAS/BOLT_filtered/${STRATA_NAME}.txt
+
 echo "###########################################################"
 echo "Finished at: "`date`
 echo "###########################################################"
