@@ -25,6 +25,7 @@ Change these scripts for each set of models, linear, cubic splines, etc.) -
 2. **plot_all_model_predictions.R** - Plot individual-level model predictions for randomly selected individuals, those with very few or many repeat measures, at the tails of model BLUPs, etc. for both linear and cubic spline models.
 ### Clustering results -  
 1. **plot_clustering_results.R** - Once individuals have been assigned to a group/cluster belonging, plot various trajectories, refit models within each cluster, etc. 
+2. **plot_cluster_disease_enrichment.R** - After testing for disease enrichment (see *../phenotype_enrichment/*), plot results in Miami-style plots.
 
 ## GWAS
 
