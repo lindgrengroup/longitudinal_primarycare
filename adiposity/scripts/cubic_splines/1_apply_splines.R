@@ -4,24 +4,23 @@
 library(lme4)
 library(splines)
 library(tidyverse)
+theme_set(theme_bw())
 
 # Parse in phenotype argument
 args <- commandArgs(trailingOnly = T)
 PHENO <- args[1]
 SEX_STRATA <- c("F", "M", "sex_comb")
-PCs <- paste0("PC", 1:21)
-COVARS <- c("data_provider")
+COVARS <- c("baseline_age", "age_sq")
 
 dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/indiv_qcd_data.rds")[[PHENO]]
 covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
 
-log_file <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/log_files/cubic_splines_",
-                   PHENO, ".txt")
-
 # Wrangle data ----
 
-# Add in covariates
+# Get time from baseline measurement and add in covariates
 model_dat <- merge(dat, covars, by = "eid")
+model_dat <- model_dat %>% mutate(t = age_event - baseline_age,
+                                  age_event_sq = age_event^2)
 
 # Functions to run natural cubic spline models ---- 
 
@@ -37,17 +36,16 @@ getModFormula <- function (sx, ndf_fe, ndf_re) {
   if (sx == "sex_comb") mod_covars <- c(mod_covars, "sex")
   
   mod_formula <- formula(paste0("value ~ ", 
-                                paste0(mod_covars, collapse = " + "), " + ", 
-                                paste0(PCs, collapse = " + "), 
-                                "+ ns(age_event, df = ", ndf_fe, 
-                                ") + (ns(age_event, df = ", ndf_re, 
+                                paste0(mod_covars, collapse = " + "), 
+                                "+ ns(t, df = ", ndf_fe, 
+                                ") + (ns(t, df = ", ndf_re, 
                                 ") | eid)"))
   return (mod_formula)
 }
 
 # Function to run through all possible dfs
 runThroughMods <- function (sx, min_fe = 3, max_fe = 10, 
-                            max_re = 3) {
+                            max_re = 3, log_file) {
   # Get data to model
   sub_dat <- model_dat
   if (sx != "sex_comb") sub_dat <- sub_dat %>% filter(sex == sx)
@@ -56,14 +54,29 @@ runThroughMods <- function (sx, min_fe = 3, max_fe = 10,
   all_mods <- list()
   # Step through models until at least one produces a non-NA result
   while (all(is.na(all_mods)) & ndf_re > 0) {
+    
+    sink(log_file, append = T) 
     print(paste0("Testing ndf_re: ", ndf_re))
+    sink()
+    
     # Step through all df for fixed effects
     all_mods <- lapply(min_fe:max_fe, function (ndf_fe) {
+      
+      sink(log_file, append = T)
       print(paste0("        Running ndf_fe: ", ndf_fe))
+      sink()
+      
       # Get formula for given dfs and apply
       res <- tryCatch(lmer(getModFormula(sx, ndf_fe, ndf_re),
                            data = sub_dat, REML = F),
                       error = function (err) NA)
+      
+      # Print BIC of model
+      sink(log_file, append = T)
+      if (!is.na(res)) { print(paste0("        BIC: ", BIC(res))) }
+      else { print("        Model failed")}
+      sink()
+      
       return (res)
     })
     ndf_re <- ndf_re - 1
@@ -73,32 +86,31 @@ runThroughMods <- function (sx, min_fe = 3, max_fe = 10,
   return (all_mods)
 }
 
-# Function to pick model with lowest BIC (parsimonious)
-pickBestMod <- function (mod_list) {
-  bics <- sapply(mod_list, function (x) BIC(x))
-  best_mod <- mod_list[[which.min(bics)]]
-  return (best_mod)
-}
-
 # Apply to all sex strata and log results ----
 
 spline_mods <- lapply(SEX_STRATA, function (sx) {
+  # Log file
+  log_file <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/log_files/age_adj_time_models_",
+                     PHENO, "_", sx, ".txt")
   mod_list <- runThroughMods(sx, min_fe = 3, max_fe = 10, 
-                             max_re = 3)
-  best_mod <- pickBestMod(mod_list)
+                             max_re = 3, log_file)
+  bics <- sapply(mod_list, function (x) BIC(x))
+  best_mod <- mod_list[[which.min(bics)]]
+  
   # Log results
   sink(log_file, append = T) 
   cat(paste0("Best model in strata ", sx, ", phenotype: ", PHENO, "\n"))
   print(summary(best_mod))
   cat(paste0("########################################################", "\n"))
   sink()
+
   # Save model
   return (best_mod)
 })
 names(spline_mods) <- SEX_STRATA
 
 saveRDS(spline_mods, 
-        paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_splines_",
+        paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_splines/not_adj_genetic_PCs/time_based/age_adj_",
                PHENO, ".rds"))
 
 # Save coefficient values (fixef + ranef) for individuals ----
@@ -106,7 +118,7 @@ saveRDS(spline_mods,
 blups <- lapply(SEX_STRATA, function (sx) {
   res <- coef(spline_mods[[sx]])$eid
   # Only get the columns with random effect terms as well as f.e.
-  all_covs <- paste0(c(COVARS, PCs, "sex"), collapse = "|")
+  all_covs <- paste0(c(COVARS, "sex"), collapse = "|")
   remove_cols <- grep(all_covs, colnames(res))
   res <- res[, -remove_cols]
   # Remove any columns with only fixed effects
@@ -116,5 +128,5 @@ blups <- lapply(SEX_STRATA, function (sx) {
 })
 names(blups) <- SEX_STRATA
 saveRDS(blups, 
-        paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_spline_blups_",
+        paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_splines/not_adj_genetic_PCs/time_based/age_adj_blups_",
                PHENO, ".rds"))

@@ -6,7 +6,9 @@ Scripts in this folder:
 1. **1_apply_lmms.R** - Build linear mixed effects models for effect of time (from baseline measurement) on trait, allowing for fixed and random intercepts and slopes; adjust for covariates (baseline age, age-squared, sex, genetic PCs, and data provider). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for intercept and slope as the fixed + random effect for each individual. 
 
 ### Cubic splines
-1. **1_apply_splines.R** - Build cubic spline mixed effects models for effect of age on trait, allowing for fixed and random intercepts and splines. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (sex, genetic PCs, and data provider). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
+1. **1_apply_splines.R** - Build cubic spline mixed effects models for effect of time on trait, allowing for fixed and random intercepts and spline effects of time. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (baseline age, baseline age-squared, and sex). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
+2. **2_cBLUP_PCA_heatmaps.R** - Calculate PCs based on BLUPs from cubic spline models and plot heatmaps of BLUPs as well as PCA scree plots to visualise dimensionality reduction captured by PCs.
+3. **3_kmeans_clustering.R** - In each strata, cluster individuals by their BLUPs using k-means. Plot within-sum-of-squares variance explained to determine best number of clusters; then save cluster identity. 
 
 ### Cross-sectional (baseline)
 1. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
@@ -20,7 +22,9 @@ Scripts in this folder:
 ### Modelling results - 
 Change these scripts for each set of models, linear, cubic splines, etc.) - 
 1. **plot_BLUP_distributions.R** - Plot randomly selected subset of BLUPs from models to check distributions as well as relationships between BLUPs and model covariates.
-2. **plot_model_predictions.R** - Plot individual-level model predictions for randomly selected individuals, those with very few or many repeat measures, at the tails of model BLUPs, etc.  
+2. **plot_all_model_predictions.R** - Plot individual-level model predictions for randomly selected individuals, those with very few or many repeat measures, at the tails of model BLUPs, etc. for both linear and cubic spline models.
+### Clustering results -  
+1. **plot_clustering_results.R** - Once individuals have been assigned to a group/cluster belonging, plot various trajectories, refit models within each cluster, etc. 
 
 ## GWAS
 

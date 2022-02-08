@@ -18,7 +18,7 @@ STRATA <- args[1]
 p <- gsub("_.*", "", STRATA)
 sx <- gsub(paste0(p, "_"), "", STRATA)
 
-blups <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_spline_blups_",
+blups <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_splines/not_adj_genetic_PCs/time_based/age_adj_blups_",
                         p, ".rds"))[[sx]]
 
 # Calculate PCs and print scree plot ----
@@ -38,7 +38,7 @@ pca_plot <- ggplot(var_expl, aes(x = PC, y = var)) +
        title = paste0("PCA of cubic spline BLUPs, phenotype: ", p,
                       " strata ", sx))
 
-pdf(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/plots/cubic_splines/cubic_spline_blup_pca_screeplot_",
+pdf(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/plots/cubic_splines/PCA/blup_pca_screeplot_",
            p, "_", sx, ".pdf"))
 print(pca_plot)
 dev.off()
@@ -61,7 +61,7 @@ clust_results <- hclust(dist(for_plot))
 # For plotting, scale each column (RINT) to see differences better
 for_plot <- apply(for_plot, 2, FUN = rint_x)
 
-pdf(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/plots/cubic_splines/cubic_spline_blup_heatmaps_",
+pdf(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/plots/cubic_splines/PCA/blup_heatmaps_",
            p, "_", sx, ".pdf"))
 pheatmap(for_plot, 
          cluster_rows = clust_results, 
