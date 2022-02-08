@@ -31,10 +31,10 @@ PCs <- paste0("PC", 1:NPCS)
 pheno[, PCs] <- qc[match(pheno$eid, qc$eid), PCs]
 
 covars <- pheno[, 
-                c("eid", 
+                c("eid", "f.34.0.0",
                   "f.21000.0.0", "f.21000.1.0", "f.21000.2.0",
                   "f.50.0.0", "f.50.1.0", "f.50.2.0", PCs)]
-colnames(covars) <- c("eid", 
+colnames(covars) <- c("eid", "year_of_birth",
                       "ancestry.1", "ancestry.2", "ancestry.3",
                       "height.1", "height.2", "height.3", PCs)
 
@@ -75,10 +75,10 @@ covars$ancestry <- apply(select(covars, starts_with("ancestry")), 1,
 covars$height <- apply(select(covars, starts_with("height")), 1, 
                        function (x) median(as.numeric(x), na.rm = T) )
 
-covars <- covars[, c("eid", 
+covars <- covars[, c("eid", "year_of_birth",
                      "sex", "ancestry", "height", PCs)]
 
-write.table(covars, "/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_demographic_covariates.txt",
+write.table(covars, "/well/lindgren/UKBIOBANK/samvida/general_resources/220131_QCd_demographic_covariates.txt",
             sep = "\t", quote = F, row.names = F)
 
 

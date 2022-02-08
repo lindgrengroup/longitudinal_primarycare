@@ -7,7 +7,7 @@
 #$ -P lindgren.prjc -q long.qc
 #$ -pe shmem 8
 #$ -t 1-12 -tc 6 
-#$ -N lmm_intercepts_GWAS
+#$ -N cspline_intercepts_GWAS
 #$ -j y
 
 echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as user ${USER}
@@ -21,7 +21,7 @@ STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" strata_filenames.txt`
 --bim=/well/lindgren/UKBIOBANK/DATA/CALLS/ukb_snp_chr{1:22}_v2.bim \
 --fam=/well/lindgren/UKBIOBANK/samvida/general_resources/BOLT-LMM/ukb11867_cal_chr1_v2_s488363_COL6NUMERIC.fam \
 --remove=/well/lindgren/UKBIOBANK/samvida/general_resources/BOLT-LMM/bolt.in_plink_but_not_imputed_AUTOSOMES.FID_IID.968.txt \
---phenoFile=/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/lmm_intercepts_${STRATA_NAME}.txt \
+--phenoFile=/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/${STRATA_NAME}/cspline_intercepts_${STRATA_NAME}.txt \
 --phenoCol=adj_trait \
 --covarFile=/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/sample_qc/${STRATA_NAME}_ids_passed_qc.txt \
 --qCovarCol=PC{1:21} \
@@ -37,21 +37,25 @@ STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" strata_filenames.txt`
 --verboseStats
 
 cd /well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_results
-cat ./${STRATA_NAME}_lmm_intercepts_assoc_cal.stats.gz \
-./${STRATA_NAME}_lmm_intercepts_assoc_imp.stats.gz \
-> ./${STRATA_NAME}_lmm_intercepts_assoc.stats.gz
+cat ./${STRATA_NAME}_cspline_intercepts_assoc_cal.stats.gz \
+./${STRATA_NAME}_cspline_intercepts_assoc_imp.stats.gz \
+> ./${STRATA_NAME}_cspline_intercepts_assoc.stats.gz
 
 # Create log file for filtering results
-LOG_FILE="../log_files/post_GWAS/${STRATA_NAME}_lmm_intercepts.txt"
+LOG_FILE="../log_files/post_GWAS/${STRATA_NAME}_cspline_intercepts.txt"
 rm $LOG_FILE
 touch $LOG_FILE
+
+# Save heritability estimate
+HERIT_LINE=`grep "heritability" ./*.o${JOB_ID}.${SGE_TASK_ID}`
+echo ${HERIT_LINE} >> ./log_files/${STRATA_NAME}.txt
 
 # Create temporary directory for filtering
 rm -r ./${STRATA_NAME}_tmp_QC
 mkdir ./${STRATA_NAME}_tmp_QC
-gunzip ./${STRATA_NAME}_lmm_intercepts_assoc.stats.gz 
+gunzip ./${STRATA_NAME}_cspline_intercepts_assoc.stats.gz 
 
-PREQC=$(wc -l < ./${STRATA_NAME}_lmm_intercepts_assoc.stats)
+PREQC=$(wc -l < ./${STRATA_NAME}_cspline_intercepts_assoc.stats)
 printf "** Phenotype and Strata: ${STRATA_NAME}\n" >> $LOG_FILE 
 printf "\t # SNPs pre-QC: $((${PREQC}-1)) \n" >> $LOG_FILE
 
@@ -60,7 +64,7 @@ FILTER_LOC="/well/lindgren/UKBIOBANK/samvida/full_primary_care/GWAS/snps_passed_
 
 # MAF filter
 awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
-${FILTER_LOC}/passed_maf_QC.txt ./${STRATA_NAME}_lmm_intercepts_assoc.stats \
+${FILTER_LOC}/passed_maf_QC.txt ./${STRATA_NAME}_cspline_intercepts_assoc.stats \
 > ./${STRATA_NAME}_tmp_QC/tmp_passed_maf.txt
 
 TMPQC=$(wc -l < ./${STRATA_NAME}_tmp_QC/tmp_passed_maf.txt)
@@ -103,8 +107,8 @@ TMPQC=$(wc -l < ./${STRATA_NAME}_tmp_QC/tmp_passed_biallelic.txt)
 printf "\t # SNPs passed bi-allelic QC: $((${TMPQC}-1)) \n" >> $LOG_FILE
 
 # Save results
-cp ./${STRATA_NAME}_tmp_QC/tmp_passed_biallelic.txt ./${STRATA_NAME}_lmm_intercepts_filtered.txt
-gzip ./${STRATA_NAME}_lmm_intercepts_filtered.txt
+cp ./${STRATA_NAME}_tmp_QC/tmp_passed_biallelic.txt ./${STRATA_NAME}_cspline_intercepts_filtered.txt
+gzip ./${STRATA_NAME}_cspline_intercepts_filtered.txt
 rm -r ./${STRATA_NAME}_tmp_QC
 
 echo "###########################################################"

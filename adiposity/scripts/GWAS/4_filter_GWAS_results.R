@@ -14,10 +14,10 @@ args <- commandArgs(trailingOnly = T)
 STRATA <- args[1]
 
 filename <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_results/",
-                   STRATA, "_lmm_intercepts_filtered.txt.gz")
+                   STRATA, "_cspline_intercepts_filtered.txt.gz")
 
 log_file <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/log_files/post_GWAS/",
-                   STRATA, "_lmm_intercepts.txt")
+                   STRATA, "_cspline_intercepts.txt")
 
 # Wrangle data for cleaning ----
 
@@ -69,15 +69,27 @@ sink(log_file, append = T)
 cat(paste0("\t", "# SNPs post-QC: ", nrow(cleaned), "\n"))
 sink()
 
-write.table(cleaned, 
+# Print file formatted for FUMA and LocusZoom ----
+
+# Sort results by chromosome and position and rename SNP to "chrN:pos"
+cleaned <- cleaned %>% arrange(CHR, BP) %>%
+  mutate(SNP = ifelse(grepl("^rs", SNP), SNP, 
+                      paste0("chr", sub("_.*", "", SNP))))
+
+to_print <- cleaned[, c("SNP", "CHR", "BP", "ALLELE1", "ALLELE0",
+                        "A1FREQ", "BETA", "SE", "P_BOLT_LMM_INF")]
+# Make sure integers as printed as integers and not in scientific
+options(scipen = 999)
+write.table(to_print, 
             paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_filtered/", 
-                   STRATA, "_lmm_intercepts.txt"),
+                   STRATA, "_cspline_intercepts.txt"),
             sep = "\t", row.names = F, quote = F)
+options(scipen = 0)
 
 # QQ plots and lambdaGC in each MAF bin ----
 
 gwas_dat <- read.table(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_filtered/", 
-                              STRATA, "_lmm_intercepts.txt"),
+                              STRATA, "_cspline_intercepts.txt"),
                        sep = "\t", header = T)
 
 maf_max_for_bins <- c(0.01, 0.05, 0.1, 0.51)
@@ -107,7 +119,7 @@ qq_plots <- lapply(1:NBINS, function (i) {
                         ", lambda = ", lambdaGC),
          x = "Expected -log10(P)", y = "Observed -log10(P)")
   ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/",
-                STRATA, "/qq_", STRATA, "_lmm_intercepts_mafbin_", i, ".png"),
+                STRATA, "/cspline_intercepts_qq_", STRATA, "_mafbin_", i, ".png"),
          qq_BOLT)
 })
 
@@ -157,6 +169,6 @@ man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(P_BOLT_LMM_INF))) +
         panel.grid.minor.x = element_blank())
 
 ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/",
-              STRATA, "/manhattan_", STRATA, "_lmm_intercepts.png"),
+              STRATA, "/cspline_intercepts_manhattan_", STRATA, ".png"),
        width = 10, height = 5, units = "in", man_BOLT)
 

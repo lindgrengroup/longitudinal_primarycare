@@ -6,25 +6,26 @@ library(tidyverse)
 # Read data ----
 
 # Name of term to RINT 
-TERM_TO_RINT <- "(Intercept)"
-result_prefix <- "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/lmm_intercepts"
+TERM_TO_RINT <- "ns.*1"
+result_prefix <- "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/cspline_ns1"
 
 # BLUP files
 PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt")$V1
 blups <- lapply(PHENOTYPES, function (p) {
-  res <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_blups_",
-                 p, ".rds"))
+  res <- readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/cubic_splines/not_adj_genetic_PCs/time_based/without_pcs_cubic_time_spline_blups_",
+                        p, ".rds"))
   res <- lapply(res, function (df) {
-    df$eid <- rownames(df)
-    df <- df[, c("eid", TERM_TO_RINT)]
-    return (df)
+    eids <- rownames(df)
+    model_terms <- df[, grep(TERM_TO_RINT, colnames(df))]
+    to_return <- data.frame(eid = eids,
+                            model_term = model_terms)
+    return (to_return)
   })
   return (res)
 })
 names(blups) <- PHENOTYPES
 
 SEX_STRATA <- names(blups[[1]])
-NPCs <- 21
 
 # IDs that passed sample QC
 ids_passed_qc <- lapply(PHENOTYPES, function (p) {
@@ -77,7 +78,7 @@ adj_rint_slopes <- lapply(PHENOTYPES, function (p) {
     }
     # Formula for adjustment
     mod_formula <- 
-      formula(paste0(TERM_TO_RINT, " ~ ", paste(COVARS_LIST, 
+      formula(paste0("model_term ~ ", paste(COVARS_LIST, 
                                            collapse = " + ")))
     # Get residuals
     mod_resid <- lm(mod_formula, data = df)$residuals
