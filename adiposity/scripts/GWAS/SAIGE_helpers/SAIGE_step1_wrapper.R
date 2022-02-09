@@ -24,14 +24,14 @@ parser$add_argument("--traitType",
                     default = "binary",
                     help = "What type of trait is the phenotype? Binary or quantitative?")
 parser$add_argument("--outputdir",
-                    default = "/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/SAIGE_results/",
+                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/",
                     help = "Results output directory")
 
 args <- parser$parse_args()
 print(args)
 
 # Create some arguments to GLMM from combinations of others
-phenoFile <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/traits_for_gwas/",
+phenoFile <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/traits_for_gwas/",
                     args$strata, "/cluster_membership_", args$strata, ".txt")
 outputPrefix <- paste0(args$outputdir, args$strata, "/", args$cluster)
 invNormalize <- args$traitType == "quantitative"
