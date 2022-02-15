@@ -7,7 +7,14 @@
 
 STRATA_NAMES <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/strata_filenames.txt")$V1
 CLUSTERS <- 1:6
-submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/perform_SAIGE_step2.sh"
+# Step 1 submission script
+# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/perform_SAIGE_step1.sh"
+# Step 2 submission script
+# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/perform_SAIGE_step2.sh"
+# Filtering submission script
+# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/perform_SAIGE_filtering.sh"
+
+submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/perform_SAIGE_filtering.sh"
 
 for (s in STRATA_NAMES) {
   for (c in CLUSTERS) {
