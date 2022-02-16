@@ -42,7 +42,7 @@ printf "\t # SNPs pre-QC: $((${PREQC}-1)) \n" >> $LOG_FILE
 
 # MAF filter
 awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
-${FILTER_LOC}/passed_maf_QC.txt \
+${FILTER_LOC}/passed_mfi_maf_QC.txt \
 k${KI}_tmp_QC/tmp_gwas_results.txt \
 > k${KI}_tmp_QC/tmp_passed_maf.txt
 

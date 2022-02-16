@@ -64,7 +64,7 @@ FILTER_LOC="/well/lindgren/UKBIOBANK/samvida/full_primary_care/GWAS/snps_passed_
 
 # MAF filter
 awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
-${FILTER_LOC}/passed_maf_QC.txt ./${STRATA_NAME}_cspline_intercepts_assoc.stats \
+${FILTER_LOC}/passed_mfi_maf_QC.txt ./${STRATA_NAME}_cspline_intercepts_assoc.stats \
 > ./${STRATA_NAME}_tmp_QC/tmp_passed_maf.txt
 
 TMPQC=$(wc -l < ./${STRATA_NAME}_tmp_QC/tmp_passed_maf.txt)
