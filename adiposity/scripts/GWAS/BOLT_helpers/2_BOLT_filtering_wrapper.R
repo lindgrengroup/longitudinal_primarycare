@@ -113,8 +113,12 @@ cleaned <- cleaned %>% arrange(CHR, BP) %>%
   mutate(SNP = ifelse(grepl("^rs", SNP), SNP, 
                       paste0("chr", sub("_.*", "", SNP))))
 
-to_print <- cleaned[, c("SNP", "CHR", "BP", "ALLELE1", "ALLELE0",
-                        "A1FREQ", "BETA", "SE", "P_BOLT_LMM_INF")]
+to_print <- cleaned[, c("SNP", "CHR", "BP", 
+                        "ALLELE1", "ALLELE0", "A1FREQ", 
+                        "BETA", "SE", "P_BOLT_LMM_INF")]
+colnames(to_print) <- c("SNP", "CHR", "POS", 
+                        "Tested_Allele", "Reference_Allele", "AF_Tested",
+                        "BETA", "SE", "PVALUE")
 # Make sure integers as printed as integers and not in scientific
 options(scipen = 999)
 write.table(to_print, 
