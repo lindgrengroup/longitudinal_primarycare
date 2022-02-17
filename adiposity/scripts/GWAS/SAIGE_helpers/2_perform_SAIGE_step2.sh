@@ -31,7 +31,7 @@ echo ${covars}
 # path to results from step 1: /well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/SAIGE_results/
 # path to where output should be stored: /well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/SAIGE_results/
 
-Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/SAIGE_step2_wrapper.R \
+Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/2_SAIGE_step2_wrapper.R \
 --strata=${STRATA} \
 --cluster=k${KI} \
 --chr=${SGE_TASK_ID} \

@@ -31,7 +31,7 @@ mkdir /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAI
 # Separate pheno column for each cluster vs the rest (k1:k6)
 # Don't add sex as covariate here because we will add that in the R wrapper
 
-Rscript /well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/SAIGE_step1_wrapper.R \
+Rscript /well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/1_SAIGE_step1_wrapper.R \
 --strata=${STRATA} \
 --cluster=k${KI} \
 --plinkFile=/well/lindgren/UKBIOBANK/ferreira/IMPUTED_association_analysis/grm_files/ukb_cal_v2_qced_pruned \

@@ -1,38 +1,68 @@
 # Author: Samvida S. Venkatesh
 # Date: 21/05/21
 
-# Submit with 8 cores to long.qc
-
-library(tidyverse)
 theme_set(theme_bw())
 
-set.seed(210521)
+# Read in arguments ----
 
-# Read files ----
-
-args <- commandArgs(trailingOnly = T)
-STRATA <- args[1]
-
-filename <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_results/",
-                   STRATA, "_cspline_intercepts_filtered.txt.gz")
-
-log_file <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/log_files/post_GWAS/",
-                   STRATA, "_cspline_intercepts.txt")
+parser <- ArgumentParser()
+parser$add_argument("--inputFile", required=TRUE,
+                    help = "Path to combined and filtered summary statistics")
+parser$add_argument("--logFile", required=TRUE,
+                    help = "Path to log file to store # SNPs cleaned")
+parser$add_argument("--outputFile", required = TRUE,
+                    help = "Output file name for filtered summary statistics")
+parser$add_argument("--outPlotDir", required = TRUE,
+                    help = "Path to store output Manhattan and QQ-plots")
+args <- parser$parse_args()
 
 # Wrangle data for cleaning ----
 
-GWAS_zip <- gzfile(filename, "rt")  
+GWAS_zip <- gzfile(args$inputFile, "rt")  
 GWAS_res <- read.table(GWAS_zip, sep = "\t", header = T, 
                        comment.char = "@", stringsAsFactors = F)
 
 # Prepare columns for cleaning
-to_numeric <- c("CHR", "BP", "F_MISS", "A1FREQ", "BETA", "SE",
+to_numeric <- c("CHR", "BP", "F_MISS", "A1FREQ", "BETA", "SE", "F_MISS",
                 "CHISQ_BOLT_LMM_INF", "P_BOLT_LMM_INF", "P_LINREG")
 GWAS_res <- GWAS_res %>% as_tibble() %>%
   mutate(across(all_of(to_numeric), as.numeric)) %>%
   mutate(maf = ifelse(A1FREQ < 0.5, A1FREQ, 1-A1FREQ))
 
 # Cleaning functions ----
+
+# Sanity check: minor allele frequency
+maf_clean <- function (qc_log, dat) {
+  res <- dat %>% filter(maf > 0 & maf <= 0.5)
+  sink(qc_log, append = T)
+  cat(paste0("\t", 
+             "# SNPs removed with implausible MAF (<0 or >1): ", 
+             nrow(dat) - nrow(res), "\n"))
+  sink()
+  return (res)
+}
+
+# Sanity check: multi-allelic markers
+biallelic_filter <- function (qc_log, dat) {
+  res <- dat %>% filter(!grepl(";", SNP))
+  sink(qc_log, append = T)
+  cat(paste0("\t", 
+             "# multi-allelic SNPs removed: ", 
+             nrow(dat) - nrow(res), "\n"))
+  sink()
+  return (res)
+}
+
+# Missingness < 5%
+fmiss <- function (qc_log, dat) {
+  res <- dat %>% filter(F_MISS < 0.05)
+  sink(qc_log, append = T)
+  cat(paste0("\t", 
+             "# SNPs removed with missingness > 5%: ", 
+             nrow(dat) - nrow(res), "\n"))
+  sink()
+  return (res)
+}
 
 # Implausibly large standard error (> 10)
 extreme_effect <- function (qc_log, dat) {
@@ -61,7 +91,12 @@ duplicate_snps <- function (qc_log, dat) {
 
 # Apply cleaning functions ----
 
-cleaned <- extreme_effect(log_file, GWAS_res)
+log_file <- args$logFile
+
+cleaned <- maf_clean(log_file, GWAS_res)
+cleaned <- biallelic_filter(log_file, cleaned)
+cleaned <- fmiss(log_file, cleaned)
+cleaned <- extreme_effect(log_file, cleaned)
 cleaned <- duplicate_snps(log_file, cleaned)
 
 # Report metrics post QC
@@ -81,16 +116,13 @@ to_print <- cleaned[, c("SNP", "CHR", "BP", "ALLELE1", "ALLELE0",
 # Make sure integers as printed as integers and not in scientific
 options(scipen = 999)
 write.table(to_print, 
-            paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_filtered/", 
-                   STRATA, "_cspline_intercepts.txt"),
+            args$outputFile,
             sep = "\t", row.names = F, quote = F)
 options(scipen = 0)
 
 # QQ plots and lambdaGC in each MAF bin ----
 
-gwas_dat <- read.table(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/BOLT_filtered/", 
-                              STRATA, "_cspline_intercepts.txt"),
-                       sep = "\t", header = T)
+gwas_dat <- cleaned
 
 maf_max_for_bins <- c(0.01, 0.05, 0.1, 0.51)
 NBINS <- length(maf_max_for_bins) - 1
@@ -118,8 +150,7 @@ qq_plots <- lapply(1:NBINS, function (i) {
                         maf_max_for_bins[i+1], 
                         ", lambda = ", lambdaGC),
          x = "Expected -log10(P)", y = "Observed -log10(P)")
-  ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/",
-                STRATA, "/cspline_intercepts_qq_", STRATA, "_mafbin_", i, ".png"),
+  ggsave(paste0(args$outPlotDir, "qq_mafbin_", i, ".png"),
          qq_BOLT)
 })
 
@@ -168,7 +199,6 @@ man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(P_BOLT_LMM_INF))) +
         panel.grid.major.x = element_blank(), 
         panel.grid.minor.x = element_blank())
 
-ggsave(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/plots/",
-              STRATA, "/cspline_intercepts_manhattan_", STRATA, ".png"),
+ggsave(paste0(args$outPlotDir, "manhattan.png"),
        width = 10, height = 5, units = "in", man_BOLT)
 

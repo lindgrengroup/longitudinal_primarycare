@@ -41,7 +41,7 @@ printf "** Strata and Cluster: ${STRATA}, k${KI}\n" >> $LOG_FILE
 printf "\t # SNPs pre-QC: $((${PREQC}-1)) \n" >> $LOG_FILE
 
 # MAF filter
-awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
+awk -F ' ' 'NR==FNR{a[$1]; next} FNR==1 || $3 in a' \
 ${FILTER_LOC}/passed_mfi_maf_QC.txt \
 k${KI}_tmp_QC/tmp_gwas_results.txt \
 > k${KI}_tmp_QC/tmp_passed_maf.txt
@@ -50,7 +50,7 @@ TMPQC=$(wc -l < k${KI}_tmp_QC/tmp_passed_maf.txt)
 printf "\t # SNPs passed MAF > 0.01: $((${TMPQC}-1)) \n" >> $LOG_FILE
 
 # INFO filter
-awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
+awk -F ' ' 'NR==FNR{a[$1]; next} FNR==1 || $3 in a' \
 ${FILTER_LOC}/passed_info_QC.txt \
 k${KI}_tmp_QC/tmp_passed_maf.txt \
 > k${KI}_tmp_QC/tmp_passed_info.txt
@@ -59,7 +59,7 @@ TMPQC=$(wc -l < k${KI}_tmp_QC/tmp_passed_info.txt)
 printf "\t # SNPs passed INFO > 0.8: $((${TMPQC}-1)) \n" >> $LOG_FILE
 
 # Genotyping filter
-awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
+awk -F ' ' 'NR==FNR{a[$1]; next} FNR==1 || $3 in a' \
 ${FILTER_LOC}/passed_geno_QC.txt \
 k${KI}_tmp_QC/tmp_passed_info.txt \
 > k${KI}_tmp_QC/tmp_passed_geno.txt
@@ -68,7 +68,7 @@ TMPQC=$(wc -l < k${KI}_tmp_QC/tmp_passed_geno.txt)
 printf "\t # SNPs passed missingness < 0.05: $((${TMPQC}-1)) \n" >> $LOG_FILE
 
 # HWE filter
-awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
+awk -F ' ' 'NR==FNR{a[$1]; next} FNR==1 || $3 in a' \
 ${FILTER_LOC}/passed_hwe_QC.txt \
 k${KI}_tmp_QC/tmp_passed_geno.txt \
 > k${KI}_tmp_QC/tmp_passed_hwe.txt
@@ -77,7 +77,7 @@ TMPQC=$(wc -l < k${KI}_tmp_QC/tmp_passed_hwe.txt)
 printf "\t # SNPs passed HWE pval > 1E-06: $((${TMPQC}-1)) \n" >> $LOG_FILE
 
 # Biallelic filter
-awk -F '\t' 'NR==FNR{a[$1]; next} FNR==1 || $1 in a' \
+awk -F ' ' 'NR==FNR{a[$1]; next} FNR==1 || $3 in a' \
 ${FILTER_LOC}/passed_biallelic_QC.txt \
 k${KI}_tmp_QC/tmp_passed_hwe.txt \
 > k${KI}_tmp_QC/tmp_passed_biallelic.txt
@@ -86,6 +86,7 @@ TMPQC=$(wc -l < k${KI}_tmp_QC/tmp_passed_biallelic.txt)
 printf "\t # SNPs passed bi-allelic QC: $((${TMPQC}-1)) \n" >> $LOG_FILE
 
 # Save results
+rm ${STRATA}_k${KI}_gwas_results.txt.gz
 cp k${KI}_tmp_QC/tmp_passed_biallelic.txt ${STRATA}_k${KI}_gwas_results.txt
 gzip ${STRATA}_k${KI}_gwas_results.txt
 rm -r k${KI}_tmp_QC
@@ -96,7 +97,7 @@ module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 # path to where plots should be stored
 mkdir /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/plots/${STRATA}/k${KI}
 
-Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/SAIGE_filtering_wrapper.R \
+Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/3_SAIGE_filtering_wrapper.R \
 --inputFile=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/${STRATA}/${STRATA}_k${KI}_gwas_results.txt.gz \
 --logFile=$LOG_FILE \
 --outputFile=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/${STRATA}/${STRATA}_k${KI}_filtered_gwas_results.txt \

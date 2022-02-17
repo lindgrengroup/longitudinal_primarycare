@@ -9,7 +9,7 @@ theme_set(theme_bw())
 
 parser <- ArgumentParser()
 parser$add_argument("--inputFile", required=TRUE,
-                    help = "Path to combined and INFO-filtered summary statistics")
+                    help = "Path to combined and filtered summary statistics")
 parser$add_argument("--logFile", required=TRUE,
                     help = "Path to log file to store # SNPs cleaned")
 parser$add_argument("--outputFile", required = TRUE,
