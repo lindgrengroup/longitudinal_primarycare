@@ -45,6 +45,7 @@ maf_filter <- function (qc_log, dat) {
              "# SNPs removed with low or implausible MAF < 0.01 or > 1: ", 
              nrow(dat) - nrow(res), "\n"))
   sink()
+  return (res)
 }
 
 # Sanity check: INFO score
@@ -55,16 +56,18 @@ info_filter <- function (qc_log, dat) {
              "# SNPs removed with INFO < 0.8: ", 
              nrow(dat) - nrow(res), "\n"))
   sink()
+  return (res)
 }
 
 # Sanity check: Multi-allelic markers
 biallelic_filter <- function (qc_log, dat) {
-  res <- dat %>% filter(!grepl(";", SNP))
+  res <- dat %>% filter(!grepl(";", SNPID))
   sink(qc_log, append = T)
   cat(paste0("\t", 
              "# multi-allelic SNPs removed: ", 
              nrow(dat) - nrow(res), "\n"))
   sink()
+  return (res)
 }
 
 # Implausibly large standard error (> 10)
@@ -81,7 +84,7 @@ extreme_effect <- function (qc_log, dat) {
 # Remove markers with duplicate entries
 duplicate_snps <- function (qc_log, dat) {
   res <- dat %>% 
-    mutate(dup_check = paste0(CHR, ":", BP, "_", ALLELE1, "_", ALLELE0)) %>%
+    mutate(dup_check = paste0(CHR, ":", POS, "_", Allele1, "_", Allele2)) %>%
     distinct(dup_check, .keep_all = T)
   
   sink(qc_log, append = T)
@@ -134,7 +137,7 @@ qq_plots <- lapply(1:NBINS, function (i) {
   sub_gwas <- subset(gwas_dat, gwas_dat$maf >= maf_max_for_bins[i] &
                        gwas_dat$maf < maf_max_for_bins[i+1])
   
-  obs_pvals <- sub_gwas$P_BOLT_LMM_INF
+  obs_pvals <- sub_gwas$p.value
   obs_pvals <- obs_pvals[!is.na(obs_pvals) & obs_pvals > 0]
   obs_pvals <- sort(obs_pvals)
   
@@ -193,7 +196,7 @@ axisdf <- sub_gwas %>% group_by(CHR) %>%
   summarise(centre = (max(BP_pos) + min(BP_pos)) / 2)
 
 # Plot
-man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(P_BOLT_LMM_INF))) +
+man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(p.value))) +
   geom_point(aes(color = as.factor(CHR)), alpha = 0.8, size = 1.3) +
   geom_point(data = subset(sub_gwas, highlight == "yes"), 
              color = "orange", size = 2) +
