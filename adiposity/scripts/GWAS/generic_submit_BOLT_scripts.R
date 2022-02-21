@@ -10,9 +10,9 @@ PARAMETERS <- c("lmm_intercepts", "lmm_slopes_adj_baseline", "cspline_intercepts
 # GWAS submission script
 # submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/BOLT_helpers/1_perform_GWAS_BOLT.sh"
 # Filtering submission script
-# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/2_perform_BOLT_filtering.sh"
+# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/BOLT_helpers/2_perform_BOLT_filtering.sh"
 
-submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/2_perform_BOLT_filtering.sh"
+submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/BOLT_helpers/2_perform_BOLT_filtering.sh"
 
 for (s in STRATA_NAMES) {
   for (pr in PARAMETERS) {

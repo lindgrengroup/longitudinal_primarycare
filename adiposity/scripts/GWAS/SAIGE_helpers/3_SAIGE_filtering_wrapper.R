@@ -107,7 +107,7 @@ cleaned <- duplicate_snps(log_file, cleaned)
 
 # Report metrics post QC
 sink(log_file, append = T)
-cat(paste0("\t", "# SNPs post-QC: ", nrow(cleaned), "\n"))
+cat(paste0("# SNPs post-QC: ", nrow(cleaned), "\n"))
 sink()
 
 # Print file formatted for FUMA and LocusZoom ----
@@ -121,7 +121,7 @@ to_print <- cleaned[, c("SNP", "CHR", "POS",
                         "Allele2", "Allele1", "AF_Allele2",
                         "BETA", "SE", "p.value")]
 colnames(to_print) <- c("SNP", "CHR", "POS", 
-                        "Tested_Allele", "Reference_Allele", "AF_Tested",
+                        "Tested_Allele", "Other_Allele", "AF_Tested",
                         "BETA", "SE", "PVALUE")
 # Make sure integers as printed as integers and not in scientific
 options(scipen = 999)

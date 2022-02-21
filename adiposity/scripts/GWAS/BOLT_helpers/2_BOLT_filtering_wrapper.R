@@ -33,34 +33,23 @@ GWAS_res <- GWAS_res %>% as_tibble() %>%
 
 # Cleaning functions ----
 
-# Sanity check: minor allele frequency
-maf_clean <- function (qc_log, dat) {
-  res <- dat %>% filter(maf > 0 & maf <= 0.5)
+# Sanity check: Minor allele frequency
+maf_filter <- function (qc_log, dat) {
+  res <- dat %>% filter(maf >= 0.01 & maf <= 0.5)
   sink(qc_log, append = T)
   cat(paste0("\t", 
-             "# SNPs removed with implausible MAF (<0 or >1): ", 
+             "# SNPs removed with low or implausible MAF < 0.01 or > 1: ", 
              nrow(dat) - nrow(res), "\n"))
   sink()
   return (res)
 }
 
-# Sanity check: multi-allelic markers
+# Sanity check: Multi-allelic markers
 biallelic_filter <- function (qc_log, dat) {
   res <- dat %>% filter(!grepl(";", SNP))
   sink(qc_log, append = T)
   cat(paste0("\t", 
              "# multi-allelic SNPs removed: ", 
-             nrow(dat) - nrow(res), "\n"))
-  sink()
-  return (res)
-}
-
-# Missingness < 5%
-fmiss <- function (qc_log, dat) {
-  res <- dat %>% filter(F_MISS < 0.05)
-  sink(qc_log, append = T)
-  cat(paste0("\t", 
-             "# SNPs removed with missingness > 5%: ", 
              nrow(dat) - nrow(res), "\n"))
   sink()
   return (res)
@@ -95,15 +84,14 @@ duplicate_snps <- function (qc_log, dat) {
 
 log_file <- args$logFile
 
-cleaned <- maf_clean(log_file, GWAS_res)
+cleaned <- maf_filter(log_file, GWAS_res)
 cleaned <- biallelic_filter(log_file, cleaned)
-cleaned <- fmiss(log_file, cleaned)
 cleaned <- extreme_effect(log_file, cleaned)
 cleaned <- duplicate_snps(log_file, cleaned)
 
 # Report metrics post QC
 sink(log_file, append = T)
-cat(paste0("\t", "# SNPs post-QC: ", nrow(cleaned), "\n"))
+cat(paste0("# SNPs post-QC: ", nrow(cleaned), "\n"))
 sink()
 
 # Print file formatted for FUMA and LocusZoom ----
@@ -113,11 +101,10 @@ cleaned <- cleaned %>% arrange(CHR, BP) %>%
   mutate(SNP = ifelse(grepl("^rs", SNP), SNP, 
                       paste0("chr", sub("_.*", "", SNP))))
 
-to_print <- cleaned[, c("SNP", "CHR", "BP", 
-                        "ALLELE1", "ALLELE0", "A1FREQ", 
-                        "BETA", "SE", "P_BOLT_LMM_INF")]
+to_print <- cleaned[, c("SNP", "CHR", "BP", "ALLELE1", "ALLELE0",
+                        "A1FREQ", "BETA", "SE", "P_BOLT_LMM_INF")]
 colnames(to_print) <- c("SNP", "CHR", "POS", 
-                        "Tested_Allele", "Reference_Allele", "AF_Tested",
+                        "Tested_Allele", "Other_Allele", "AF_Tested",
                         "BETA", "SE", "PVALUE")
 # Make sure integers as printed as integers and not in scientific
 options(scipen = 999)
@@ -199,7 +186,6 @@ man_BOLT <- ggplot(sub_gwas, aes(x = BP_pos, y = -log10(P_BOLT_LMM_INF))) +
   scale_color_manual(values = rep(c("grey", "skyblue"), 22 )) +
   scale_x_continuous(label = axisdf$CHR, breaks = axisdf$centre) +
   scale_y_continuous(limits = c(0, NA)) +
-  labs(title = STRATA) +
   theme(legend.position = "none", 
         panel.border = element_blank(),
         panel.grid.major.x = element_blank(), 
