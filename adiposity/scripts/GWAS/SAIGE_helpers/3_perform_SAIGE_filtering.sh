@@ -100,7 +100,7 @@ mkdir /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/plo
 Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_helpers/3_SAIGE_filtering_wrapper.R \
 --inputFile=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/${STRATA}/${STRATA}_k${KI}_gwas_results.txt.gz \
 --logFile=$LOG_FILE \
---outputFile=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/${STRATA}/${STRATA}_k${KI}_filtered_gwas_results.txt \
+--outputFile=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/${STRATA}/${STRATA}_k${KI}_final.txt \
 --outPlotDir=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/plots/${STRATA}/k${KI}/ 
 
 echo "###########################################################"

@@ -10,3 +10,6 @@ Scripts in this folder:
 4. **4b_ and 4c_plot_qq_manhattan.R** - QQ plots and Manhattan plots for associations of various model parameters with subset of metabolic and endocrine variants (as described in *../general_scripts/extract_gwascat_variants.R*) \
 **generic_submit_BOLT_scripts.R** - Loops over all strata and parameters (lmm intercepts, lmm slopes adjusted for baseline, cubic spline intercepts) to submit BOLT GWAS, filtering, etc. Relies on helper scripts in *./BOLT_helpers/*. See README in *./BOLT_helpers/* for more details. \
 **generic_submit_SAIGE_scripts.R** - Loops over all strata and clusters to submit SAIGE step 1, step 2, or results filtering for cluster membership as the GWAS trait. Relies on helper scripts in *./SAIGE_helpers/*. See README in *./SAIGE_helpers/* for more details.
+
+
+Within the *./BOLT_helpers/* and *./SAIGE_helpers/* folders are the scripts to perform GWAS, filter results and plot QQ-plots and Manhattan plots, perform finemapping, etc. (labelled appropriately, with more details in the respective README files) 
