@@ -31,6 +31,12 @@ Change these scripts for each set of models, linear, cubic splines, etc.) -
 
 Refer to README in */GWAS/*
 
+## Post-GWAS
+1. **1_perform_finemapping.sh** - Uses Duncan's pipeline (see here: https://github.com/astheeggeggs/pipeline) to finemap causal variants in loci from filtered GWAS summary statistics. 
+2. **2_plot_locuszoom.sh** - Following finemapping, provide LD matrix, summary stats, and finemapped variants to local version of locuszoom for loci plots. This can be extended to highlight independently associated variants. 
+3. **3_calculate_heritability.sh** - Get overall SNP-based heritability of phenotype using LDSC from summary statistics. 
+4. **4_extract_dosages.sh and 4_submit_extract_dosages.R** - Get dosages (0,1,2) to find homozygous REF/ALT and heterozygous individuals at lead SNPs of interest. 
+
 ## PHENOTYPE ENRICHMENT
 1. **female_phenotype_enrichment.R** - Get age at menarche, age at menopause, and number of live births from UKB to compare distributions in different clusters in female-specific analyses.
 2. **cluster_disease_associations.R** - Use logistic regression (with dummy variables for each cluster), adjusted for covariates, to test for association of clusters with >300 diseases identified by ICD and primary care codes. Calculate prevalence of each disease in the cohort and each cluster. Alternative: Fisher's enrichment test for disease counts in each cluster vs cohort.
