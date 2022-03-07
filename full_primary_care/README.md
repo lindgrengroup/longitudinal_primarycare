@@ -12,6 +12,7 @@ There are 65 traits in primary care and 37 matched traits in UKB main phenotype 
 4. **4_add_UKB_filter_longit.R** - Add UK Biobank measurements from assessment centres (where available), to individuals with primary care recordings and long-format data. Remove any individuals that have < 2 measurements. 
 5. **5_indiv_level_QC.R** - Longitudinal filtering on individual measurements, removing timepoints where there are > 1 measurements at the same timepoint; also check for extreme "jumps", i.e. log fold-change between consecutive measurements in the data, to exclude timepoints with extreme changes.
 6. **6_calculate_covariates.R** - Get trait-specific covariates, such as baseline age (age at first measurement of trait), baseline trait value, number of follow-up measurements, number of years between first and last measurement, etc.
+7. **plot_trajectories.R** - For a list of IDs with classification and biomarkers passed as arguments, this script plots (a) distribution of covariates such as baseline age, baseline biomarker, # follow-ups, etc. in each class, (b) randomly sampled individual trajectories of specified biomarkers in each class, and (c) group-level mean trajectories of specified biomarkers in each class.  
 
 ## qc
 QC results from each step:
