@@ -257,32 +257,24 @@ plot_many_observed_dat <- function (bm) {
 
 ## Age binned summaries ----
 
-# Given a dataframe with ages, add age bins cut by specified interval length,
+# Given a dataframe with time-points, add age bins cut by specified interval length,
 # summarise values across individuals in each age bin
 # and get the rolling average to plot
 
-summ_by_age_bins <- function (df, interval_yrs = 0.5, roll_years = 5) {
-  # Cut ages into 6-month (0.5 yr) bins
-  cut_points <- seq(20, 80, by = interval_yrs)
-  cut_labels <- seq(20, 80 - interval_yrs, by = interval_yrs)
-  df$age_bin <- cut(df$age_event, 
-                    breaks = cut_points, 
-                    include.lowest = T,
-                    labels = cut_labels)
+summ_pred_dat <- function (df, roll_years = 2) {
   res <- df %>% 
-    group_by(class, age_bin) %>% 
+    group_by(class, t) %>% 
     summarise(mean_value = mean(fit),
               sd_value = sd(fit), 
               n = n()) %>%
     mutate(lci_mean = mean_value - 1.96*(sd_value/sqrt(n)),
            uci_mean = mean_value + 1.96*(sd_value/sqrt(n))) 
   
-  fn_roll <- function (x) { rollapply(x, roll_years/interval_yrs, 
+  fn_roll <- function (x) { rollapply(x, roll_years/0.25, 
                                       mean, fill = NA) }
   res <- res %>% ungroup() %>% 
     group_by(class) %>% 
-    mutate(age_bin = as.numeric(as.character(age_bin))) %>%
-    arrange(age_bin, .by_group = T) %>%
+    arrange(t, .by_group = T) %>%
     mutate(across(c(mean_value, lci_mean, uci_mean),
                   fn_roll))
   return (res)
@@ -294,19 +286,22 @@ plot_mean_obs_dat <- function (bm) {
   # Get data
   # Create predicted df for all ids
   pred_dat <- create_prediction_df(bm, summ_dat[[bm]])
-  to_plot <- summ_by_age_bins(pred_dat, interval_yrs = 0.25, roll_years = 5)
+  
+  # Apply rolling mean across 2 years
+  to_plot <- summ_pred_dat(pred_dat, roll_years = 2) %>%
+    filter(t <= 20)
   
   res_plot <- ggplot(to_plot,
-                     aes(x = age_bin, y = mean_value,
+                     aes(x = t, y = mean_value,
                          fill = class,
                          colour = class)) +
     geom_line() +
     geom_ribbon(aes(ymin = lci_mean, ymax = uci_mean), alpha = 0.2) +
     scale_color_manual(values = custom_col_pal) +
     scale_fill_manual(values = custom_col_pal) +
-    labs(x = "Age (years)",
+    labs(x = "Time from baseline measurement (years)",
          y = paste0("Mean and 95% C.I. of mean ", bm),
-         title = paste0("Fitted trajectories of ", bm, " in each class"))
+         title = paste0("Modelled trajectories of ", bm, " in each class"))
   return (res_plot)
 }
 
@@ -323,6 +318,5 @@ lapply(BIOMS, function (bm) {
   print(plot_many_observed_dat(bm))
   # Group mean 
   print(plot_mean_obs_dat(bm))
-  # Covariates of interest
   dev.off()
 })
