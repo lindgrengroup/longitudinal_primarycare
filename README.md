@@ -13,6 +13,7 @@ General scripts:
 6. **build_eid_phenotype_matrix.R** - Constructs matrix of 0/1 for presence of disease phenotype code (cleaned, Spiros) in each individual in UKB secondary data and primary care data.
 7. **time-to_event_from_primary_care.R** - Calculate age at first diagnosis for each disease phenotype code (cleaned, Spiros) in each individual in UKB primary care data.
 8. **ukb_extract_wb_ids.R** - Get subset of individuals of White British ancestry (as genetically identified by Bycroft et al. 2018).
+9. **hes_get_age_event.R** - Annotate HES records in UK Biobank with age at event, calculated with UKBIOBANK-based DOB, choosing the earliest of multiple dates for the same record.
 
 ## scripts
 Remaining scripts organised by trait:
