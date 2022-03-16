@@ -6,16 +6,13 @@ library(lubridate)
 
 # Read files ----
 
-qcd_dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/indiv_qcd_data.rds")
-general_covars <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/QCd_demographic_covariates.txt",
-                             sep = "\t", header = T, comment.char = "$",
-                             stringsAsFactors = F)
+qcd_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")
 PHENOTYPES <- names(qcd_dat)
 
 # QC log file
-qc_log <- "/well/lindgren/UKBIOBANK/samvida/full_primary_care/qc/covariate_QC.txt"
+qc_log <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/qc/covariate_QC.txt"
 
-# Design covariate files for each adiposity trait ----
+# Design covariate files for each trait ----
 
 NPCs = 21
 
@@ -35,10 +32,9 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
   cleaned <- merge(calc_covars, general_covars, by = "eid")
   # Set missing and inconsistent ancestry to "other"
   # Remove individuals missing any covariate
-  res <- cleaned[, c("eid", "sex", "ancestry",
-                     "baseline_age", "age_sq", 
-                     "height", "baseline_trait",
-                     "FUyrs", "FU_n", paste0("PC", 1:NPCs))]
+  res <- cleaned[, c("eid", "baseline_age", "age_sq", 
+                     "baseline_trait",
+                     "FUyrs", "FU_n")]
   res <- res[complete.cases(res), ]
   sink(qc_log, append = T)
   cat(paste0("** PHENOTYPE **", p, "\n",  
@@ -52,4 +48,4 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
 names(QCd_covars) <- PHENOTYPES
 
 # Save
-saveRDS(QCd_covars, "/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/covariates.rds")
+saveRDS(QCd_covars, "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")

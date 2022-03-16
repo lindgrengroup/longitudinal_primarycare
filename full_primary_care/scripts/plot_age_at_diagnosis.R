@@ -68,3 +68,4 @@ plot_list <- lapply(c("age_at_first_record", "age_at_last_record",
 to_print <- ggarrange(plotlist = plot_list, nrow = 3, ncol = 2)
 ggexport(to_print, 
          filename = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/plots/age_at_diagnosis_distributions.pdf")
+
