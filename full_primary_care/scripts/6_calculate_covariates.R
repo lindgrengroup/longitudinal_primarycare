@@ -28,18 +28,16 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
               FU_n = n(),
               baseline_trait = first(value))
   
-  # Merge with previously calculated covariates (sex, ancestry, etc.)
-  cleaned <- merge(calc_covars, general_covars, by = "eid")
   # Set missing and inconsistent ancestry to "other"
   # Remove individuals missing any covariate
-  res <- cleaned[, c("eid", "baseline_age", "age_sq", 
+  res <- calc_covars[, c("eid", "baseline_age", "age_sq", 
                      "baseline_trait",
                      "FUyrs", "FU_n")]
   res <- res[complete.cases(res), ]
   sink(qc_log, append = T)
   cat(paste0("** PHENOTYPE **", p, "\n",  
              "**FILTER** EXCLUDED, Missing covariates: ", 
-             dim(cleaned)[1] - dim(res)[1], "\n"))
+             dim(calc_covars)[1] - dim(res)[1], "\n"))
   sink()
   
   res$eid <- as.character(res$eid)
