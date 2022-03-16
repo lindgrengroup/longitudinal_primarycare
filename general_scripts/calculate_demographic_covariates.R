@@ -45,11 +45,13 @@ covars <- pheno[,
                 c("eid", "f.34.0.0",
                   "f.21000.0.0", "f.21000.1.0", "f.21000.2.0",
                   "f.50.0.0", "f.50.1.0", "f.50.2.0", 
+                  "f.40007.0.0", "f.40007.1.0", "f.40007.2.0",
                   "f.20116.0.0", "f.20116.1.0", "f.20116.2.0",
                   PCs)]
 colnames(covars) <- c("eid", "year_of_birth",
                       "ancestry.1", "ancestry.2", "ancestry.3",
                       "height.1", "height.2", "height.3", 
+                      "age_at_death.1", "age_at_death.2", "age_at_death.3",
                       "smoking_status.1", "smoking_status.2", "smoking_status.3",
                       PCs)
 
@@ -95,6 +97,9 @@ getSmoking <- function (x) {
   return (smoking_status)
 }
 
+# Write function to get age at death 
+
+
 # Calculate all additional covariates ----
 
 covars <- cleaned 
@@ -107,6 +112,10 @@ covars$smoking_status <- apply(select(covars, starts_with("smoking")), 1,
 # Calculate median height
 covars$height <- apply(select(covars, starts_with("height")), 1, 
                        function (x) median(as.numeric(x), na.rm = T) )
+
+# Calculate age at death (median if there are multiple values)
+covars$age_at_death <- apply(select(covars, starts_with("age_at_death")),
+                             1, function (x) median(as.numeric(x), na.rm = T) )
 
 # Calculate disease status for all ICD chapters
 CHAPS <- sort(unique(dictionary$ICD_chapter))
@@ -124,7 +133,8 @@ covars <- merge(covars, eid_disease_chapters, by = "eid")
 
 covars <- covars[, c("eid", "year_of_birth",
                      "sex", "ancestry", "smoking_status",
-                     "height", paste0("ICD_chapter_", CHAPS), PCs)]
+                     "height", "age_at_death",
+                     paste0("ICD_chapter_", CHAPS), PCs)]
 
 write.table(covars, "/well/lindgren/UKBIOBANK/samvida/general_resources/220131_QCd_demographic_covariates.txt",
             sep = "\t", quote = F, row.names = F)
