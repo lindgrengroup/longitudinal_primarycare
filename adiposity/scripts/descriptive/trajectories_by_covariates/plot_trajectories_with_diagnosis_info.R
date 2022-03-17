@@ -20,7 +20,7 @@ parser$add_argument("--diagnoses",
 parser$add_argument("--biomarker", 
                     default = "Weight",
                     help = "Name of biomarker (ONLY ONE) to plot")
-parser$add_argument("-followUpYears",
+parser$add_argument("--followUpYears",
                     default = 5,
                     help = "Number of years of follow-up to plot")
 parser$add_argument("--logFile", required=TRUE, 
@@ -34,7 +34,7 @@ print(args)
 
 # UKB eids and age at diagnosis (continuous)
 diag_dat <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/eid_time_to_event_matrix.txt",
-                             sep = "\t", header = T, stringsAsFactors = F)
+                       sep = "\t", header = T, stringsAsFactors = F)
 colnames(diag_dat) <- gsub("^X", "", colnames(diag_dat))
 
 # Disease dictionary
@@ -57,10 +57,38 @@ BIOM <- args$biomarker
 biomarker_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[[BIOM]] %>%
   ungroup() %>%
   mutate(eid = as.character(eid))
+covar_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[BIOM]] %>%
+  ungroup() %>%
+  mutate(eid = as.character(eid))
+general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220131_QCd_demographic_covariates.txt",
+                             sep = "\t", header = T, comment.char = "$",
+                             stringsAsFactors = F) %>%
+  mutate(eid = as.character(eid))
+
 
 ALL_AVAILABLE_IDS <- unique(biomarker_dat$eid)
+XLIMIT <- as.numeric(args$followUpYears)
 
 # Wrangle data and set colour palette ----
+
+# Residualise biomarker data with respect to age (adjust for sex,
+# age- and age-sq)
+
+biomarker_dat <- biomarker_dat %>% 
+  mutate(age_event_sq = age_event^2,
+         sex = general_covars$sex[match(eid, general_covars$eid)])
+
+# Return NA for missing covariates
+adj_model <- lm(value ~ age_event + age_event_sq + sex, 
+                    data = biomarker_dat,
+                na.action = na.exclude)
+
+modelled_dat <- biomarker_dat
+modelled_dat <- modelled_dat %>% 
+  mutate(adj_value = resid(adj_model),
+         baseline_age = covar_dat$baseline_age[match(eid, covar_dat$eid)],
+         time_from_first_mmt = age_event - baseline_age) %>%
+  filter(!is.na(adj_value))
 
 custom_col_pal <- c("#7DA15B", "#000000", "#E41A1C")
 names(custom_col_pal) <- c("never_diag", "pre_diag", "post_diag")
@@ -73,7 +101,7 @@ plot_dat <- lapply(DIAGS, function (d) {
   colnames(diag_info) <- c("eid", "age_at_diag")
   
   # Merge in disease status (0 before diagnosis and 1 after)
-  res <- biomarker_dat %>% 
+  res <- modelled_dat %>% 
     mutate(age_at_diag = diag_info$age_at_diag[match(eid, diag_info$eid)],
            disease_status = factor(ifelse(is.na(age_at_diag), "never_diag",
                                           ifelse(age_event < age_at_diag, 
@@ -105,9 +133,9 @@ getRandIDS <- function (diag, n_sample = 25) {
                                             unique_diag_ids]
   sampled_diag_ids <- sample(unique_diag_ids, min(n_sample, 
                                                   length(unique_diag_ids)), 
-                        replace = F)
+                             replace = F)
   sampled_nondiag_ids <- sample(unique_nondiag_ids, min(n_sample, 
-                                                     length(unique_nondiag_ids)), 
+                                                        length(unique_nondiag_ids)), 
                                 replace = F)
   
   return (list(diag = sampled_diag_ids,
@@ -123,13 +151,15 @@ plotIndivObsDat <- function (diag, ids_to_plot) {
     to_plot <- plot_dat[[diag]] %>% filter(eid %in% ids_to_plot) %>%
       mutate(eid_f = factor(as.character(eid)))
     
-    res <- ggplot(to_plot, aes(x = age_event, y = value,
+    res <- ggplot(to_plot, aes(x = time_from_first_mmt, y = adj_value,
                                group = eid, colour = disease_status)) +
-      facet_wrap(.~eid_f, ncol = 5, scales = "free_x") +
+      facet_wrap(.~eid_f, ncol = 5) +
       geom_point() +
       geom_line() +
       scale_color_manual(values = custom_col_pal) +
-      labs(x = "Age (years)", y = BIOM, title = diag) +
+      labs(x = "Time from first measurement (years)", 
+           y = paste0("Age-adjusted ", BIOM), 
+           title = diag) +
       theme(title = element_text(size = 8),
             axis.title = element_text(size = 8))
   } else res <- NULL
@@ -151,7 +181,8 @@ plotManyObsDat <- function (diag) {
   
   # Plot
   res_plot <- ggplot(to_plot %>% filter(!highlight), 
-                     aes(x = age_event, y = value, group = eid,
+                     aes(x = time_from_first_mmt, 
+                         y = adj_value, group = eid,
                          colour = disease_status)) +
     geom_point(alpha = 0.1) +
     geom_line(alpha = 0.1) +
@@ -160,7 +191,9 @@ plotManyObsDat <- function (diag) {
     geom_line(data = to_plot %>% filter(highlight),
               alpha = 1) +
     scale_color_manual(values = custom_col_pal) +
-    labs(x = "Age (years)", y = BIOM, title = diag) +
+    labs(x = "Time from first measurement (years)", 
+         y = paste0("Age-adjusted ", BIOM), 
+         title = diag) +
     theme(title = element_text(size = 8),
           axis.title = element_text(size = 8))
   return (res_plot)
@@ -199,8 +232,8 @@ summTimeBin <- function (df, interval_yrs = 0.25, roll_years = 2) {
                      labels = cut_labels)
   res <- df %>% 
     group_by(disease_status, time_bin) %>% 
-    summarise(mean_value = mean(value),
-              sd_value = sd(value), 
+    summarise(mean_value = mean(adj_value),
+              sd_value = sd(adj_value), 
               n = n()) %>%
     mutate(lci_mean = mean_value - 1.96*(sd_value/sqrt(n)),
            uci_mean = mean_value + 1.96*(sd_value/sqrt(n))) 
@@ -231,9 +264,9 @@ plotMeanObsDat <- function (diag) {
     geom_ribbon(aes(ymin = lci_mean, ymax = uci_mean), alpha = 0.2) +
     scale_color_manual(values = custom_col_pal) +
     scale_fill_manual(values = custom_col_pal) +
-    scale_x_continuous(limits = c(0, as.numeric(args$followUpYears))) +
+    scale_x_continuous(limits = c(0, XLIMIT)) +
     labs(x = "Time from first measurement (years)", 
-         y = paste0("Mean and 95% CI of ", BIOM), 
+         y = paste0("Mean age-adjusted ", BIOM), 
          title = diag) +
     theme(title = element_text(size = 8),
           axis.title = element_text(size = 8))

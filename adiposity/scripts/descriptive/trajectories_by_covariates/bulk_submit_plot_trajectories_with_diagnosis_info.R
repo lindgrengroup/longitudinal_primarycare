@@ -12,7 +12,9 @@ submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_prima
 DIAGS_TO_PLOT <- "all"
 OUTPLOTDIR <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/testing_plot_traj/diagnosis_trajectories/"
 
-BIOMARKERS <- c("BMI", "Weight", "WC", "WHR")
+BIOMARKERS <- c("BMI", "Weight")
+BM_FU <- c(20, 20)
+names(BM_FU) <- BIOMARKERS
 
 for (bm in BIOMARKERS) {
   logfile_name <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/testing_plot_traj/all_diags_",
@@ -22,7 +24,9 @@ for (bm in BIOMARKERS) {
     paste0(
       "diagnoses=\"", DIAGS_TO_PLOT, "\",",
       "biomarker=\"", bm, "\",",
-      "logFile=\"", logfile_name, "\""
+      "followUpYears=\"", BM_FU[[bm]], "\",",
+      "logFile=\"", logfile_name, "\",",
+      "outPlotDir=\"", OUTPLOTDIR, "\""
     )
   )
   job_submission <- paste("qsub", job_options, submission_script)

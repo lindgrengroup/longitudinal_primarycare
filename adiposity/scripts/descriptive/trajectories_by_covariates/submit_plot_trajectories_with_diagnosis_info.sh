@@ -20,19 +20,24 @@ echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as use
 # 4. directory where output plots should be stored
 
 # If using bulk submission via R script:
-echo "passing covariates..."
-covars=${covars//|/,}
-echo ${covars}
+# echo "passing covariates..."
+# covars=${covars//|/,}
+# echo ${covars}
+
+outPlotDir="/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/testing_plot_traj/diagnosis_trajectories/"
 
 mkdir ${outPlotDir}
 
 module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 
-Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/scripts/plot_trajectories_with_diagnosis_info.R \
---diagnoses=${diagnoses} \
---biomarker=${biomarker} \
---logFile=${logFile} \
---outPlotDir=${outPlotDir}
+for adipo in BMI Weight WC WHR
+do
+	Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/scripts/plot_trajectories_with_diagnosis_info.R \
+	--diagnoses=all \
+	--biomarker=${adipo} \
+	--logFile=/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/testing_plot_traj/all_diags_${adipo}_log.txt \
+	--outPlotDir=${outPlotDir}
+done
 
 echo "###########################################################"
 echo "Finished at: "`date`
