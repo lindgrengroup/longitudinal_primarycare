@@ -1,5 +1,7 @@
 Scripts in this folder:
 
+1. **plot_trajectories_given_snps.R** - For a SNP with pre-calculated dosages, plot trajectories of hormones for randomly sampled individuals and population averages within dosage groups.
+
 ## GWAS
 
 1. **1_prep_cross_sec.R** - Get cross-sectional hormone data from GP records by either extracting the single available value or (in the case of multiple measurements) extracting the first reported value closest to the individual's median hormone measurement. In sex-specific and sex-combined strata, adjust for covariates and rank-based inverse normal transform the residuals as phenotype for GWAS. 
