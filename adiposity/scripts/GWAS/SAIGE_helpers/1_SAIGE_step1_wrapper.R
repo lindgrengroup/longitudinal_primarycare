@@ -4,14 +4,18 @@
 
 # MAKE SURE TO SUBMIT WITH 12 THREADS (or change nThreads in this script)
 
-library(SAIGE, lib.loc='/well/lindgren/flassen/software/tmp/') 
+# library(SAIGE, lib.loc='/well/lindgren/flassen/software/tmp/') 
+library(SAIGE)
 suppressPackageStartupMessages(library("argparse"))
 
 parser <- ArgumentParser()
 parser$add_argument("--strata", required=TRUE,
-                   help = "Which strata we are assessing")
+                    help = "Which strata we are assessing")
 parser$add_argument("--cluster", required=TRUE,
                     help = "Which cluster we are assessing")
+parser$add_argument("--adjBaseline",
+                    default = "False",
+                    help = "Should GWAS be adjusted for baseline trait value?")
 parser$add_argument("--plinkFile", 
                     default = "/well/lindgren/UKBIOBANK/ferreira/IMPUTED_association_analysis/grm_files/ukb_cal_v2_qced_pruned")
 parser$add_argument("--covars",
@@ -24,19 +28,21 @@ parser$add_argument("--traitType",
                     default = "binary",
                     help = "What type of trait is the phenotype? Binary or quantitative?")
 parser$add_argument("--outputdir",
-                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/",
+                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/SAIGE_results/",
                     help = "Results output directory")
 
 args <- parser$parse_args()
 print(args)
 
 # Create some arguments to GLMM from combinations of others
-phenoFile <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/traits_for_gwas/",
-                    args$strata, "/cluster_membership_", args$strata, ".txt")
+phenoFile <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/traits_for_GWAS/cluster_membership_", 
+                    args$strata, ".txt")
 outputPrefix <- paste0(args$outputdir, args$strata, "/", args$cluster)
 invNormalize <- args$traitType == "quantitative"
 covarColList <- unlist(strsplit(args$covars, split=","))
 if (grepl("sex_comb", args$strata)) covarColList <- c(covarColList, "sex")
+if (args$adjBaseline %in% c("T", "TRUE", "True")) 
+  covarColList <- c(covarColList, "baseline_trait")
 
 # Step 1: fit null model
 fitNULLGLMM(

@@ -5,10 +5,21 @@ Scripts in this folder:
 ### Linear mixed models
 1. **1_apply_lmms.R** - Build linear mixed effects models for effect of time (from baseline measurement) on trait, allowing for fixed and random intercepts and slopes; adjust for covariates (baseline age, age-squared, sex, genetic PCs, and data provider). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for intercept and slope as the fixed + random effect for each individual. 
 
+### High dimensional splines (in collaboration with George Nicholson)
+**0_prep_data.R** - Get data, adjust outcome for various confounders, calculate time from first measurement in days. 
+1. **1_fit_hidim_splines.R** - Calculate subject-specific posteriors and save B-spline matrix, spline posteriors, and residual variance. PLot samples of fitted trajectories to monitor fit. 
+2. **2_sample_clustering_scheme.R** - Try various samples to initialise clustering - based on L (minimum length of follow up) and M (quantile difference at M years post-baseline). Clustering is based on baselined spline posteriors generated in (1), using a custom distance matrix that is an inverse-variance weighted Euclidean distance.
+3. **3_assign_clusters.R** - Correspond cluster centroids between various sampling initialisation schemes. Pick best M and L combination from above for initialisation of clusters. Assign every individual to closest cluster centroid. 
+4. **4_plot_clustering_results...** - Once clusters have been determined, plot modelled trajectories, observed trajectories, and associations between clusters and various covariates.
+5. **5_compare_hidim_cspline.R** - Compare results from clustering based on high-dimensional spline models to those below (based on cubic spline models).
+
 ### Cubic splines
-1. **1_apply_splines.R** - Build cubic spline mixed effects models for effect of time on trait, allowing for fixed and random intercepts and spline effects of time. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (baseline age, baseline age-squared, and sex). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
-2. **2_cBLUP_PCA_heatmaps.R** - Calculate PCs based on BLUPs from cubic spline models and plot heatmaps of BLUPs as well as PCA scree plots to visualise dimensionality reduction captured by PCs.
-3. **3_kmeans_clustering.R** - In each strata, cluster individuals by their BLUPs using k-means. Plot within-sum-of-squares variance explained to determine best number of clusters; then save cluster identity. 
+1. **1_apply_time_splines.R** - Build cubic spline mixed effects models for effect of time on trait, allowing for fixed and random intercepts and spline effects of time. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (baseline age, baseline age-squared, and sex). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
+2. **2_plot_cspline_predictions.R** - Plot model predictions for various subsets of individuals (random, high or low values of baseline trait, baseline age, covariates, etc.) 
+3. **3_cBLUP_PCA_heatmaps.R** - Calculate PCs based on BLUPs from cubic spline models and plot heatmaps of BLUPs as well as PCA scree plots to visualise dimensionality reduction captured by PCs.
+4. **4_*.R** - Try various clustering techniques: Gaussian mixture modelling, bootstrap number of clusters, and k-means clustering - all based on intercept and BLUPs from models.
+5. **5_plot_clustering_results...** - Once clusters have been determined, plot modelled trajectories, observed trajectories, and associations between clusters and various covariates.
+6. **6_remap_clusters.R** - If clusters have to be made to correspond across different strata.
 
 ### Cross-sectional (baseline)
 1. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
@@ -32,11 +43,26 @@ Change these scripts for each set of models, linear, cubic splines, etc.) -
 
 Refer to README in */GWAS/*
 
+## TRAJGWAS
+Scripts to perform trajectory GWAS as outlined in https://github.com/OpenMendel/TrajGWAS.jl (Ko et al. 2022). Returns results for beta (mean), tau (variance), and joint effects of beta and tau for each SNP on trait. 
+1. **1_sample_qc.R** - Prepare data and covariates in long format for TrajGWAS.
+2. **2_fit_null_model.jl** - Use TrajGWAS Julia package to fit mixed model with fixed and random effects (including covariates and random intercept and random time-slope within each individual) but without any SNPs - null model. 
+3. **3_spatest.jl** - Perform GWAS on each chromosome with the saddle point approximation implemented in Julia TrajGWAS pacakge.
+4. **submit_4_plot_results.sh** and **4_plot_gwas_results.R** - Filter SNPs and plot QQ-plots and Manhattan plots.
+
 ## Post-GWAS
 1. **1_perform_finemapping.sh** - Uses Duncan's pipeline (see here: https://github.com/astheeggeggs/pipeline) to finemap causal variants in loci from filtered GWAS summary statistics. 
 2. **2_plot_locuszoom.sh** - Following finemapping, provide LD matrix, summary stats, and finemapped variants to local version of locuszoom for loci plots. This can be extended to highlight independently associated variants. 
 3. **3_calculate_heritability.sh** - Get overall SNP-based heritability of phenotype using LDSC from summary statistics. 
 4. **4_extract_dosages.sh and 4_submit_extract_dosages.R** - Get dosages (0,1,2) to find homozygous REF/ALT and heterozygous individuals at lead SNPs of interest. 
+
+Other helpers:
+**8_calculate_power_boost** - Compare chi-square statistics from linear mixed model intercept GWASs to GIANT GWASs to determine increase in effective sample size.
+**classify_reported_novel_variants.R** - Classify variants as "reported" (previously published), "refined" (correlated with previously published variants, larger effect size than previously published correlated variants, and retains effect when conditioned on previously published correlated variants), or "novel" (uncorrelated with previously published variants, or conditionally independent of any previously published correlated variants).
+
+## PGS ASSOCIATIONS (in collaboration with Frederik Heymann Lassen)
+See here for generation of PGS - https://github.com/frhl/wes_ko_ukbb/tree/speedy_speedos/scripts/prs
+1. **plot_PGS_in_clusters.R** - Compare polygenic score distributions for various traits across the clusters.
 
 ## PHENOTYPE ENRICHMENT
 1. **female_phenotype_enrichment.R** - Get age at menarche, age at menopause, and number of live births from UKB to compare distributions in different clusters in female-specific analyses.

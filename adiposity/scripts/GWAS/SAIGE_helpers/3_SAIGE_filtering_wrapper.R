@@ -30,7 +30,7 @@ GWAS_res <- read.table(GWAS_zip,
 to_numeric <- c("CHR", "POS", "AF_Allele2", "imputationInfo", 
                 "N", "BETA", "SE", "p.value")
 GWAS_res <- GWAS_res %>% as_tibble() %>%
-  select(c("CHR", "POS", "SNPID", "Allele1", "Allele2", "AF_Allele2", 
+  select(c("rsid", "CHR", "POS", "SNPID", "Allele1", "Allele2", "AF_Allele2", 
            "imputationInfo", "N", "BETA", "SE", "p.value")) %>%
   mutate(across(all_of(to_numeric), as.numeric)) %>%
   mutate(maf = ifelse(AF_Allele2 < 0.5, AF_Allele2, 1-AF_Allele2))
@@ -61,7 +61,7 @@ info_filter <- function (qc_log, dat) {
 
 # Sanity check: Multi-allelic markers
 biallelic_filter <- function (qc_log, dat) {
-  res <- dat %>% filter(!grepl(";", SNPID))
+  res <- dat %>% filter(!grepl(";", rsid))
   sink(qc_log, append = T)
   cat(paste0("\t", 
              "# multi-allelic SNPs removed: ", 
@@ -114,8 +114,8 @@ sink()
 
 # Sort results by chromosome and position and rename SNP to "chrN:pos"
 cleaned <- cleaned %>% arrange(CHR, POS) %>%
-  mutate(SNP = ifelse(grepl("^rs", SNPID), SNPID, 
-                      paste0("chr", sub("_.*", "", SNPID))))
+  mutate(SNP = ifelse(grepl("^rs", rsid), rsid, 
+                      paste0("chr", sub("_.*", "", rsid))))
 
 to_print <- cleaned[, c("SNP", "CHR", "POS", 
                         "Allele2", "Allele1", "AF_Allele2",
@@ -170,18 +170,20 @@ qq_plots <- lapply(1:NBINS, function (i) {
 
 # Manhattan plots ----
 
-# Function to only keep 10,000 SNPs below a threshold to make plotting easier
-thinSNPS <- function (pvals, threshold) {
-  pass_threshold <- which(pvals < threshold)
-  fail_threshold <- which(pvals >= threshold)
-  n_thin <- max(length(fail_threshold), 10000)
-  keep_failed <- sample(fail_threshold, n_thin, replace = F)
-  indices_return <- c(pass_threshold, keep_failed)
-  return (indices_return)
-}
+# # Function to only keep 10,000 SNPs below a threshold to make plotting easier
+# thinSNPS <- function (pvals, threshold) {
+#   pass_threshold <- which(pvals < threshold)
+#   fail_threshold <- which(pvals >= threshold)
+#   n_thin <- min(length(fail_threshold), 10000)
+#   keep_failed <- sample(fail_threshold, n_thin, replace = F)
+#   indices_return <- c(pass_threshold, keep_failed)
+#   return (indices_return)
+# }
+# 
+# # keep only some SNPs to reduce plot size
+# sub_gwas <- gwas_dat[thinSNPS(gwas_dat$p.value, 1E-03), ]
 
-# keep only some SNPs to reduce plot size
-sub_gwas <- gwas_dat[thinSNPS(gwas_dat$p.value, 1E-03), ]
+sub_gwas <- gwas_dat
 
 sub_gwas <- sub_gwas %>% 
   # get chromosome length

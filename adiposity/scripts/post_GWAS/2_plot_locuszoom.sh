@@ -6,7 +6,7 @@
 #$ -cwd
 #$ -P lindgren.prjc -q short.qc
 #$ -pe shmem 1
-#$ -t 1-7 -tc 2 
+#$ -t 1-6 -tc 2 
 #$ -N adiposity_locuszoom_plots
 #$ -j y
 
@@ -16,13 +16,12 @@ echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as use
 
 # Before running this, create batch list of SNPs to plot
 
-STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" locuszoom_filenames.txt`
+STRATA_NAME=`sed -n -e "$SGE_TASK_ID p" /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/strata_filenames.txt`
 
-cd /well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS
+cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS
 
 # Create METAL-style input file for locuszoom
-zcat BOLT_filtered/${STRATA_NAME}_lmm_slopes_adj_baseline.txt.gz | \
-awk 'BEGIN{OFS="\t"} {print $1,$9}' - \
+awk 'BEGIN{OFS="\t"} {print $1,$9}' BOLT_results/${STRATA_NAME}_lmm_slopes_adj_int_final.txt \
 > post_GWAS/${STRATA_NAME}/locuszoom/lmm_slopes_input_sumstats.txt
 
 cd post_GWAS/${STRATA_NAME}/locuszoom

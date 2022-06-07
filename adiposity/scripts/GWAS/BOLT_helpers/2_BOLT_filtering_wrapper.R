@@ -149,18 +149,20 @@ qq_plots <- lapply(1:NBINS, function (i) {
 
 # Manhattan plots ----
 
-# Function to only keep 10,000 SNPs below a threshold to make plotting easier
-thinSNPS <- function (pvals, threshold) {
-  pass_threshold <- which(pvals < threshold)
-  fail_threshold <- which(pvals >= threshold)
-  n_thin <- max(length(fail_threshold), 10000)
-  keep_failed <- sample(fail_threshold, n_thin, replace = F)
-  indices_return <- c(pass_threshold, keep_failed)
-  return (indices_return)
-}
+# # Function to only keep 10,000 SNPs below a threshold to make plotting easier
+# thinSNPS <- function (pvals, threshold) {
+#   pass_threshold <- which(pvals < threshold)
+#   fail_threshold <- which(pvals >= threshold)
+#   n_thin <- min(length(fail_threshold), 10000)
+#   keep_failed <- sample(fail_threshold, n_thin, replace = F)
+#   indices_return <- c(pass_threshold, keep_failed)
+#   return (indices_return)
+# }
+# 
+# # keep only some SNPs to reduce plot size
+# sub_gwas <- gwas_dat[thinSNPS(gwas_dat$P_BOLT_LMM_INF, 1E-03), ]
 
-# keep only some SNPs to reduce plot size
-sub_gwas <- gwas_dat[thinSNPS(gwas_dat$P_BOLT_LMM_INF, 1E-03), ]
+sub_gwas <- gwas_dat
 
 sub_gwas <- sub_gwas %>% 
   # get chromosome length

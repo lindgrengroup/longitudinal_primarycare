@@ -2,7 +2,7 @@
 # Date: 08/02/22
 # Adapted from: Duncan Palmer (https://github.com/astheeggeggs/SAIGE_gene_munging)
 
-library(SAIGE, lib.loc='/well/lindgren/flassen/software/tmp/') 
+library(SAIGE) 
 suppressPackageStartupMessages(library("argparse"))
 
 parser <- ArgumentParser()
@@ -19,10 +19,10 @@ parser$add_argument("--sampleFile",
                     default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/bgen_sample_ids_chr1.txt",
                     help = "List of sample IDs in bgen files")
 parser$add_argument("--step1ResultsDir", 
-                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/",
+                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/SAIGE_results/",
                     help = "Path to directory where step 1 results were stored")
 parser$add_argument("--step2ResultsDir", 
-                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/SAIGE_results/",
+                    default = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/SAIGE_results/",
                     help = "Path to directory where step 2 results should be stored")
 args <- parser$parse_args()
 
@@ -50,4 +50,4 @@ SPAGMMATtest(
   SAIGEOutputFile = SAIGEOutputFile,
   IsOutputAFinCaseCtrl = TRUE,
   IsOutputNinCaseCtrl = TRUE
-  )
+)

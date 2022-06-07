@@ -174,8 +174,8 @@ qc_not_in_phasing  <- function(data, qc_log_file) {
 
 qc_sex_chr_aneupl  <- function(data, qc_log_file) {
   
-  cleaned <- subset(data, !is.na(data$putative.sex.chromosome.aneuploidy) & 
-                      data$putative.sex.chromosome.aneuploidy != 1)
+  cleaned <- subset(data, !is.na(data$putative.sex.chromosome.aneuploid) & 
+                      data$putative.sex.chromosome.aneuploid != 1)
   
   sink(qc_log_file, append = T)
   cat(paste("**FILTER** EXCLUDED, putative sex chr aneuploidy: ", 

@@ -1,0 +1,63 @@
+# Author: Samvida S. Venkatesh
+# Date: 11/10/21
+
+library(tidyverse)
+
+# Read data ----
+
+# BLUP files
+PHENOTYPES <- c("BMI", "Weight")
+SEX_STRATA <- c("F", "M", "sex_comb")
+
+blups <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(SEX_STRATA, function (sx) {
+    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/lmm_models/",
+                            p, "_", sx, "_blups_full_model.txt"),
+                     sep = "\t", header = T, stringsAsFactors = F)
+    df <- df[, c("eid", "X.Intercept.")]
+    colnames(df) <- c("eid", "model_term")
+    return (df)
+  })
+  names(res) <- SEX_STRATA
+  return (res)
+})
+names(blups) <- PHENOTYPES
+
+# IDs that passed sample QC
+ids_passed_qc <- lapply(PHENOTYPES, function (p) {
+  res <- lapply(SEX_STRATA, function (sx) {
+    read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/sample_qc/", 
+                      p, "_", sx, "_ids_passed_qc.txt"),
+               sep = "\t", header = T)
+  })
+  names(res) <- SEX_STRATA
+  return (res)
+})
+names(ids_passed_qc) <- PHENOTYPES
+
+# RINT ----
+
+rinted_intercepts <- lapply(PHENOTYPES, function (p) {
+  res_list <- lapply(SEX_STRATA, function (sx) {
+    df <- blups[[p]][[sx]]
+    # Only retain the IDs that passed genotyping sample QC
+    df <- df %>% filter(eid %in% ids_passed_qc[[p]][[sx]]$IID)
+
+    # RINT
+    trait_to_rint <- df$model_term
+    rinted_trait <- qnorm((rank(trait_to_rint) - 0.5) / sum(!is.na(trait_to_rint)))
+    # Return formatted data
+    res <- data.frame(FID = df$eid, 
+                      IID = df$eid,
+                      rinted_trait = rinted_trait) 
+    
+    # Write results to table
+    write.table(res,
+                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/traits_for_GWAS/lmm_intercepts_", 
+                       p, "_", sx, ".txt"),
+                sep = "\t", row.names = F, quote = F)
+    return ()
+  })
+  return ()
+})
+
