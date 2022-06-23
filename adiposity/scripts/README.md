@@ -7,7 +7,7 @@ Scripts in this folder:
 
 ### High dimensional splines (in collaboration with George Nicholson)
 **0_prep_data.R** - Get data, adjust outcome for various confounders, calculate time from first measurement in days. 
-1. **1_fit_hidim_splines.R** - Calculate subject-specific posteriors and save B-spline matrix, spline posteriors, and residual variance. PLot samples of fitted trajectories to monitor fit. 
+1. **1_fit_hidim_splines.R** - Calculate subject-specific posteriors and save B-spline matrix, spline posteriors, and residual variance. Plot samples of fitted trajectories to monitor fit. 
 2. **2_sample_clustering_scheme.R** - Try various samples to initialise clustering - based on L (minimum length of follow up) and M (quantile difference at M years post-baseline). Clustering is based on baselined spline posteriors generated in (1), using a custom distance matrix that is an inverse-variance weighted Euclidean distance.
 3. **3_assign_clusters.R** - Correspond cluster centroids between various sampling initialisation schemes. Pick best M and L combination from above for initialisation of clusters. Assign every individual to closest cluster centroid. 
 4. **4_plot_clustering_results...** - Once clusters have been determined, plot modelled trajectories, observed trajectories, and associations between clusters and various covariates.
