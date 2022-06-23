@@ -17,14 +17,10 @@ parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
 parser$add_argument("--sex_strata", required = TRUE,
                     help = "Sex strata")
-parser$add_argument("--resid_var", required = TRUE,
-                    default = 5,
-                    help = "Residual variance estimate for models")
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
 SEX_STRATA <- args$sex_strata
-VAR_RES <- as.numeric(args$resid_var)
 
 plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/plots/"
 resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/"
@@ -137,71 +133,72 @@ spline_posteriors <- lapply(model_dat, function (id_df) {
 
 # Extract values of interest ----
 
-# # To calculate SD_RES, check histogram of residual variances
-# resid_vars_check <- lapply(ALL_IDS, function (id) {
-#   obs_dat <- model_dat[[id]]
-#   pred_dat <- B %*% spline_posteriors[[id]]$mu
-#   
-#   check <- data.frame(t_diff = obs_dat$t_diff,
-#                       obs_val = obs_dat$value_fulladj)
-#   check$pred_val <- pred_dat[check$t_diff]
-#   var <- 1/nrow(check) * sum((check$obs_val - check$pred_val)^2)
-#   return (var)
-# })
-# resid_vars_check <- data.frame(var = unlist(resid_vars_check))
-# mean_rvar <- mean(resid_vars_check$var)
-# median_rvar <- median(resid_vars_check$var)
-# 
-# resid_var_plot <- ggplot(resid_vars_check, aes(x = var)) +
-#   geom_histogram() +
-#   geom_vline(xintercept = mean_rvar, linetype = "dashed") + 
-#   geom_vline(xintercept = median_rvar) +
-#   labs(x = "Residual variance", 
-#        title = paste0("Mean: ", round(mean_rvar, 3), 
-#                       " Median: ", round(median_rvar, 3)))
-# 
-# pdf(paste0(plotdir, "resid_var_check_", PHENO, "_", SEX_STRATA, ".pdf"), 
-#     onefile = T)
-# print(resid_var_plot)
-# print(resid_var_plot + scale_x_continuous(limits = c(0, 10)))
-# dev.off()
+# To calculate SD_RES, check histogram of residual variances
+resid_vars_check <- lapply(ALL_IDS, function (id) {
+  obs_dat <- model_dat[[id]]
+  pred_dat <- B %*% spline_posteriors[[id]]$mu
+  
+  check <- data.frame(t_diff = obs_dat$t_diff,
+                      obs_val = obs_dat$value_fulladj)
+  check$pred_val <- pred_dat[check$t_diff]
+  var <- 1/nrow(check) * sum((check$obs_val - check$pred_val)^2)
+  return (var)
+})
+resid_vars_check <- data.frame(var = unlist(resid_vars_check))
+mean_rvar <- mean(resid_vars_check$var)
+median_rvar <- median(resid_vars_check$var)
+
+resid_var_plot <- ggplot(resid_vars_check, aes(x = var)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean_rvar, linetype = "dashed") +
+  geom_vline(xintercept = median_rvar) +
+  labs(x = "Residual variance",
+       title = paste0("Mean: ", round(mean_rvar, 3),
+                      " Median: ", round(median_rvar, 3)))
+
+pdf(paste0(plotdir, "resid_var_check_", PHENO, "_", SEX_STRATA, ".pdf"),
+    onefile = T)
+print(resid_var_plot)
+print(resid_var_plot + scale_x_continuous(limits = c(0, 10)))
+dev.off()
 
 saveRDS(list(B = B,
-             spline_posteriors = spline_posteriors,
-             resid_var = VAR_RES),
+             spline_posteriors = spline_posteriors),
         paste0(resdir, "fit_objects_", PHENO, "_", SEX_STRATA, ".rds"))
 
 # Plot fitted values for sample data ----
 
-set.seed(RANDOM_SEED)
-plot_indivs <- sample(unique(dat$eid), 25, replace = F)
+## only run this after getting the residual variance from above
 
-pred_sample <- lapply(plot_indivs, function (id) {
-  pred_value <- B %*% spline_posteriors[[id]]$mu
-  sd_pred <- sqrt(diag(B %*% spline_posteriors[[id]]$Sig %*% t(B)) * VAR_RES)
-  
-  res <- data.frame(eid = id,
-                    t_diff = 1:length(pred_value),
-                    fit_mean = pred_value,
-                    fit_sd = sd_pred)
-  return (res)
-})
-pred_sample <- bind_rows(pred_sample)
-
-raw_sample <- dat %>% filter(eid %in% plot_indivs)
-
-fit_plot <- ggplot(pred_sample, aes(x = t_diff)) +
-  facet_wrap(~eid, nrow = 5, ncol = 5, scales = "free_y") +
-  geom_point(data = raw_sample,
-             aes(x = t_diff, y = value_fulladj)) +
-  geom_line(aes(y = fit_mean)) +
-  geom_ribbon(aes(ymin = fit_mean - 1.96*fit_sd,
-                  ymax = fit_mean + 1.96*fit_sd), alpha = 0.1) +
-  labs(x = "Days from first measurement", y = "Confounder-adj value")
-
-pdf(paste0(plotdir, "sample_pred_", PHENO, "_", SEX_STRATA, ".pdf"), onefile = T)
-print(fit_plot)
-dev.off()
+# set.seed(RANDOM_SEED)
+# plot_indivs <- sample(unique(dat$eid), 25, replace = F)
+# 
+# pred_sample <- lapply(plot_indivs, function (id) {
+#   pred_value <- B %*% spline_posteriors[[id]]$mu
+#   sd_pred <- sqrt(diag(B %*% spline_posteriors[[id]]$Sig %*% t(B)) * VAR_RES)
+#   
+#   res <- data.frame(eid = id,
+#                     t_diff = 1:length(pred_value),
+#                     fit_mean = pred_value,
+#                     fit_sd = sd_pred)
+#   return (res)
+# })
+# pred_sample <- bind_rows(pred_sample)
+# 
+# raw_sample <- dat %>% filter(eid %in% plot_indivs)
+# 
+# fit_plot <- ggplot(pred_sample, aes(x = t_diff)) +
+#   facet_wrap(~eid, nrow = 5, ncol = 5, scales = "free_y") +
+#   geom_point(data = raw_sample,
+#              aes(x = t_diff, y = value_fulladj)) +
+#   geom_line(aes(y = fit_mean)) +
+#   geom_ribbon(aes(ymin = fit_mean - 1.96*fit_sd,
+#                   ymax = fit_mean + 1.96*fit_sd), alpha = 0.1) +
+#   labs(x = "Days from first measurement", y = "Confounder-adj value")
+# 
+# pdf(paste0(plotdir, "sample_pred_", PHENO, "_", SEX_STRATA, ".pdf"), onefile = T)
+# print(fit_plot)
+# dev.off()
 
 # # Matrix of means (id x basis) 
 # mn_mat <- lapply(spline_posteriors, function (spobj) {
