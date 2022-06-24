@@ -58,7 +58,7 @@ Scripts to perform trajectory GWAS as outlined in https://github.com/OpenMendel/
 
 Other helpers:
 **8_calculate_power_boost** - Compare chi-square statistics from linear mixed model intercept GWASs to GIANT GWASs to determine increase in effective sample size.
-**classify_reported_novel_variants.R** - Classify variants as "reported" (previously published), "refined" (correlated with previously published variants, larger effect size than previously published correlated variants, and retains effect when conditioned on previously published correlated variants), or "novel" (uncorrelated with previously published variants, or conditionally independent of any previously published correlated variants).
+**classify/characterise_reported_novel_variants.R** - Classify variants as "reported" (previously published), "refined" (correlated with previously published variants, larger effect size than previously published correlated variants, and retains effect when conditioned on previously published correlated variants), or "novel" (uncorrelated with previously published variants, and conditionally independent of any previously published variants in the region). Characterise with global MAF, nearest gene, and variant consequence.
 
 ## PGS ASSOCIATIONS (in collaboration with Frederik Heymann Lassen)
 See here for generation of PGS - https://github.com/frhl/wes_ko_ukbb/tree/speedy_speedos/scripts/prs

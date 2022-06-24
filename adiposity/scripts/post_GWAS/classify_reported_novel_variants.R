@@ -54,6 +54,10 @@ write.table(reported_snps,
             "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/BMI_sex_comb/classify_lmm_intercept_variants/reported_snp_list.txt",
             sep = "\t", row.names = F, col.names = F, quote = F)
 
+write.table(unreported_snps, 
+            "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/BMI_sex_comb/classify_lmm_intercept_variants/unreported_snp_list.txt",
+            sep = "\t", row.names = F, quote = F)
+
 # Calculate list of conditional SNPs to assess per variant and submit GCTA-COJO ----
 
 WINDOW_SIZE <- 500000 # 500kb window
@@ -70,7 +74,7 @@ for (i in 1:nrow(unreported_snps)) {
                           unreported_snps$POS[i])
   
   # Add SNP itself to the list
-  to_write <- c(unreported_snps$SNP[i], to_write)
+  to_write <- unique(c(unreported_snps$SNP[i], to_write))
   
   write.table(to_write,
               paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/BMI_sex_comb/classify_lmm_intercept_variants/reported_variants/",
