@@ -2,6 +2,45 @@
 # Adapted from: George Nicholson
 # Date: 16/05/22
 
+# ONLY RUN THE FOLLOWING ONCE TO SPLIT DATA INTO 80% CLUSTER DISCOVERY SET
+# AND 20% CLUSTER VALIDATION SET
+
+# Split data into training and validation ----
+
+# library(tidyverse)
+# RANDOM_SEED <- 160522
+# set.seed(RANDOM_SEED)
+# 
+# PHENOTYPES <- c("BMI", "Weight")
+# SEX_STRATA <- c("F", "M", "sex_comb")
+# 
+# main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/"
+# raw_dat <- readRDS(paste0(main_filepath, "data/dat_to_model.rds"))
+# 
+# lapply(PHENOTYPES, function (p) {
+#   lapply(SEX_STRATA, function (sx) {
+#     df <- raw_dat[[p]][[sx]] 
+#     
+#     ids_to_split <- unique(df$eid)
+#     NTRAIN <- round(0.8*length(ids_to_split))
+#     
+#     training_ids <- sample(ids_to_split, NTRAIN, replace = F)
+#     validation_ids <- ids_to_split[!ids_to_split %in% training_ids]
+#     
+#     write.table(training_ids, 
+#                 paste0(main_filepath, "clustering/",
+#                        p, "_", sx, "/ids_training.txt"),
+#                 sep = "\t", row.names = F, quote = F, col.names = F)
+#     
+#     write.table(validation_ids, 
+#                 paste0(main_filepath, "clustering/",
+#                        p, "_", sx, "/ids_validation.txt"),
+#                 sep = "\t", row.names = F, quote = F, col.names = F)
+#   })
+# })
+
+# Main script ----
+
 library(argparse)
 library(splines)
 library(cluster)
@@ -18,23 +57,26 @@ parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
 parser$add_argument("--ss", required = TRUE,
                     help = "Sex strata")
-parser$add_argument("--nclust", required = TRUE,
+parser$add_argument("--K", required = TRUE,
                     default = 5,
                     help = "Number of clusters")
 parser$add_argument("--L", required = TRUE,
+                    default = 2, 
                     help = "Only sample from individuals with at least L measurements")
 parser$add_argument("--M", required = TRUE,
+                    default = 1,
                     help = "Initialise clusters with diff. at M years post-baseline")
-
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
 SEX_STRATA <- args$ss
-NCLUST <- as.numeric(args$nclust)
+K <- as.numeric(args$K)
+
+main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/"
 
 # For sampling scheme
-NSAMPLES <- 10000 # number of individuals to sample each iteration
-S <- 9 # number of times to draw samples from population
+NSAMPLES <- 5000 # number of individuals to sample each iteration
+S <- 10 # number of times to draw samples from population
 L <- as.numeric(args$L) # only sample from individuals with at least L measurements
 
 # For clustering
@@ -43,20 +85,34 @@ if (M != "random") {
   M <- as.numeric(args$M) # initialise clusters with n-tile diff. at M years post-baseline
 }
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/plots/sample_clustering_scheme"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
+resdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
+                 "/parameter_selection/")
 
 # Load data ----
 
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+model_dat <- readRDS(paste0(main_filepath, "results/fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 covars_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
 
-# Get data relevant for sampling scheme ----
+# Only retain 80% of data used for discovery
+training_ids <- read.table(paste0(main_filepath, "clustering/", 
+                              PHENO, "_", SEX_STRATA, "/ids_training.txt"),
+                       sep = "\t", header = F, stringsAsFactors = F)$V1
+training_ids <- as.character(training_ids)
 
 B <- model_dat$B
-spline_posteriors <- model_dat$spline_posteriors
+spline_posteriors <- model_dat$spline_posteriors[training_ids]
 model_resid_var <- model_dat$resid_var
+
+# Only retain data with minimum L measurements 
+covars_dat <- covars_dat %>% 
+  mutate(eid = as.character(eid)) %>%
+  filter(eid %in% training_ids & FU_n >= L)
+VALID_IDS <- unique(covars_dat$eid)
+
+spline_posteriors <- spline_posteriors[VALID_IDS]
+
+# Create B-spline coefficient matrices for distance matrix construction ----
 
 # Create mean and S.D. matrix
 # Matrix of means (id x basis)
@@ -73,14 +129,6 @@ sd_mat <- lapply(spline_posteriors, function (spobj) {
 sd_mat <- bind_rows(sd_mat)
 sd_mat <- as.data.frame(sd_mat)
 rownames(sd_mat) <- names(spline_posteriors)
-
-# Minimum number of measurements
-valid_ids <- as.character(covars_dat$eid[covars_dat$FU_n >= L])
-valid_ids <- rownames(model_dat$mn_mat)[rownames(model_dat$mn_mat) %in% valid_ids]
-
-mn_mat <- model_dat$mn_mat[valid_ids, ]
-sd_mat <- model_dat$sd_mat[valid_ids, ]
-spline_posteriors <- spline_posteriors[valid_ids]
 
 # Baseline data before clustering (subtract intercept - value at t0)
 mn_mat <- mn_mat - mn_mat[, 1]
@@ -146,14 +194,14 @@ getClusterBelonging <- function (id_list, medoid_list) {
 
 ## Calculate cluster medoids for initialisation, given list of individuals
 getInitialCentres <- function (id_list, myrs = M,
-                               ncentres = NCLUST) {
+                               ncentres = K) {
   
   cat("######## Initialising cluster centres", "\n")
   
   if (M == "random") {
     
     # Sample initial medoids randomly from list
-    init_meds <- sample(id_list, NCLUST, replace = F)
+    init_meds <- sample(id_list, K, replace = F)
     index_ret <- match(init_meds, id_list)
     
     # Assign remaining ids to closest initial centre
@@ -187,79 +235,17 @@ getInitialCentres <- function (id_list, myrs = M,
 
 ## Perform PAM clustering (partitioning around medoids) and return clusters
 
-performClustering <- function (dist_mat, ncentres = NCLUST, init_centres) {
+performClustering <- function (dist_mat, ncentres = K, init_centres) {
   clust_res <- pam(dist_mat, k = ncentres, diss = T, 
                    medoids = init_centres, 
-                   keep.diss = F, cluster.only = T)
+                   keep.diss = T, cluster.only = F)
+  sil_scores <- silhouette(clust_res)
   
-  res <- data.frame(eid = names(clust_res),
-                    final_clust = clust_res)
+  res <- data.frame(eid = row.names(sil_scores),
+                    final_clust = sil_scores[, "cluster"])
   cat("######## Clustering done!", "\n", "\n")
-  return (res)
-}
-
-# Plotting functions ----
-
-## Cluster centroid trajectories ----
-
-## Predictions
-getPredValuesClusterCentroid <- function (coef_mat) {
-  pred_vals <- t(apply(coef_mat, 1, 
-                       function (x) model_dat$B %*% x))
-  # Wrangle into ggplot format
-  for_plot <- as.data.frame(pred_vals)
-  colnames(for_plot) <- paste0("d", 1:ncol(for_plot))
-  for_plot$final_clust <- factor(as.character(1:NCLUST))
-  
-  for_plot <- for_plot %>% pivot_longer(cols = -final_clust,
-                                        names_to = "t_diff", 
-                                        names_prefix = "d", 
-                                        values_to = "pred_value") %>%
-    mutate(t_diff = as.numeric(t_diff))
-  return (for_plot)
-}
-
-## Cluster centroid mean and S.D., wrangled into long format for plot
-getPlotDatClusterCentroids <- function (grouped_id_list) {
-  
-  full_dat <- mn_mat[grouped_id_list$eid, ]
-  full_dat$eid <- rownames(full_dat)
-  full_dat$final_clust <- 
-    grouped_id_list$final_clust[match(full_dat$eid, grouped_id_list$eid)]
-  
-  centroid_means <- full_dat %>% group_by(final_clust) %>%
-    summarise(across(-eid, mean))
-  centroid_sds <- full_dat %>% group_by(final_clust) %>%
-    summarise(across(-eid, sd))
-  
-  # Predict full trajectory for centroids (returns centroid x time matrix)
-  pred_mns <- getPredValuesClusterCentroid(centroid_means[, -1]) %>%
-    rename(pred_mean_value = pred_value)
-  pred_locis <- getPredValuesClusterCentroid(centroid_means[, -1] - 1.96*centroid_sds[, -1]) %>%
-    rename(pred_loci_value = pred_value)
-  pred_upcis <- getPredValuesClusterCentroid(centroid_means[, -1] + 1.96*centroid_sds[, -1]) %>%
-    rename(pred_upci_value = pred_value)
-  
-  # Wrangle into ggplot format
-  for_plot <- full_join(pred_mns, pred_locis, by = c("final_clust", "t_diff"))
-  for_plot <- full_join(for_plot, pred_upcis, by = c("final_clust", "t_diff"))
-  
-  return (for_plot)
-}
-
-## Confusion matrix plots for initial vs final cluster assignment ----
-
-getPlotDatConfusionMat <- function (cmat) {
-  cmat <- cmat %>% mutate(init_clust = factor(init_clust, 
-                                                 levels = 1:NCLUST),
-                          final_clust = factor(final_clust, 
-                                                  levels = NCLUST:1))
-  res <- ggplot(cmat, aes(x = init_clust, y = final_clust, fill = count)) +
-    geom_tile() + 
-    geom_text(aes(label = count), size = 2) +
-    scale_fill_gradient(low = "white", high = "#009194", guide = "none") +
-    labs(x = "Initial", y = "Final") 
-  return (res)
+  return (list(clust_assignment = res,
+               silhouette_score = mean(sil_scores[, "sil_width"])))
 }
 
 # Apply clustering S times ----
@@ -267,64 +253,104 @@ getPlotDatConfusionMat <- function (cmat) {
 itered_clustering <- lapply(1:S, function (si) {
   cat(paste0("Running iteration #", si), "\n")
   # Get ids
-  id_list <- sample(valid_ids, NSAMPLES, replace = F)
+  id_list <- sample(VALID_IDS, NSAMPLES, replace = F)
   
   # Initialisation
-  init_centres <- getInitialCentres(id_list, myrs = M, ncentres = NCLUST)
+  init_centres <- getInitialCentres(id_list, myrs = M, ncentres = K)
   # Cluster
   clust_res <- performClustering(dist_mat = getCustDistMat(id_list), 
-                                 ncentres = NCLUST, 
+                                 ncentres = K, 
                                  init_centres = init_centres$medoid_index)
-  
-  # Add in initial clustering assignment
-  res <- left_join(clust_res, init_centres$og_assignment, by = "eid")
-  return (res)
+  return (clust_res)
 })
 names(itered_clustering) <- paste0("iter", 1:S)
 
-saveRDS(itered_clustering, 
-        paste0(resdir, "sample_clustering_scheme_", PHENO, "_", SEX_STRATA, 
-               "_L", L, "_M", M, 
-               ".rds"))
+# Functions to correspond cluster centroids across iterations ----
 
-# Plot results ----
+# Given a list of grouped ids, get the group centroids and centroid trajectories
+# Returns matrix of NCLUST x NDF 
+calcGroupCentroids <- function (grouped_id_list) {
+  # Get coefficients for the given ids
+  sub_mn <- mn_mat[grouped_id_list$eid, ]
+  sub_mn$eid <- rownames(sub_mn)
+  sub_mn$clust <- 
+    grouped_id_list$final_clust[match(sub_mn$eid, grouped_id_list$eid)]
+  
+  # Calculate centroid means
+  centroid_means <- sub_mn %>% group_by(clust) %>%
+    summarise(across(-eid, mean))
+  centroid_means <- centroid_means[, -1]
+  
+  return (centroid_means)
+}
 
-## Centroid mean trajectories ---
-centroid_traj <- lapply(1:S, function (si) {
-  plot_res <- getPlotDatClusterCentroids(itered_clustering[[paste0("iter", si)]])
-  plot_res$iteration <- as.character(si)
-  return (plot_res)
+# Given centroid trajectories, reorder from 1 (highest) to NCLUST (lowest)
+# Since the trajectories are non-overlapping, just order them by last pred value
+reorderCentroids <- function (centroid_traj) {
+  new_order <- order(centroid_traj[, ncol(centroid_traj)], decreasing = T)
+  map_res <- data.frame(old_clust = 1:nrow(centroid_traj),
+                        new_clust = new_order)
+  return (map_res)
+}
+
+# Apply to match cluster centroids across iterations ----
+
+cat("Corresponding clusters across iterations", "\n")
+combined_iters <- lapply(1:length(itered_clustering), function (si) {
+  # Get cluster assignment
+  df <- itered_clustering[[paste0("iter", si)]]$clust_assignment
+  # Calculate old centroids
+  old_centroid_pos <- calcGroupCentroids(df)
+  
+  # Get old trajectories to reorder
+  old_coefs <- t(apply(old_centroid_pos, 1, 
+                       function (x) B %*% x))
+  # Get new cluster order
+  remapping_order <- reorderCentroids(old_coefs)
+  # Reassign centroids
+  new_centroid_pos <- old_centroid_pos[remapping_order$new_clust, ]
+  
+  # Pivot longer for tidyverse mean calculations
+  for_mean_calc <- as.data.frame(new_centroid_pos)
+  colnames(for_mean_calc) <- paste0("b", 1:ncol(for_mean_calc))
+  for_mean_calc$clust <- factor(as.character(1:nrow(for_mean_calc)))
+  
+  for_mean_calc <- for_mean_calc %>% pivot_longer(cols = -clust,
+                                                  names_to = "b_coef", 
+                                                  names_prefix = "b", 
+                                                  values_to = "b_val") %>%
+    mutate(b_coef = as.numeric(b_coef),
+           iteration = si)
+  return (for_mean_calc)
 })
-centroid_traj <- bind_rows(centroid_traj)
+combined_iters <- bind_rows(combined_iters)
 
-centroid_traj_plot <- ggplot(centroid_traj, 
-                             aes(x = t_diff, y = pred_mean_value,
-                                 col = final_clust)) +
-  facet_wrap(~iteration) +
-  geom_line() +
-  geom_ribbon(aes(ymin = pred_loci_value, ymax = pred_upci_value,
-                  fill = final_clust),
-              alpha = 0.1, linetype = 0) +
-  scale_color_brewer(palette = "Set1", guide = "none") +
-  scale_fill_brewer(palette = "Set1", guide = "none") +
-  labs(x = "Days from first measurement", 
-       y = "Cluster centroid predicted value")
+# Calculate mean centroid positions across iterations
+combined_centroid_mn <- combined_iters %>% 
+  group_by(clust, b_coef) %>%
+  summarise(b_val = mean(b_val))
+# Pivot wider back to NCLUST X NDF format
+combined_centroid_mn <- combined_centroid_mn %>%
+  pivot_wider(id_cols = clust,
+              names_from = b_coef, values_from = b_val)
 
-## Confusion matrices for initial vs final clustering assignment ----
+# Calculate mean and S.D. of silhouette score across iterations
 
-confusion_mat_plots <- lapply(1:S, function (si) {
-  cmat <- as.data.frame(table(itered_clustering[[si]]$init_clust, 
-                              itered_clustering[[si]]$final_clust))
-  colnames(cmat) <- c("init_clust", "final_clust", "count")
-  resplot <- getPlotDatConfusionMat(cmat)
-  return (resplot)
+combined_silscore <- lapply(1:length(itered_clustering), function (si) { 
+  # Get silhouette score
+  sscore <- itered_clustering[[paste0("iter", si)]]$silhouette_score
+  return (sscore)
 })
+mean_silscore <- mean(unlist(combined_silscore))
+sd_silscore <- sd(unlist(combined_silscore))
 
-# Print all plots ----
+silscore <- data.frame(mean = mean_silscore, sd = sd_silscore)
 
-pdf(paste0(plotdir, "sample_clustering_scheme_", PHENO, "_", SEX_STRATA, "_L", L, "_M", M, 
-           ".pdf"), onefile = T)
-print(centroid_traj_plot)
-# Arrange confusion matrix plots
-print(ggarrange(plotlist = confusion_mat_plots, ncol = 3, nrow = 3))
-dev.off()
+# RETURN: K, L, M, cluster centroids, and silhouette score information ----
+
+to_ret <- list(K = K, L = L, M = M,
+               cluster_centroids = combined_centroid_mn,
+               silhouette_score = silscore)
+
+saveRDS(to_ret, 
+        paste0(resdir, "K", K, "_L", L, "_M", M, ".rds"))

@@ -19,10 +19,10 @@ echo ${covars}
 
 module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 
-Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/2_sample_clustering_scheme.R \
+Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/scripts/2_sample_clustering_scheme.R \
 --phenotype=${phenotype} \
 --ss=${ss} \
---nclust=${nclust} \
+--K=${nclust} \
 --L=${lmin} \
 --M=${myrs}
 
