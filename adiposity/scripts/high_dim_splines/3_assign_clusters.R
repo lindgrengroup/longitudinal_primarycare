@@ -2,71 +2,91 @@
 # Date: 24/05/2022
 
 # Script to plot silhouette scores for combinations of K, L, M ----
-
-library(tidyverse)
-theme_set(theme_bw())
-
-RANDOM_SEED <- 160522
-set.seed(RANDOM_SEED)
-
-custom_teal_sequential <- c("#66BFBE", "#009593", "#005958")
-names(custom_teal_sequential) <- c("2", "5", "10")
-
-PHENOTYPES <- c("BMI", "Weight")
-SEX_STRATA <- c("F", "M", "sex_comb")
-
-main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
-
-# Plot silhouette plot given data frame of K, L, M, mean score, and S.D. score
-plotSilScores <- function (df) {
-  df <- df %>% 
-    mutate(K = as.numeric(K),
-           L = as.factor(L),
-           M = as.factor(M))
-  resplot <- ggplot(aes(x = K, y = mean_silscore,
-                        colour = L, fill = L)) +
-    geom_point(aes(shape = M)) +
-    geom_line(aes(group = interaction(L, M))) +
-    geom_errorbar(aes(ymin = mean_silscore - 1.96*sd_silscore,
-                      ymax = mean_silscore + 1.96*sd_silscore)) +
-    scale_colour_manual(values = custom_teal_sequential) +
-    scale_fill_manual(values = custom_teal_sequential) +
-    labs(y = "Mean (95% C.I.) across iterations silhouette score")
-  return (resplot)
-}
-
-lapply(PHENOTYPES, function (p) {
-  lapply(SEX_STRATA, function (sx) {
-    all_combos <- list.files(paste0(main_filepath, p, "_", sx, "/parameter_selection/"),
-                             pattern = "*.rds")
-    centroid_dat <- lapply(all_combos, function (fname) {
-      dat <- readRDS(paste0(main_filepath, p, "_", sx, "/",
-                                        fname))
-      df_to_plot <- data.frame(K = dat$K, L = dat$L, M = dat$M,
-                               mean_silscore = dat$silhouette_score$mean,
-                               sd_silscore = dat$silhouette_score$sd)
-      return (df_to_plot)
-    })
-    all_parameters_dat <- bind_rows(centroid_dat)
-    
-    png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/silhouette_plot.png"),
-        res = 300, units = "cm", height = 7, width = 7)
-    print(plotSilScores(all_parameters_dat))
-    dev.off()
-  })
-})
+# 
+# library(tidyverse)
+# theme_set(theme_bw())
+# 
+# RANDOM_SEED <- 160522
+# set.seed(RANDOM_SEED)
+# 
+# custom_teal_sequential <- c("#66BFBE", "#009593", "#005958")
+# names(custom_teal_sequential) <- c("2", "5", "10")
+# 
+# PHENOTYPES <- c("BMI", "Weight")
+# SEX_STRATA <- c("F", "M", "sex_comb")
+# 
+# main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
+# 
+# # Plot silhouette plot given data frame of K, L, M, mean score, and S.D. score
+# plotSilScores <- function (df) {
+#   df <- df %>% 
+#     mutate(K = as.numeric(K),
+#            L = as.factor(L),
+#            M = as.factor(M))
+#   resplot <- ggplot(df, aes(x = K, y = mean_silscore,
+#                         colour = L, fill = L)) +
+#     geom_point(aes(shape = M)) +
+#     geom_line(aes(group = interaction(L, M))) +
+#     geom_errorbar(aes(ymin = mean_silscore - 1.96*sd_silscore,
+#                       ymax = mean_silscore + 1.96*sd_silscore),
+#                   width = 0.1, alpha = 0.2) +
+#     scale_colour_manual(values = custom_teal_sequential) +
+#     scale_fill_manual(values = custom_teal_sequential) +
+#     scale_x_continuous(breaks = 2:8, labels = 2:8) +
+#     labs(y = "Mean (95% C.I.) across iterations silhouette score") +
+#     theme(axis.text = element_text(size = 6),
+#           axis.title = element_text(size = 8),
+#           legend.text = element_text(size = 6),
+#           legend.title = element_text(size = 8))
+#   return (resplot)
+# }
+# 
+# lapply(PHENOTYPES, function (p) {
+#   lapply(SEX_STRATA, function (sx) {
+#     all_combos <- list.files(paste0(main_filepath, p, "_", sx, "/parameter_selection/"),
+#                              pattern = "*.rds")
+#     centroid_dat <- lapply(all_combos, function (fname) {
+#       dat <- readRDS(paste0(main_filepath, p, "_", sx, "/parameter_selection/",
+#                                         fname))
+#       df_to_plot <- data.frame(K = dat$K, L = dat$L, M = dat$M,
+#                                mean_silscore = dat$silhouette_score$mean,
+#                                sd_silscore = dat$silhouette_score$sd)
+#       df_to_plot <- df_to_plot %>%
+#         mutate(K = as.numeric(K),
+#                L = as.character(L),
+#                M = as.character(M))
+#       return (df_to_plot)
+#     })
+#     all_parameters_dat <- bind_rows(centroid_dat)
+#     
+#     # subset_dat <- all_parameters_dat %>% filter(K %in% c(3, 4, 5) &
+#     #                                               L == "2")
+#     # 
+#     # png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/zoomed_in_silhouette_plot.png"),
+#     #     res = 300, units = "cm", height = 7, width = 7)
+#     # print(plotSilScores(subset_dat))
+#     # dev.off()
+#     
+#     png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/silhouette_plot.png"),
+#         res = 300, units = "cm", height = 7, width = 7)
+#     print(plotSilScores(all_parameters_dat))
+#     dev.off()
+#   })
+# })
 
 # Main script ----
 
 library(argparse)
 library(splines)
+library(zoo)
 library(tidyverse)
 theme_set(theme_bw())
 
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
-# custom_N_diverge <- #### COLOUR PALETTE 
+custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
+names(custom_four_diverge) <- c("1", "2", "3", "4")
 
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
@@ -98,7 +118,7 @@ clust_centroids <- readRDS(paste0(main_filepath,
 clust_centroids <- clust_centroids$cluster_centroids
 
 # Modelling results for distance calculations 
-model_dat <- readRDS(paste0(main_filepath, "results/fit_objects_", 
+model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
 # Covariates to compare between training and validation sets
@@ -109,13 +129,11 @@ general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/ge
   mutate(eid = as.character(eid))
 
 # Assignment of ids to training or validation sets 
-training_ids <- read.table(paste0(main_filepath, "clustering/", 
-                                  PHENO, "_", SEX_STRATA, "/ids_training.txt"),
+training_ids <- read.table(paste0(main_filepath, "/ids_training.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 training_ids <- data.frame(eid = as.character(training_ids),
                            id_type = "training")
-validation_ids <- read.table(paste0(main_filepath, "clustering/", 
-                                  PHENO, "_", SEX_STRATA, "/ids_validation.txt"),
+validation_ids <- read.table(paste0(main_filepath, "/ids_validation.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 validation_ids <- data.frame(eid = as.character(validation_ids),
                            id_type = "validation")
@@ -125,7 +143,7 @@ id_classification <- bind_rows(training_ids, validation_ids)
 orig_popn_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[[PHENO]] %>%
   mutate(eid = as.character(eid))
 
-# Calculate mean and S.D. matrix of coefficients needed for distance calculations ----
+# Calculate mean matrix of coefficients needed for distance calculations ----
 
 B <- model_dat$B
 spline_posteriors <- model_dat$spline_posteriors
@@ -163,39 +181,24 @@ getPredValuesClusterCentroid <- function (coef_mat) {
   return (for_plot)
 }
 
-## Cluster centroid mean and S.D., wrangled into long format for plot
-getPlotDatClusterCentroids <- function (centroid_pos_mats) {
-  
-  # Predict full trajectory for centroids (returns centroid x time matrix)
-  pred_mns <- getPredValuesClusterCentroid(centroid_pos_mats$mean_mat) %>%
-    rename(pred_mean_value = pred_value)
-  pred_locis <- getPredValuesClusterCentroid(centroid_pos_mats$mean_mat - 1.96*centroid_pos_mats$sd_mat) %>%
-    rename(pred_loci_value = pred_value)
-  pred_upcis <- getPredValuesClusterCentroid(centroid_pos_mats$mean_mat + 1.96*centroid_pos_mats$sd_mat) %>%
-    rename(pred_upci_value = pred_value)
-  
-  # Wrangle into ggplot format
-  for_plot <- full_join(pred_mns, pred_locis, by = c("clust", "t_diff"))
-  for_plot <- full_join(for_plot, pred_upcis, by = c("clust", "t_diff"))
-  
-  return (for_plot)
-}
-
 ## Apply ----
 
-sanity_check_cluster_centres <- getPlotDatClusterCentroids(clust_centroids)
+sanity_check_cluster_centres <- getPredValuesClusterCentroid(clust_centroids[, -1])
+
 clust_centres_plot <- ggplot(sanity_check_cluster_centres, 
-                             aes(x = t_diff, y = pred_mean_value, 
+                             aes(x = t_diff, y = pred_value, 
                                  col = clust, fill = clust)) +
   geom_line() +
-  geom_ribbon(aes(ymin = pred_loci_value, ymax = pred_upci_value),
-              alpha = 0.1, linetype = 0) +
-  scale_color_manual(values = custom_N_diverge, guide = "none") +
-  scale_fill_manual(values = custom_N_diverge, guide = "none") +
+  scale_color_manual(values = custom_four_diverge, guide = "none") +
+  scale_fill_manual(values = custom_four_diverge, guide = "none") +
   labs(x = "Days from first measurement", 
-       y = "Cluster centroid predicted value")
-
-png(filename = paste0(main_filepath, p, "_", sx, "/plots/cluster_centroids.png"),
+       y = "Cluster centroid predicted value") + 
+  theme(axis.text = element_text(size = 6),
+        axis.title = element_text(size = 8),
+        legend.text = element_text(size = 6),
+        legend.title = element_text(size = 8))
+  
+png(filename = paste0(main_filepath, "/plots/cluster_centroids.png"),
     res = 300, units = "cm", height = 7, width = 7)
 print(clust_centres_plot)
 dev.off()
@@ -224,7 +227,7 @@ getClusterBelonging <- function (id_list, centroid_mat) {
 }
 
 final_clust_assignments <- getClusterBelonging(id_list = id_classification$eid,
-                                               centroid_mat = clust_centroids)
+                                               centroid_mat = clust_centroids[, -1])
 
 # Compare between training and validation sets ----
 
@@ -233,7 +236,7 @@ final_clust_assignments <- getClusterBelonging(id_list = id_classification$eid,
 # 3. Mean population level trajectories
 
 full_dat <- left_join(final_clust_assignments, id_classification, by = "eid")
-full_dat <- left_join(full_dat, covars, by = "eid")
+full_dat <- left_join(full_dat, covars_dat, by = "eid")
 full_dat <- left_join(full_dat, general_covars, by = "eid")
 
 sumstats_table <- full_dat %>% 
@@ -251,34 +254,40 @@ sumstats_table <- full_dat %>%
                                  sep = ", ")) 
 
 write.table(sumstats_table,
-            paste0(main_filepath, p, "_", sx, "/training_vs_validation_cluster_properties.txt"),
+            paste0(main_filepath, "/training_vs_validation_cluster_properties.txt"),
             sep = "\t", row.names = F, quote = F)
 
 ## Plotting functions ----
 
 to_plot <- full_dat %>%
   mutate(clust = as.factor(as.character(clust)),
-         id_alpha = ifelse(id_type == "validation", 1, 0.7))
+         id_type = as.factor(id_type))
 
 violinCovarPlot <- function (dat, covar_name) {
   resplot <- ggplot(dat, aes(x = clust, y = !!as.symbol(covar_name),
-                             group = id_alpha, alpha = id_alpha)) +
-    geom_violin(aes(fill = clust), 
+                             group = interaction(clust, id_type))) +
+    geom_violin(aes(fill = clust, 
+                    alpha = id_type), 
                 position = position_dodge(1)) +
-    geom_boxplot(width = 0.1) + 
-    scale_fill_manual(values = custom_N_diverge, guide = F) +
-    scale_alpha_continuous(guide = F) + 
-    labs(x = "Cluster", y = covar_name)
+    geom_boxplot(position = position_dodge(1), width = 0.1) + 
+    scale_fill_manual(values = custom_four_diverge, guide = "none") +
+    scale_alpha_manual(values = c(0.5, 1), guide = "none") + 
+    labs(x = "Cluster", y = covar_name) + 
+    theme(axis.text = element_text(size = 6),
+          axis.title = element_text(size = 8),
+          legend.text = element_text(size = 6),
+          legend.title = element_text(size = 8))
+  
   return (resplot)
 }
 
 # Apply covariate plotting to all covariates 
 lapply(c("baseline_age", "baseline_trait", "FU_n", "FUyrs"), function (cvname) {
   
-  png(filename = paste0(main_filepath, p, "_", sx, "/plots/training_vs_validation_",
+  png(filename = paste0(main_filepath, "/plots/training_vs_validation_",
                         cvname, ".png"),
       res = 300, units = "cm", height = 7, width = 7)
-  print(violinCovarPlot(to_plot))
+  print(violinCovarPlot(to_plot, cvname))
   dev.off()
 
 })
@@ -286,8 +295,9 @@ lapply(c("baseline_age", "baseline_trait", "FU_n", "FUyrs"), function (cvname) {
 to_plot <- left_join(orig_popn_dat, final_clust_assignments, by = "eid")
 to_plot <- left_join(to_plot, id_classification, by = "eid")
 to_plot <- to_plot %>%
+  filter(!is.na(clust) & !is.na(id_type)) %>%
   mutate(clust = as.factor(as.character(clust)),
-         id_lty = ifelse(id_type == "validation", 1, 2))
+         id_lty = ifelse(id_type == "validation", 1, 2)) 
 
 plotPopnTrajCluster <- function (dat) {
   
@@ -295,32 +305,33 @@ plotPopnTrajCluster <- function (dat) {
   summ_dat <- dat %>% 
     mutate(age_bin = plyr::round_any(age_event, 0.25, f = round)) %>%
     filter(age_bin >= 30 & age_bin <= 70) %>%
-    group_by(cluster, age_bin, id_lty) %>% 
+    group_by(clust, age_bin, id_lty) %>% 
     summarise(mean_value = mean(value))
   
   # Get rolling average mean across 2 years 
   summ_dat <- summ_dat %>% 
     ungroup() %>% 
-    group_by(cluster, id_lty) %>% 
+    group_by(clust, id_lty) %>% 
     arrange(age_bin, .by_group = T) %>%
     mutate(interval_width = seq_along(age_bin) - 
              findInterval(age_bin - 2, age_bin),
            mean_value_rolled = rollapply(mean_value, interval_width, mean, 
                                          fill = NA),
-           cluster = factor(as.character(cluster)))
+           clust = factor(as.character(clust)),
+           id_lty = factor(as.character(id_lty)))
   
   all_plot <- ggplot(summ_dat,
                      aes(x = age_bin, y = mean_value_rolled, 
-                         color = cluster, linetype = id_lty)) +
+                         color = clust, linetype = id_lty)) +
     # Add a thick line for rolling average 
     geom_line() +
-    scale_color_manual(values = custom_N_diverge) +
+    scale_color_manual(values = custom_four_diverge) +
     scale_x_continuous(guide = guide_axis(check.overlap = TRUE))
   
   return (all_plot)
 }
 
-png(filename = paste0(main_filepath, p, "_", sx, "/plots/training_vs_validation_trajectories.png"),
+png(filename = paste0(main_filepath, "/plots/training_vs_validation_trajectories.png"),
     res = 300, units = "cm", height = 7, width = 7)
 print(plotPopnTrajCluster(to_plot))
 dev.off()
