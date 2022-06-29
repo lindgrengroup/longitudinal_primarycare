@@ -50,6 +50,12 @@ Scripts to perform trajectory GWAS as outlined in https://github.com/OpenMendel/
 3. **3_spatest.jl** - Perform GWAS on each chromosome with the saddle point approximation implemented in Julia TrajGWAS pacakge.
 4. **submit_4_plot_results.sh** and **4_plot_gwas_results.R** - Filter SNPs and plot QQ-plots and Manhattan plots.
 
+## VARIANT SUBSET ASSOCIATIONS
+Scripts to perform genetic associations with only a subset of variants known to associate with a range of obesity-traits (BMI, weight, waist circumference, waist-hip ratio, etc.)
+1. **1_get_gwascat_obesity_associations.R** - Extract SNPs associated with obesity traits in GWAS catalog (downloaded 2021/11/02, build hg38). If missing chr and pos info, add this in. List of obesity traits defined in associated file **gwascat_obesity_traits.txt**. Write associations to bed file to lift over to hg19.
+2. **2_liftover_hg38_to_hg19.sh** - Convert hg38 chr/pos information SNPs to hg19.
+3. **3_collate_snp_list_per_chr.R** - Write list of rsids and variant ids per chromosome to extract from UKB bgen files.
+
 ## Post-GWAS
 1. **1_perform_finemapping.sh** - Uses Duncan's pipeline (see here: https://github.com/astheeggeggs/pipeline) to finemap causal variants in loci from filtered GWAS summary statistics. 
 2. **2_plot_locuszoom.sh** - Following finemapping, provide LD matrix, summary stats, and finemapped variants to local version of locuszoom for loci plots. This can be extended to highlight independently associated variants. 

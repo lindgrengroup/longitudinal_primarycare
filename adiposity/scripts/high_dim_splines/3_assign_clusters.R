@@ -336,4 +336,35 @@ png(filename = paste0(main_filepath, "/plots/training_vs_validation_trajectories
 print(plotPopnTrajCluster(to_plot))
 dev.off()
 
+# Write file for GWAS ----
 
+# IDs that passed sample QC
+ids_passed_qc <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/sample_qc/", 
+                             PHENO, "_", SEX_STRATA, "_ids_passed_qc.txt"),
+                      sep = "\t", header = T)
+ids_passed_qc$IID <- as.character(ids_passed_qc$IID)
+
+PCs <- paste0("PC", c(1:21))
+COVARS_LIST <- c("UKB_assmt_centre", "genotyping.array", 
+                 "year_of_birth", "baseline_age", "age_sq", 
+                 "FU_n", "FUyrs", "sex", PCs)
+
+# Wrangle data to wide form (k1, k2, etc. for cluster belonging)
+to_write <- full_dat %>% select(all_of(c("eid", "clust", COVARS_LIST))) %>%
+  filter(eid %in% ids_passed_qc$IID) %>%
+  mutate(clust = paste0("k", clust)) %>%
+  pivot_wider(id_cols = -clust, 
+              names_from = clust, 
+              values_from = clust, 
+              values_fn = function (x) 1, 
+              values_fill = 0)
+
+# Create group columns
+to_write <- to_write %>% 
+  mutate(k1_k2 = ifelse(k1 + k2 > 0, 1, 0))
+
+# Write results to table
+write.table(to_write,
+            paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/cluster_membership_", 
+                   PHENO, "_", SEX_STRATA, ".txt"),
+            sep = " ", row.names = F, quote = F)
