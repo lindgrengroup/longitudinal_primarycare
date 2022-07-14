@@ -34,8 +34,6 @@ hg38ToHg19.over.chain.gz \
 GWASCatalog/gwascat_obesity_associations_hg19.bed \
 GWASCatalog/gwascat_obesity_associations_unlifted.bed
 
-############## CONTINUE FROM HERE 
-
 echo "###########################################################"
 echo "Finished at: "`date`
 echo "###########################################################"
