@@ -6,7 +6,7 @@
 #$ -cwd
 #$ -P lindgren.prjc -q short.qc
 #$ -pe shmem 1
-#$ -N finemap_Weight_sex_comb
+#$ -N finemap
 #$ -o /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/BOLT_logs/
 #$ -e /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/BOLT_logs/
 #$ -j y
