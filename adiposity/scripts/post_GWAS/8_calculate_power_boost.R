@@ -20,11 +20,13 @@ power_log <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2
                     STRATA, "/power_boost_log.txt")
 power_plot <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
                      STRATA, "/power_boost_plot.tiff")
+power_res <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
+                    STRATA, "/power_boost_snp_comparisons.txt")
 
-gp_dat <- read.table(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/2204_models/GWAS/post_GWAS/",
+gp_dat <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
                             STRATA, "/tmp_gp_gwas.txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)
-giant_dat <- read.table(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/2204_models/GWAS/post_GWAS/",
+giant_dat <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
                             STRATA, "/tmp_giant_meta.txt"), 
                      sep = " ", header = T, stringsAsFactors = F)
 
@@ -45,6 +47,9 @@ merged_dat <- full_join(gp_chisq, giant_chisq, by = "SNP") %>%
   mutate(CHI_SQ_RATIO = CHI_SQUARE_GP/CHI_SQUARE_GIANT,
          EXP_N_RATIO = N_GP/N_GIANT) %>%
   filter(!is.na(CHI_SQ_RATIO))
+
+write.table(merged_dat, power_res, 
+            sep = "\t", row.names = F, quote = F)
 
 obs_med <- median(merged_dat$CHI_SQ_RATIO, na.rm = T)
 exp_med <- median(merged_dat$EXP_N_RATIO, na.rm = T)
