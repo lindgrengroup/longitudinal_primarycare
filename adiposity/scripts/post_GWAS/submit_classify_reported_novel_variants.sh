@@ -25,7 +25,11 @@ cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS
 
 mkdir post_GWAS/${STRATA_NAME}/classify_lmm_intercept_variants
 mkdir post_GWAS/${STRATA_NAME}/classify_lmm_intercept_variants/reported_variants
+mkdir post_GWAS/${STRATA_NAME}/classify_lmm_intercept_variants/condnl_results
+mkdir post_GWAS/${STRATA_NAME}/classify_lmm_intercept_variants/tmp_ukbb_bed
+mkdir post_GWAS/${STRATA_NAME}/classify_lmm_intercept_variants/tmp_ukbb_ld
 
+# TO RUN FOR ALL GENOME-WIDE SIGNIFICANT SNPS
 # Get significant (P <= 5E-8) SNPs 
 zcat BOLT_results/${STRATA_NAME}_lmm_intercepts_final.txt.gz | \
 awk -F '[[:space:]]+' 'NR>1 { if ($9 <= 5E-8) print $1,$2,$3 }' - \
