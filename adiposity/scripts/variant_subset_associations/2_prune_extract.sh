@@ -27,7 +27,7 @@ awk -v pat="chr${SGE_TASK_ID}" '$0 ~ pat{print $4}' \
 
 # Get genotype information at these SNPs 
 plink2 \
---extract per_chr/chr${SGE_TASK_ID}_all_variants.txt \
+--extract tmp/chr${SGE_TASK_ID}_all_variants.txt \
 --bgen /well/lindgren-ukbb/projects/ukbb-11867/DATA/IMPUTATION/ukb_imp_chr${SGE_TASK_ID}_v3.bgen ref-first \
 --sample /well/lindgren-ukbb/projects/ukbb-11867/DATA/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
 --threads 3 \
