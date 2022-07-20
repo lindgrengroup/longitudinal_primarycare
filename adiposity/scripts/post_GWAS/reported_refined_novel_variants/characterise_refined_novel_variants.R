@@ -1,16 +1,12 @@
 # Author: Samvida S. Venkatesh
 # Date: 22/06/2022
 
-library(argparse)
+library(data.table)
 library(tidyverse)
 library(biomaRt)
 
-parser <- ArgumentParser()
-parser$add_argument("--strata", required=TRUE,
-                    help = "Which strata we are assessing")
-args <- parser$parse_args()
-
-STRATA <- args$strata
+args <- commandArgs(trailingOnly = T)
+STRATA <- args[1]
 
 filepath_main <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/", 
                         STRATA, "/classify_lmm_intercept_variants/")
@@ -26,23 +22,53 @@ sumstats <- read.table(paste0(filepath_main, "tmp_sumstats_gcta.txt"),
 colnames(sumstats)[ncol(sumstats)] <- "SAMPLE_SIZE"
 ndf_ttest <- 2*sumstats$SAMPLE_SIZE[1] - 2
 
-potential_novel <- read.table(paste0(filepath_main, 
-                                     "potential_novel_snps.txt"),
-                              sep = "\t", header = F, stringsAsFactors = F)$V1
+sumstats <- sumstats %>%
+  mutate(SNP = as.character(SNP), 
+         Tested_Allele = as.character(Tested_Allele), 
+         Other_Allele = as.character(Other_Allele),
+         AF_Tested = as.numeric(AF_Tested), BETA = as.numeric(BETA),
+         SE = as.numeric(SE), PVALUE = as.numeric(PVALUE),
+         SAMPLE_SIZE = as.numeric(SAMPLE_SIZE))
 
-potential_refined <- read.table(paste0(filepath_main, 
-                                       "potential_refined_snps.txt"),
+novel_filename <- paste0(filepath_main, 
+                         "potential_novel_snps.txt")
+if (file.exists(novel_filename)) {
+  potential_novel <- read.table(novel_filename,
                                 sep = "\t", header = F, stringsAsFactors = F)$V1
+  
+} else potential_novel <- NA
+
+refined_filename <- paste0(filepath_main, 
+                           "potential_refined_snps.txt")
+if (file.exists(refined_filename)) {
+  potential_refined <- read.table(refined_filename,
+                                  sep = "\t", header = F, stringsAsFactors = F)$V1
+  
+} else potential_refined <- NA
 
 gwas_cat_snps <- read.table("/well/lindgren/samvida/Resources/GWASCatalog/gwascat_obesity_associations_hg19.bed",
                             sep = "\t", header = F, quote = "")
 colnames(gwas_cat_snps) <- c("CHR", "POS0", "POS1", "SNP")
 
+gwas_cat_snps <- gwas_cat_snps %>%
+  mutate(CHR = as.character(CHR), 
+         POS0 = as.numeric(POS0), POS1 = as.numeric(POS1),
+         SNP = as.character(SNP))
+
 gp_snps <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
                              STRATA, "/finemapping/", STRATA, "_lmm_intercepts_final.lead_snps.txt"),
-                      sep = " ", header = F, stringsAsFactors = F)
+                      sep = "\t", header = T, stringsAsFactors = F)
 gp_snps <- gp_snps[, 1:3]
 colnames(gp_snps) <- c("SNP", "CHR", "POS")
+
+gp_snps <- gp_snps %>%
+  mutate(SNP = as.character(SNP),
+         CHR = as.character(CHR), 
+         POS = as.numeric(POS))
+
+# Need to rename chromosomes 01, 02, etc. to 1, 2, etc.
+gp_snps$CHR[grep("^0", gp_snps$CHR)] <- gsub("^0", "", 
+                                             gp_snps$CHR[grep("^0", gp_snps$CHR)])
 
 # Function to check if a SNP is novel ----
 
@@ -112,6 +138,13 @@ ourSNPstronger <- function (our_snp, nearest_pub_snp) {
   our_ind <- which(sumstats$SNP == our_snp)
   pub_ind <- which(sumstats$SNP == nearest_pub_snp)
   
+  # Sometimes we don't know the correct SNP if there are multiple alt alelles
+  # So retain the most significant
+  if (length(pub_ind) > 1) {
+    keep_row <- which.min(sumstats$PVALUE[pub_ind])
+    pub_ind <- pub_ind[keep_row]
+  }
+  
   mean_diff <- sumstats$BETA[our_ind] - sumstats$BETA[pub_ind]
   pooled_se <- sqrt(sumstats$SE[our_ind]^2 + sumstats$SE[pub_ind]^2)
   tstat <- mean_diff / pooled_se
@@ -133,6 +166,9 @@ getBuddyR2 <- function (lead_snp) {
                           header = F, stringsAsFactors = F)
     colnames(ld_file) <- c("CHR_A", "POS_A", "SNP_A",
                            "CHR_B", "POS_B", "SNP_B", "r2")
+    
+    # Ensure that all buddy SNPs in LD file are also in our data to get buddy
+    ld_file <- ld_file %>% filter(SNP_B %in% sumstats$SNP)
     
     return_nearest <- ld_file[which.min(ld_file$r2), 
                               c("SNP_A", "CHR_A", "POS_A",
@@ -164,17 +200,22 @@ getBuddyDist <- function (lead_snp) {
     ld_file <- ld_file %>% 
       mutate(dist_to_novel = abs(POS_A - POS_B)) 
     
+    # Ensure that all buddy SNPs in LD file are also in our data to get buddy
+    ld_file <- ld_file %>% filter(SNP_B %in% sumstats$SNP)
+    
     return_nearest <- ld_file[which.min(ld_file$dist_to_novel), 
                               c("SNP_A", "CHR_A", "POS_A",
                                 "SNP_B", "CHR_B", "POS_B", "dist_to_novel")]
     colnames(return_nearest) <- c("SNP_og", "CHR_og", "POS_og",
                                   "SNP_buddy", "CHR_buddy", "POS_buddy", 
                                   "dist_to_novel")
+    
   } else {
     # Find nearest SNP from list of all obesity-associated SNPs in GWAS catalog
     chr_search <- paste0("chr", gp_snps$CHR[gp_snps$SNP == lead_snp])
-    pos_test <- gp_snps$POS[gp_snps$SNP == lead_snp]
-    gwascat_sub <- gwas_cat_snps %>% filter(CHR == chr_search) %>%
+    pos_test <- as.numeric(gp_snps$POS[gp_snps$SNP == lead_snp])
+    gwascat_sub <- gwas_cat_snps %>% 
+      filter(CHR == chr_search) %>%
       mutate(dist_to_novel = abs(POS1 - pos_test))
     
     # Get nearest SNP
@@ -192,51 +233,57 @@ getBuddyDist <- function (lead_snp) {
 
 # Classify potentially novel SNPs as "novel", "refined", or "reported" ----
 
-iterate_maybe_novel <- lapply(potential_novel, function (mnsnp) {
-  print(paste0("Testing SNP: ", mnsnp))
-  res <- data.frame(SNP_og = mnsnp, 
-                    status = "maybe novel")
-  
-  if (isUncorr(mnsnp) & ourSNPindependent(mnsnp)) {
-    res$status <- "novel"
-    res_buddy <- getBuddyDist(mnsnp)
-    res <- left_join(res, res_buddy, by = "SNP_og")
-  } else {
-    # Is SNP stronger than the most highly correlated buddy SNP?
-    res_buddy <- getBuddyR2(mnsnp)
-    if (ourSNPstronger(our_snp = mnsnp, 
+if (!is.na(potential_novel)) {
+  iterate_maybe_novel <- lapply(potential_novel, function (mnsnp) {
+    print(paste0("Testing SNP: ", mnsnp))
+    res <- data.frame(SNP_og = mnsnp, 
+                      status = "maybe novel")
+    
+    if (isUncorr(mnsnp) & ourSNPindependent(mnsnp)) {
+      res$status <- "novel"
+      res_buddy <- getBuddyDist(mnsnp)
+      res <- left_join(res, res_buddy, by = "SNP_og")
+    } else {
+      # Is SNP stronger than the most highly correlated buddy SNP?
+      res_buddy <- getBuddyR2(mnsnp)
+      if (ourSNPstronger(our_snp = mnsnp, 
+                         nearest_pub_snp = res_buddy$SNP_buddy)) {
+        res$status <- "refined"
+        res <- left_join(res, res_buddy, by = "SNP_og")
+      } else {
+        res$status <- "reported"
+      }
+    }
+    return (res)
+  })
+  classified_novel <- rbindlist(iterate_maybe_novel, fill = T)
+  classified_novel <- classified_novel %>%
+    filter(status != "reported")
+}
+
+# Classify potentially refined SNPs as "refined" or "reported" ----
+
+if (!is.na(potential_refined)) {
+  iterate_maybe_refined <- lapply(potential_refined, function (mrsnp) {
+    print(paste0("Testing SNP: ", mrsnp))
+    res <- data.frame(SNP_og = mrsnp, 
+                      status = "maybe refined")
+    res_buddy <- getBuddyR2(mrsnp)
+    
+    if (ourSNPindependent(mrsnp) & pubSNPsdependent(mrsnp) & 
+        ourSNPstronger(our_snp = mrsnp, 
                        nearest_pub_snp = res_buddy$SNP_buddy)) {
       res$status <- "refined"
       res <- left_join(res, res_buddy, by = "SNP_og")
     } else {
       res$status <- "reported"
     }
-  }
-  return (res)
-})
-classified_novel <- bind_rows(iterate_maybe_novel) %>%
-  filter(status != "reported")
-
-# Classify potentially refined SNPs as "refined" or "reported" ----
-
-iterate_maybe_refined <- lapply(potential_refined, function (mrsnp) {
-  print(paste0("Testing SNP: ", mrsnp))
-  res <- data.frame(SNP_og = mrsnp, 
-                    status = "maybe refined")
-  res_buddy <- getBuddyR2(mrsnp)
-  
-  if (ourSNPindependent(mrsnp) & pubSNPsdependent(mrsnp) & 
-      ourSNPstronger(our_snp = mrsnp, 
-                     nearest_pub_snp = res_buddy$SNP_buddy)) {
-    res$status <- "refined"
-    res <- left_join(res, res_buddy, by = "SNP_og")
-  } else {
-    res$status <- "reported"
-  }
-  return (res)
-})
-classified_refined <- bind_rows(iterate_maybe_refined) %>%
-  filter(status != "reported")
+    return (res)
+  })
+  classified_refined <- rbindlist(iterate_maybe_refined) 
+  classified_refined <- classified_refined %>%
+    filter(status != "reported")
+}
 
 # Add information from biomart to novel/refined SNPs and their buddies ----
 
@@ -306,4 +353,5 @@ to_write <- annotated_full %>%
 write.table(to_write, paste0(filepath_main,
                              "annotated_results_refined_novel_snps.txt"),
             sep = "\t", row.names = F, quote = F)
+
 

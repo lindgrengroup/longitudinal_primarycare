@@ -4,7 +4,7 @@
 library(tidyverse)
 
 STRATA_ALL <- c("BMI_F", "BMI_M", "BMI_sex_comb",
-            "Weight_F", "Weight_M", "Weight_sex_comb")
+                "Weight_F", "Weight_M", "Weight_sex_comb")
 
 for (STRATA in STRATA_ALL) {
   report_log <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/", 
