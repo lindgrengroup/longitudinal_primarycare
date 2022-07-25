@@ -81,7 +81,8 @@ all_lead_snps <- bind_rows(all_lead_snps)
 
 # Colour palette
 # light grey, light blue, navy, teal green, amber, rose
-col_palette <- c("#EBEBEB", "#D4F4FA", "#005580", 
+col_palette <- c("#A4A4A4", "#A6E8F5", 
+                 "#005580", 
                  "#009593", "#C7B241", "#D35C79")
 names(col_palette) <- c("odd_nonsig", "even_nonsig", 
                         "sig", 
@@ -120,9 +121,9 @@ manhattan_plot <- ggplot(for_plot,
   geom_point(data = for_plot %>% filter(status == "reported"), 
              aes(fill = status, colour = status), shape = 19, size = 1) +
   geom_point(data = for_plot %>% filter(status == "refined"), 
-             aes(fill = status, colour = status), shape = 19, size = 1) +
+             aes(fill = status, colour = status), shape = 19, size = 1.5) +
   geom_point(data = for_plot %>% filter(status == "novel"), 
-             aes(fill = status, colour = status), shape = 19, size = 1) +
+             aes(fill = status, colour = status), shape = 19, size = 1.5) +
   geom_hline(yintercept = -log10(5e-8), linetype = "dashed") +
   scale_colour_manual(values = col_palette, guide = "none") +
   scale_fill_manual(values = col_palette, guide = "none") +
