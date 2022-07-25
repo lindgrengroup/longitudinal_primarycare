@@ -79,19 +79,19 @@ all_lead_snps <- bind_rows(all_lead_snps)
 # For background GWAS, colour SNPs with previous GWAS catalog associations
 # as well as SNPs with P < 5E-8
 
-# light grey, black, light blue, navy, teal green
-col_palette <- c("#EBEBEB", "#000000", "#D4F4FA", "#005580", 
+# Colour palette
+# light grey, light blue, navy, teal green, amber, rose
+col_palette <- c("#EBEBEB", "#D4F4FA", "#005580", 
                  "#009593", "#C7B241", "#D35C79")
-names(col_palette) <- c("odd_nonsig", "odd_sig",
-                           "even_nonsig", "even_sig", 
-                           "reported", "refined", "novel")
+names(col_palette) <- c("odd_nonsig", "even_nonsig", 
+                        "sig", 
+                        "reported", "refined", "novel")
 
 background_gwas <- background_gwas %>%
   mutate(status = ifelse(SNP %in% known_gwascat_snps$SNP & PVALUE < 5e-8, "reported",
                                ifelse(CHR %% 2 == 0 & PVALUE >= 5e-8, "even_nonsig",
-                                      ifelse(CHR %% 2 == 0 & PVALUE < 5e-8, "even_sig",
-                                             ifelse(CHR %% 2 != 0 & PVALUE >= 5e-8, "odd_nonsig",
-                                                    ifelse(CHR %% 2 != 0 & PVALUE < 5e-8, "odd_sig", NA))))))
+                                      ifelse(CHR %% 2 != 0 & PVALUE >= 5e-8, "odd_nonsig",
+                                                    ifelse(PVALUE < 5e-8, "sig", NA)))))
 
 plot_dat <- bind_rows(background_gwas, all_lead_snps)
 plot_dat$status <- as.factor(plot_dat$status)

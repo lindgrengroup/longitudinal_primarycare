@@ -6,7 +6,7 @@ library(tidyverse)
 # Read data ----
 
 # BLUP files
-PHENOTYPES <- c("BMI", "Weight")
+PHENOTYPES <- c("BMI", "Weight", "WC", "WHR")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 blups <- lapply(PHENOTYPES, function (p) {
