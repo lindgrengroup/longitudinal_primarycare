@@ -37,15 +37,15 @@ hes_dat <- raw_hes_dat %>%
   mutate(across(all_of(c("eid", ICD9COLS, ICD10COLS, OPCSCOLS)), 
                 as.character)) 
 
-# Annotated death data
-raw_death_dat <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/death_register_age_annotated.txt",
-                            sep = "\t", header = T, comment.char = "~", 
-                            stringsAsFactors = F, quote = "",
-                            na.string = c("NA", "", "."))
-death_dat <- raw_death_dat %>%
-  select(all_of(c("eid", "age_at_death", "cause_icd10")))  %>%
-  mutate(across(all_of(c("eid", "cause_icd10")), 
-                as.character)) 
+# # Annotated death data
+# raw_death_dat <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/death_register_age_annotated.txt",
+#                             sep = "\t", header = T, comment.char = "~", 
+#                             stringsAsFactors = F, quote = "",
+#                             na.string = c("NA", "", "."))
+# death_dat <- raw_death_dat %>%
+#   select(all_of(c("eid", "age_at_death", "cause_icd10")))  %>%
+#   mutate(across(all_of(c("eid", "cause_icd10")), 
+#                 as.character)) 
 
 # Wrangle code data to separate diagnosis and history codes ----
 
@@ -189,10 +189,10 @@ sorted_hes_dat <- hes_dat %>%
 
 # need to do this because some people have multiple death records
 # with multiple causes of death recorded
-sorted_death_dat <- death_dat %>%
-  group_by(eid) %>%
-  arrange(age_at_death, .by_group = T) %>%
-  ungroup()
+# sorted_death_dat <- death_dat %>%
+#   group_by(eid) %>%
+#   arrange(age_at_death, .by_group = T) %>%
+#   ungroup()
 
 # Functions to get age at first diagnosis for specific codes ----
 
@@ -229,33 +229,39 @@ getFirstAgeHES <- function (icd9c, icd10c, opcsc) {
 # Given disease ICD10 codes,
 # function to return eids with age at death caused by this event
 # DEATH DATA HAS TO BE SORTED BY AGE BEFORE THIS FUNCTION CAN BE RUN
-getFirstAgeDeath <- function (icd10c) {
-  df <- sorted_death_dat %>% 
-    filter(cause_icd10 %in% icd10c) %>%
-    group_by(eid) %>%
-    summarise(age_at_death = first(age_at_death))
-  return (df)
-}
+# getFirstAgeDeath <- function (icd10c) {
+#   df <- sorted_death_dat %>% 
+#     filter(cause_icd10 %in% icd10c) %>%
+#     group_by(eid) %>%
+#     summarise(age_at_death = first(age_at_death))
+#   return (df)
+# }
 
 # Given ages at history codes or diagnosis codes,
 # ensure these align by marking "history" for any sets of ages where
 # history precedes diagnosis, or where there is only a history and no diagnosis
 combineDiagnosisHistoryInfo <- function (hist_age, diag_age) {
-  if (is.na(hist_age) & is.na(diag_age)) res <- NA
-  # only history present
-  else if (!is.na(hist_age) & is.na(diag_age)) res <- "history"
-  # both history and diagnosis present, but history before diagnosis
-  # which makes it inconsistent
-  else if (!is.na(hist_age) & !is.na(diag_age) & hist_age < diag_age) 
+  if (is.na(hist_age) & is.na(diag_age)) {
+    res <- as.character(NA)
+  } else if (!is.na(hist_age) & is.na(diag_age)) {
+    # only history present
     res <- "history"
-  else
-    res <- diag_age
+  } else if (!is.na(hist_age) & !is.na(diag_age) & hist_age < diag_age) {
+    # both history and diagnosis present, but history before diagnosis
+    # which makes it inconsistent
+    res <- "history"
+  } else {
+    res <- as.character(diag_age)
+  }
   return (res)
 }
 
 # Apply functions and combine GP, HES, death register results ----
 
 eid_tte_lists <- lapply(UNIQ, function (ucode) {
+  print(paste0("Running phenotype: ", 
+               dictionary$phenotype[dictionary$unique_code == ucode]))
+  
   ids_with_gp_record <- 
     getFirstAgeGP(v2c = code_lists[[as.character(ucode)]]$codes_V2,
                   v3c = code_lists[[as.character(ucode)]]$codes_V3)
@@ -265,13 +271,14 @@ eid_tte_lists <- lapply(UNIQ, function (ucode) {
                    icd10c = code_lists[[as.character(ucode)]]$codes_ICD10,
                    opcsc = code_lists[[as.character(ucode)]]$codes_OPCS)
   
-  ids_with_death_record <- 
-    getFirstAgeDeath(icd10c = code_lists[[as.character(ucode)]]$codes_ICD10)
-  
+  # ids_with_death_record <- 
+  #   getFirstAgeDeath(icd10c = code_lists[[as.character(ucode)]]$codes_ICD10)
+  # 
   ids_with_tte <- full_join(ids_with_gp_record, ids_with_hes_record, 
                             by = "eid") %>%
-    full_join(ids_with_death_record, by = "eid") %>%
-    mutate(age_at_first_diag = pmin(age_at_first_GP, age_at_first_HES, age_at_death,
+    # full_join(ids_with_death_record, by = "eid") %>%
+    mutate(age_at_first_diag = pmin(age_at_first_GP, age_at_first_HES, 
+                                    # age_at_death,
                                     na.rm = T)) %>%
     select(all_of(c("eid", "age_at_first_diag")))
   
@@ -279,13 +286,13 @@ eid_tte_lists <- lapply(UNIQ, function (ucode) {
   # history was recorded
   # This is not relevant for the death codes
   ids_with_gp_history <- 
-    getFirstAgeGP(v2c = history_code_lists[[as.character(ucode)]]$codes_V2,
-                  v3c = history_code_lists[[as.character(ucode)]]$codes_V3)
+    getFirstAgeGP(v2c = history_code_lists[[as.character(ucode)]]$hist_codes_V2,
+                  v3c = history_code_lists[[as.character(ucode)]]$hist_codes_V3)
   
   ids_with_hes_history <- 
-    getFirstAgeHES(icd9c = history_code_lists[[as.character(ucode)]]$codes_ICD9,
-                   icd10c = history_code_lists[[as.character(ucode)]]$codes_ICD10,
-                   opcsc = history_code_lists[[as.character(ucode)]]$codes_OPCS)
+    getFirstAgeHES(icd9c = history_code_lists[[as.character(ucode)]]$hist_codes_ICD9,
+                   icd10c = history_code_lists[[as.character(ucode)]]$hist_codes_ICD10,
+                   opcsc = history_code_lists[[as.character(ucode)]]$hist_codes_OPCS)
   
   ids_with_history <- full_join(ids_with_gp_history, ids_with_hes_history, 
                                 by = "eid") %>%
@@ -296,24 +303,34 @@ eid_tte_lists <- lapply(UNIQ, function (ucode) {
   # Combine the diagnosis and history data
   # If there is a history code preceding a diagnosis code, then the individual
   # has to be censored from survival data, so change age-at-diagnosis to "history"
-  full_dat <- full_join(ids_with_tte, ids_with_history,
-                        by = "eid") %>%
-    rowwise() %>%
-    mutate(age_at_first_diag = combineDiagnosisHistoryInfo(age_at_first_history,
-                                                           age_at_first_diag))
-
-  # Return age at diagnosis for matrix
-  for_mat <- full_dat %>% 
-    select(all_of(c("eid", "age_at_first_diag")))
-  colnames(for_mat) <- c("eid", ucode)
   
+  full_dat <- full_join(ids_with_tte, ids_with_history,
+                        by = "eid")
+  if (nrow(full_dat) > 0) {
+    full_dat <- full_dat %>%
+      rowwise() %>%
+      mutate(age_at_first_history = ifelse(length(age_at_first_history) == 0, NA, 
+                                           age_at_first_history),
+             cleaned_age_at_first_diag = 
+               combineDiagnosisHistoryInfo(age_at_first_history,
+                                           age_at_first_diag))
+    # Return age at diagnosis for matrix
+    for_mat <- full_dat %>% 
+      select(all_of(c("eid", "cleaned_age_at_first_diag")))
+  } else {
+    for_mat <- data.frame(eid = NA,
+                          cleaned_age_at_first_diag = as.numeric(NA))
+  }
+  colnames(for_mat) <- c("eid", ucode)
   return (for_mat)
 })
 names(eid_tte_lists) <- UNIQ
 
 # Build eid-time-to-event matrix ----
 
-eid_tte_matrix <- eid_tte_lists %>% reduce(full_join, by = "eid")
+eid_tte_matrix <- eid_tte_lists %>% 
+  reduce(full_join, by = "eid") %>%
+  filter(!is.na(eid))
 
 # Get time to event for first/last records in primary care
 eid_tte_GP_ends <- sorted_gp_dat %>% 
@@ -326,10 +343,10 @@ eid_tte_HES_ends <- sorted_hes_dat %>%
   summarise(age_at_first_HES_record = first(age_record),
             age_at_last_HES_record = last(age_record))
 
-# Get age at death (first)
-eid_age_death <- sorted_death_dat %>%
-  group_by(eid) %>%
-  summarise(age_at_death = first(age_at_death))
+# # Get age at death (first)
+# eid_age_death <- sorted_death_dat %>%
+#   group_by(eid) %>%
+#   summarise(age_at_death = first(age_at_death))
 
 eid_tte_ends <- full_join(eid_tte_GP_ends, 
                           eid_tte_HES_ends, by = "eid") %>%
