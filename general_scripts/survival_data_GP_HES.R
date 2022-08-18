@@ -12,6 +12,8 @@ theme_set(theme_bw())
 
 survival_log <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/qc/survival_data_removed_individuals.txt"
 
+# Full UKB phenotypes file to get sex
+# Main UKBB phenotypes file
 general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
@@ -33,10 +35,12 @@ age_at_diag_matrix$death <- general_covars$age_at_death[match(age_at_diag_matrix
                                                               general_covars$eid)]
 
 age_at_diag_matrix <- age_at_diag_matrix %>%
-  mutate(across(all_of(c("age_at_first_GP_record", "age_at_last_GP_record",
+  mutate(across(all_of(c("age_at_first_GP_record",
+                         "age_at_last_GP_record",
                          "age_at_first_HES_record", "age_at_last_HES_record",
-                         "death")),
-                as.numeric))
+                         "death")), 
+                as.numeric)) %>%
+  mutate(eid = as.character(eid))
 
 # Create survival information ----
 
@@ -52,9 +56,7 @@ age_at_diag_matrix <- age_at_diag_matrix %>%
                                     na.rm = T),
          age_at_last_record = pmax(age_at_last_GP_record,
                                    age_at_last_HES_record,
-                                   na.rm = T),
-         age_at_last_record = ifelse(!is.na(death) & !is.na(age_at_last_record) & death > age_at_last_record,
-                                     death, age_at_last_record)) %>%
+                                   na.rm = T)) %>%
   filter(!is.na(age_at_first_record) & !is.na(age_at_last_record)
          & age_at_first_record < age_at_last_record)
 
@@ -93,6 +95,13 @@ surv_dat <- lapply(c("death", DIAGNOSES), function (diag) {
   
   # Remove any inconsistencies, i.e. when age at disease onset is 
   # earlier than the first record in GP or HES
+  # If age at disease is itself the first record in GP or HES,
+  # tweak the first record to reduce age by 0.01 yrs for 
+  # computational ease
+  tweak_age <- which(cleaned$age_at_event == cleaned$age_at_first_record)
+  cleaned$age_at_first_record[tweak_age] <- 
+    cleaned$age_at_first_record[tweak_age] - 0.01
+  
   cleaned <- cleaned %>% filter(age_at_event > age_at_first_record)
   sink(survival_log, append = T)
   cat(paste0("\t", "FINAL cases with non-conflicting survival data: ",  
@@ -108,7 +117,9 @@ names(surv_dat) <- c("death", DIAGNOSES)
 
 # Add covariates
 surv_dat_sex <- lapply(surv_dat, function (df) {
+  df$eid <- as.character(df$eid)
   df$sex <- general_covars$sex[match(df$eid, general_covars$eid)]
+  df <- df %>% filter(!is.na(sex))
   return (df)
 })
 

@@ -175,7 +175,7 @@ history_code_lists <- lapply(UNIQ, function (ucode) {
 })
 names(history_code_lists) <- UNIQ
 
-# Wrangle GP, HES, and death data to arrange by event dates ----
+# Wrangle GP and HES data to arrange by event dates ----
 
 sorted_gp_dat <- gp_dat %>% 
   group_by(eid) %>% 
@@ -276,9 +276,7 @@ eid_tte_lists <- lapply(UNIQ, function (ucode) {
   # 
   ids_with_tte <- full_join(ids_with_gp_record, ids_with_hes_record, 
                             by = "eid") %>%
-    # full_join(ids_with_death_record, by = "eid") %>%
-    mutate(age_at_first_diag = pmin(age_at_first_GP, age_at_first_HES, 
-                                    # age_at_death,
+    mutate(age_at_first_diag = pmin(age_at_first_GP, age_at_first_HES,
                                     na.rm = T)) %>%
     select(all_of(c("eid", "age_at_first_diag")))
   
@@ -349,8 +347,7 @@ eid_tte_HES_ends <- sorted_hes_dat %>%
 #   summarise(age_at_death = first(age_at_death))
 
 eid_tte_ends <- full_join(eid_tte_GP_ends, 
-                          eid_tte_HES_ends, by = "eid") %>%
-  full_join(eid_age_death, by = "eid")
+                          eid_tte_HES_ends, by = "eid")
 
 eid_tte_matrix <- full_join(eid_tte_ends, 
                             eid_tte_matrix, by = "eid")
