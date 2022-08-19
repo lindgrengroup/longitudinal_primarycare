@@ -9,14 +9,12 @@ STRATA <- c("BMI_F", "BMI_M", "BMI_sex_comb",
             "Weight_F", "Weight_M", "Weight_sex_comb")
 
 trait_dat <- lapply(STRATA, function (st) {
-  per_sex <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/GWAS/traits_for_gwas/", 
+  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/GWAS/traits_for_gwas/", 
                              st, "_cross_sectional.txt"),
                       sep = "\t", header = T, stringsAsFactors = F)
     return (res)
-  })
 })
-names(trait_dat) <- PHENOTYPES
+names(trait_dat) <- STRATA
 NPCs <- 21
 
 # QC file from UKBB
@@ -67,7 +65,7 @@ names(for_gen_QC) <- STRATA
 remove_withdrawn_ids <- function (data, qc_log_file) {
   
   # Path to UKBB provided list of individuals that have withdrawn consent
-  withdrawn <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/QC/w11867_20210809.csv", 
+  withdrawn <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/QC/w11867_20220525.csv", 
                           header = F)
   cleaned <- subset(data, !(data$eid %in% withdrawn$V1))
   
