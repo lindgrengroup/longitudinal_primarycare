@@ -102,7 +102,15 @@ plink2 \
 --threads 3 \
 --memory 15000 \
 --make-pgen \
---out chr${SGE_TASK_ID}_pruned
+--out pgen_format/chr${SGE_TASK_ID}_pruned
+
+# Make bed files (hard-call thresholds needed for some functions)
+plink2 \
+--pfile pgen_format/chr${SGE_TASK_ID}_pruned \
+--threads 3 \
+--memory 15000 \
+--make-bed \
+--out bed_format/chr${SGE_TASK_ID}_pruned
 
 # Remove genotype files for all variants (only retain pruned)
 rm tmp/chr${SGE_TASK_ID}_all_variants.p*
