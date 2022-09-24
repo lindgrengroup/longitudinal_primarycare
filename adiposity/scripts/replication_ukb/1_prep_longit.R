@@ -17,7 +17,7 @@ PHENOTYPES <- c("BMI", "Weight", "WC", "WHR", "Weight_change_1yr")
 PHENO_CODES <- c("f.21001.*", "f.21002.*", "f.48.*", NA, "f.2306.*")
 names(PHENO_CODES) <- PHENOTYPES
 
-# Get relevant UKB data fo each phenotype ----
+# Get relevant UKB data for each phenotype ----
 
 # Function to convert main pheno wide files to long format
 wide_to_long <- function (wide_df, p) {
@@ -103,25 +103,6 @@ standardise_coltypes <- function (long_df) {
   return (res)
 }
 
-# Function to get BMI-adjusted value
-adj_for_bmi <- function (long_df) {
-  complete_dat <- long_df[complete.cases(long_df), ]
-  modeled_dat <- lm(value ~ BMI,
-                    data = complete_dat)
-  resids <- resid(modeled_dat)
-  
-  res <- complete_dat
-  res$value_adjBMI <- resids
-  
-  # Add back in rows that were missing BMI
-  add_rows <- which(is.na(long_df$BMI))
-  add_rows <- long_df[add_rows, ]
-  add_rows$value_adjBMI <- NA
-  
-  res <- bind_rows(res, add_rows)
-  return (res)
-}
-
 all_adipo_main_dat <- lapply(PHENOTYPES, function (p) {
   print(paste0("Running phenotype: ", p))
   
@@ -146,43 +127,54 @@ all_adipo_main_dat <- lapply(PHENOTYPES, function (p) {
   # Standardise columns
   res <- standardise_coltypes(main_df)
   
-  # Get BMI-adjusted data where appropriate
-  if (p %in% c("WC", "WHR")) {
-    res <- adj_for_bmi(res)
-  }
-  
+  # Change coding on weight-change
+  if (p == "Weight_change_1yr")
+    res <- res %>% 
+    mutate(value = ifelse(value == 0, "No change",
+                          ifelse(value == 2, "Gain",
+                                 ifelse(value == 3, "Loss", "Unknown"))))
   return (res)
 })
 names(all_adipo_main_dat) <- PHENOTYPES
 
-# Change coding on weight-change-1yr question
-tmp <- all_adipo_main_dat[["Weight_change_1yr"]]
-tmp$value <- ifelse(tmp$value == 0, "No change",
-                    ifelse(tmp$value == 2, "Gain",
-                           ifelse(tmp$value == 3, "Loss", "Unknown")))
-tmp$value <- factor(tmp$value)
-all_adipo_main_dat[["Weight_change_1yr"]] <- tmp
+# Create WCadjBMI and WHRadjBMI strata
+for_wcadjbmi <- all_adipo_main_dat[["WC"]]
+for_wcadjbmi <- for_wcadjbmi[complete.cases(for_wcadjbmi$value,
+                                            for_wcadjbmi$BMI), ]
+# Model and get residuals
+modeled_dat <- lm(value ~ BMI, data = for_wcadjbmi)
+resids <- resid(modeled_dat)
+for_wcadjbmi$value <- resids
+all_adipo_main_dat[["WCadjBMI"]] <- for_wcadjbmi
+
+for_whradjbmi <- all_adipo_main_dat[["WHR"]]
+for_whradjbmi <- for_whradjbmi[complete.cases(for_whradjbmi$value,
+                                              for_whradjbmi$BMI), ]
+# Model and get residuals
+modeled_dat <- lm(value ~ BMI, data = for_whradjbmi)
+resids <- resid(modeled_dat)
+for_whradjbmi$value <- resids
+all_adipo_main_dat[["WHRadjBMI"]] <- for_whradjbmi
 
 # Filter to longitudinal data except for the weight-change field ----
 
-filtered <- lapply(PHENOTYPES, function (p) {
-  res <- all_adipo_main_dat[[p]]
-  res <- res %>% arrange(eid, event_dt)
+filtered <- lapply(c(PHENOTYPES, "WCadjBMI", "WHRadjBMI"), function (p) {
+  df <- all_adipo_main_dat[[p]]
   
+  df <- df %>% arrange(eid, event_dt)
   # Drop any NA values and only keep individuals with > 1 measurement
-  cleaned <- res[complete.cases(res$age_event, res$value), ]
+  cleaned <- df[complete.cases(df$age_event, df$value), ]
   keep_ids <- cleaned %>% group_by(eid) %>% count()
-
+  
   if (p == "Weight_change_1yr") 
     keep_ids <- keep_ids$eid
   else 
     keep_ids <- keep_ids$eid[keep_ids$n > 1]
   
   cleaned <- subset(cleaned, cleaned$eid %in% keep_ids)
- 
   return (cleaned)
 })
-names(filtered) <- PHENOTYPES
+names(filtered) <- c(PHENOTYPES, "WCadjBMI", "WHRadjBMI")
 
 saveRDS(filtered, 
         "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/main_data_adipo_change.rds")
