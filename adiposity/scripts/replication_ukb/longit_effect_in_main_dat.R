@@ -2,6 +2,7 @@
 # Date: 31/08/22
 
 library(tidyverse)
+library(lme4)
 library(broom)
 library(foreign)
 library(MASS)
@@ -34,9 +35,15 @@ gp_ids <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/
                      sep = "\t", header = F, stringsAsFactors = F)$V1
 gp_ids <- as.character(gp_ids)
 
-vars_to_replicate <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/adipo_change_snps_replicate.txt",
+vars_to_replicate <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/snps_to_replicate.txt",
                                 sep = "\t", header = T, stringsAsFactors = F)
 VARIDS <- vars_to_replicate$SNP
+# For variants without rsids, build variant name
+rename_vars <- grep("^chr", VARIDS)
+VARIDS[rename_vars] <- paste0(vars_to_replicate$SNP[rename_vars], "_",
+                              vars_to_replicate$allele1[rename_vars], "_", 
+                              vars_to_replicate$allele2[rename_vars])
+VARIDS <- gsub("^chr", "", VARIDS)
 
 # Genotypes / dosages at variants of interest
 var_dosages <- lapply(VARIDS, function (varid) {
@@ -129,6 +136,34 @@ addGenoGroup <- function (dat, varid) {
 
 # Testing functions ----
 
+getLMMTerm <- function (dat, mod_cvs) {
+  to_model <- dat %>%
+    group_by(eid) %>%
+    arrange(age_event, .by_group = T) %>%
+    mutate(t = age_event - first(age_event))
+  
+  mod_form <- paste0("value ~ t + ",
+                     paste0(mod_cvs, collapse = " + "),
+                     " + (t | eid)")
+  # Run model
+  lmod <- lmer(formula(mod_form), data = to_model, REML = F)
+  # Get BLUPs 
+  blups <- coef(lmod)$eid[, c("(Intercept)", "t")]
+  colnames(blups) <- c("intercept", "slope")
+  
+  # Adjust slope term for intercept and RINT
+  modelled_slope <- lm(slope ~ intercept, blups)
+  
+  # RINT
+  trait_to_rint <- resid(modelled_slope)
+  rinted_trait <- qnorm((rank(trait_to_rint) - 0.5) / sum(!is.na(trait_to_rint)))
+  
+  res <- data.frame(eid = rownames(blups),
+                    lmm_slope_adj_int = rinted_trait)
+  res <- inner_join(res, dat, by = "eid")
+  return (res)
+}
+
 quantTest <- function (dat, ss) {
   covars_include <- MOD_COVARS
   if (ss != "sex_comb") {
@@ -138,10 +173,12 @@ quantTest <- function (dat, ss) {
   if (length(unique(dat$data_provider)) < 2)
     covars_include <- covars_include[-which(covars_include == "data_provider")]
   
-  mod_formula <- paste0("value_diff ~ dosage + ",
-                        paste0(covars_include, collapse = " + "))
+  # Get term to use for association testing
+  # i.e. RINTed adjusted LMM slope
+  dat_final <- getLMMTerm(dat, covars_include)
   
-  modeled_dat <- lm(formula(mod_formula), data = dat)
+  modeled_dat <- lm(lmm_slope_adj_int ~ dosage, data = dat_final)
+  
   print_res <- tidy(modeled_dat) %>%
     filter(term == "dosage") %>%
     rename(beta = estimate, se = std.error, tstat = statistic, pval = p.value) %>%
@@ -214,7 +251,7 @@ quantPlot <- function (dat, qp, varid) {
       scale_color_manual(values = use_col_palette) +
       scale_fill_manual(values = use_col_palette) +
       scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
-      labs(x = paste0("Change in ", qp), 
+      labs(x = paste0("Change in ", qp, " from visit 1"), 
            title = paste0(varid, ": ", ss))
     return (resplot)
   })
@@ -260,23 +297,16 @@ adipo_change_replication <- lapply(VARIDS, function (varid) {
     model_dat <- addVarDosage(model_dat, varid)
     model_dat <- addGenoGroup(model_dat, varid)
     
-    # Run regressions and plots
+    # Run regressions per sex
     regression_res <- lapply(SEX_STRATA, function (ss) {
-      per_visit <- lapply(c(2, 3), function (vc) {
-        sub_dat <- model_dat %>% filter(visit == vc)
-        res <- quantTest(sub_dat, ss) %>%
-          mutate(visit_compared = vc)
-      })
-      per_visit <- bind_rows(per_visit) %>%
+      res <- quantTest(model_dat, ss) %>%
         mutate(sex_strata = ss)
-      
-      return (per_visit)
+      return (res)
     })
     regression_res <- bind_rows(regression_res) %>%
       mutate(pheno_tested = qp)
     
-    
-    # Plot results
+    # Plot change in adiposity
     png(paste0(plotdir, varid, "/", varid, "_", qp, ".png"))
     print(quantPlot(model_dat, qp, varid))
     dev.off()
@@ -330,4 +360,216 @@ adipo_change_replication <- bind_rows(adipo_change_replication)
 write.table(adipo_change_replication, 
             paste0(resdir, "adipo_change_replication.txt"),
             sep = "\t", quote = F, row.names = F)
+
+# Explore results ----
+
+dat <- read.table("adipo_change_replication_lmm_slopes.txt", sep = "\t",
+                  header = T, stringsAsFactors = F)
+
+# Subset to phenotypes of interest at visits with most power (sample size)
+
+selfrep_wtchg <- dat %>% 
+  filter(pheno_tested == "Weight_change_1yr" & visit_compared == 1)
+
+sig_wtchg_snps <- selfrep_wtchg %>%
+  filter(pval <= 0.005) %>%
+  mutate(perc_change = signif((1 - OR)*100, 3))
+
+# Subset to abdominal obesity
+abdo_obesity <- dat %>%
+  filter(pheno_tested %in% c("WC", "WCadjBMI", "WHR", "WHRadjBMI")) 
+
+sig_abdo_obesity <- abdo_obesity %>%
+  filter(pval <= 2E-3)
+
+# printing to table
+to_write <- bind_rows(selfrep_wtchg, abdo_obesity) %>%
+  filter(grepl("^rs", SNP)) %>%
+  dplyr::select(all_of(c("beta", "se", "pval", "sex_strata", "pheno_tested",
+                         "OR", "lci", "uci", "SNP"))) %>%
+  mutate(beta_print = paste0(signif(beta, 3), " (", signif(se, 3), ")"),
+         OR_print = paste0(signif(OR, 3), " (", signif(lci, 3), " - ", signif(uci, 3), ")"),
+         pval_print = signif(pval, 3)) %>%
+  dplyr::select(all_of(c("SNP", "pheno_tested", "sex_strata", "beta_print", "OR_print", "pval_print"))) %>%
+  arrange(SNP, sex_strata, factor(pheno_tested, levels = c("WC", "WCadjBMI",
+                                                           "WHR", "WHRadjBMI",
+                                                           "Weight_change_1yr")))
+write.table(to_write, "for_results_tables.txt",
+            sep = "\t", quote = F, row.names = F)
+
+# Plot results ----
+
+theme_set(theme_bw())
+
+# colour palette: rose, teal, grey
+custom_three_diverge <- c("#D35C79","#009593", "#666666")
+names(custom_three_diverge) <- c("F", "M", "sex_comb")
+
+plot_dat <- abdo_obesity %>%
+  filter(grepl("^rs", SNP)) %>%
+  mutate(sex_strata = factor(sex_strata, levels = c("F", "M", "sex_comb")),
+         pheno_tested = factor(pheno_tested, levels = c("WHRadjBMI", "WHR",
+                                                        "WCadjBMI", "WC")),
+         bmi_adj = factor(ifelse(grepl("adjBMI", pheno_tested), "yes", "no")),
+         strata = factor(paste0(pheno_tested, "_", sex_strata), 
+                         levels = c("WHRadjBMI_sex_comb", "WHR_sex_comb",
+                                    "WHRadjBMI_M", "WHR_M",
+                                    "WHRadjBMI_F", "WHR_F",
+                                    "WCadjBMI_sex_comb", "WC_sex_comb",
+                                    "WCadjBMI_M", "WC_M",
+                                    "WCadjBMI_F", "WC_F")),
+         uci = beta + 1.96*se,
+         lci = beta - 1.96*se,
+         sig_lty = factor(ifelse(pval < 2E-3, "yes", "no"),
+                          levels = c("yes", "no")))
+
+MINPLOT <- min(plot_dat$lci)
+MAXPLOT <- max(plot_dat$uci)
+
+VARIDS <- unique(plot_dat$SNP)
+
+plotBetas <- function (v) {
+  sub_dat <- plot_dat %>% 
+    filter(SNP == v)
+  
+  res_plot <- ggplot(sub_dat, aes(x = beta, y = strata,
+                                  group = pheno_tested)) +
+    geom_pointrange(aes(xmin = lci, xmax = uci,
+                        shape = bmi_adj, color = sex_strata,
+                        linetype = sig_lty, alpha = sig_lty),
+                    position = position_dodge(width = 0.7),
+                    size = 0.4) +
+    geom_vline(xintercept = 0, linetype = 2) +
+    scale_color_manual(values = custom_three_diverge, guide = "none") +
+    scale_alpha_manual(values = c(no = 0.7, yes = 1)) +
+    scale_linetype_manual(values = c(no = 2, yes = 1)) +
+    scale_x_continuous(limits = c(MINPLOT, MAXPLOT),
+                       guide = guide_axis(check.overlap = TRUE)) +
+    theme(legend.position = "none",
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  return (res_plot) 
+}
+
+lapply(VARIDS, function (v) {
+  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/abdominal_obesity_effects/",
+              v, ".tiff"),
+       height = 4, width = 5, units = "cm",
+       res = 300)
+  print(plotBetas(v))
+  dev.off()
+})
+
+# Plot concordant effects on BMI and WHRadjBMI (scatter with lines for C.I.s) ----
+
+for_plot <- dat %>%
+  filter(pheno_tested %in% c("WCadjBMI", "WHRadjBMI", "BMI") & sex_strata == "sex_comb"
+         & grepl("^rs", SNP)) %>%
+  select(all_of(c("beta", "se", "pval", "pheno_tested", "SNP"))) %>%
+  mutate(lci = beta - 1.96*se,
+         uci = beta + 1.96*se,
+         sig_lty = factor(ifelse(pval < 2E-3, "yes", "no"),
+                                    levels = c("yes", "no")))
+
+for_plot <- for_plot %>%
+  pivot_wider(id_cols = SNP,
+              names_from = pheno_tested,
+              values_from = c(beta, se, pval, lci, uci, sig_lty))
+
+# Align to the BMI-increasing allele
+for_plot <- for_plot %>%
+  mutate(flip = beta_BMI < 0,
+         og_beta_BMI = beta_BMI,
+         beta_BMI = ifelse(flip, -og_beta_BMI, og_beta_BMI),
+         lci_BMI = ifelse(flip, -og_beta_BMI - 1.96*se_BMI, lci_BMI),
+         uci_BMI = ifelse(flip, -og_beta_BMI + 1.96*se_BMI, uci_BMI),
+         og_beta_WHRadjBMI = beta_WHRadjBMI,
+         beta_WHRadjBMI = ifelse(flip, -og_beta_WHRadjBMI, og_beta_WHRadjBMI),
+         lci_WHRadjBMI = ifelse(flip, -og_beta_WHRadjBMI - 1.96*se_WHRadjBMI, lci_WHRadjBMI),
+         uci_WHRadjBMI = ifelse(flip, -og_beta_WHRadjBMI + 1.96*se_WHRadjBMI, uci_WHRadjBMI),
+         og_beta_WCadjBMI = beta_WCadjBMI,
+         beta_WCadjBMI = ifelse(flip, -og_beta_WCadjBMI, og_beta_WCadjBMI),
+         lci_WCadjBMI = ifelse(flip, -og_beta_WCadjBMI - 1.96*se_WCadjBMI, lci_WCadjBMI),
+         uci_WCadjBMI = ifelse(flip, -og_beta_WCadjBMI + 1.96*se_WCadjBMI, uci_WCadjBMI))
+
+minplot <- min(c(for_plot$lci_BMI, for_plot$lci_WHRadjBMI))
+maxplot <- max(c(for_plot$uci_BMI, for_plot$uci_WHRadjBMI))
+
+whradjbmi_plot <- ggplot(for_plot, aes(x = beta_BMI, y = beta_WHRadjBMI)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 1, color = "grey",
+              size = 0.3) +
+  geom_pointrange(aes(xmin = lci_BMI, xmax = uci_BMI,
+                      linetype = sig_lty_WHRadjBMI, alpha = sig_lty_WHRadjBMI),
+                  size = 0.3, fatten = 0.5) +
+  geom_pointrange(aes(ymin = lci_WHRadjBMI, ymax = uci_WHRadjBMI,
+                      linetype = sig_lty_WHRadjBMI, alpha = sig_lty_WHRadjBMI),
+                  size = 0.3, fatten = 0.5) +
+  scale_alpha_manual(values = c(no = 0.5, yes = 1)) +
+  scale_linetype_manual(values = c(no = 2, yes = 1)) +
+  scale_x_continuous(limits = c(minplot, maxplot),
+                     guide = guide_axis(check.overlap = TRUE)) +
+  scale_y_continuous(limits = c(minplot, maxplot),
+                     guide = guide_axis(check.overlap = TRUE)) +
+  theme(legend.position = "none",
+        axis.title = element_blank(),
+        axis.text.x = element_text(size = 6),
+        axis.text.y = element_text(size = 6))
+
+tiff("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/abdominal_obesity_effects/WHRadjBMI_vs_BMI.tiff",
+     height = 5, width = 5, units = "cm",
+     res = 300)
+print(whradjbmi_plot)
+dev.off()
+
+minplot <- min(c(for_plot$lci_BMI, for_plot$lci_WCadjBMI))
+maxplot <- max(c(for_plot$uci_BMI, for_plot$uci_WCadjBMI))
+
+wcadjbmi_plot <- ggplot(for_plot, aes(x = beta_BMI, y = beta_WCadjBMI)) +
+  geom_abline(intercept = 0, slope = 1, linetype = 1, color = "grey",
+              size = 0.3) +
+  geom_pointrange(aes(xmin = lci_BMI, xmax = uci_BMI,
+                      linetype = sig_lty_WCadjBMI, alpha = sig_lty_WCadjBMI),
+                  size = 0.3, fatten = 0.5) +
+  geom_pointrange(aes(ymin = lci_WCadjBMI, ymax = uci_WCadjBMI,
+                      linetype = sig_lty_WCadjBMI, alpha = sig_lty_WCadjBMI),
+                  size = 0.3, fatten = 0.5) +
+  scale_alpha_manual(values = c(no = 0.5, yes = 1)) +
+  scale_linetype_manual(values = c(no = 2, yes = 1)) +
+  scale_x_continuous(limits = c(minplot, maxplot),
+                     guide = guide_axis(check.overlap = TRUE)) +
+  scale_y_continuous(limits = c(minplot, maxplot),
+                     guide = guide_axis(check.overlap = TRUE)) +
+  theme(legend.position = "none",
+        axis.title = element_blank(),
+        axis.text.x = element_text(size = 6),
+        axis.text.y = element_text(size = 6))
+
+tiff("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/abdominal_obesity_effects/WCadjBMI_vs_BMI.tiff",
+     height = 3.5, width = 3.5, units = "cm",
+     res = 300)
+print(wcadjbmi_plot)
+dev.off()
+
+# Test sex heterogeneity ----
+
+full_dat <- dat %>% 
+  filter(pheno_tested %in% c("WCadjBMI", "WHRadjBMI") & sex_strata != "sex_comb") %>%
+  select(all_of(c("beta", "se", "pval", "sex_strata", "pheno_tested", "SNP"))) 
+
+full_dat <- split(full_dat, f = full_dat$pheno_tested)
+
+het_results <- lapply(c("WCadjBMI", "WHRadjBMI"), function (p) {
+  res <- full_dat[[p]] %>% pivot_wider(id_cols = SNP,
+                                       names_from = sex_strata,
+                                       values_from = c(beta, se, pval))
+  
+  res <- res %>%
+    mutate(het_zstat = (beta_F - beta_M)/sqrt(se_F^2 + se_M^2),
+           het_pval = pnorm(het_zstat, 0, 1, lower.tail = T),
+           pheno_tested = p)
+  return(res)
+})
+het_results <- bind_rows(het_results)
 

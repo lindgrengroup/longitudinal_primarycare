@@ -35,6 +35,24 @@ for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
 done
 cat ukb_no_gp/tmp.txt | sort | uniq > ukb_no_gp/clustprobs_snps_to_replicate.txt
 
+for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
+	zcat 2204_models/GWAS/BOLT_results/${STRATA}_lmm_slopes_adj_int_final.txt.gz | \
+	head -n 1 > 2204_models/GWAS/BOLT_results/${STRATA}_lmm_slopes_adj_int_gws_sig_hits.txt
+	zcat 2204_models/GWAS/BOLT_results/${STRATA}_lmm_slopes_adj_int_final.txt.gz | \
+	awk 'BEGIN {FS = "[[:space:]]+"} { if ($9<=5E-08 && $6>=0.01 && $6<=0.99) print $0 }' - \
+	>> 2204_models/GWAS/BOLT_results/${STRATA}_lmm_slopes_adj_int_gws_sig_hits.txt
+done
+
+for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
+	for clustk in k1 k2 k3 k4; do
+		head -1 highdim_splines/GWAS/BOLT_results/${STRATA}_${clustk}_final.txt \
+		> highdim_splines/GWAS/BOLT_results/${STRATA}_${clustk}_gws_sig_hits.txt
+		awk '{ if ($9<=5E-08 && $6>=0.01 && $6<=0.99) print $0 }' \
+		highdim_splines/GWAS/BOLT_results/${STRATA}_${clustk}_final.txt \
+		>> highdim_splines/GWAS/BOLT_results/${STRATA}_${clustk}_gws_sig_hits.txt
+	done
+done
+
 echo "###########################################################"
 echo "Finished at: "`date` 
 echo "###########################################################"
