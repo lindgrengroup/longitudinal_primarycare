@@ -50,6 +50,8 @@ general_covars$eid <- as.character(general_covars$eid)
 
 covars <- lapply(covars, function (df) {
   res <- merge(df, general_covars, by = "eid")
+  # Make sure UKB assessment centre is treated as a categorical covariate by adding text
+  res$UKB_assmt_centre <- paste0("UKB", res$UKB_assmt_centre)
   return (res)
 })
 
