@@ -18,8 +18,11 @@ parser$add_argument("--adjBaseline",
                     help = "Should GWAS be adjusted for baseline trait value?")
 parser$add_argument("--plinkFile", 
                     default = "/well/lindgren/UKBIOBANK/ferreira/IMPUTED_association_analysis/grm_files/ukb_cal_v2_qced_pruned")
-parser$add_argument("--covars",
-                    default = "UKB_assmt_centre,genotyping.array,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21",
+parser$add_argument("--quant_covars",
+                    default = "PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21",
+                    help = "Collection of quantitative covariates in the phenotype file to use")
+parser$add_argument("--cat_covars",
+                    default = "UKB_assmt_centre,genotyping.array",
                     help = "Collection of covariates in the phenotype file to use")
 parser$add_argument("--sampleIDColinphenoFile",
                     default = "eid",
@@ -39,8 +42,11 @@ phenoFile <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2
                     args$strata, ".txt")
 outputPrefix <- paste0(args$outputdir, args$strata, "/", args$cluster)
 invNormalize <- args$traitType == "quantitative"
-covarColList <- unlist(strsplit(args$covars, split=","))
-if (grepl("sex_comb", args$strata)) covarColList <- c(covarColList, "sex")
+
+covarColList <- unlist(strsplit(args$quant_covars, split=","))
+qCovarColList <- unlist(strsplit(args$cat_covars, split=","))
+
+if (grepl("sex_comb", args$strata)) qCovarColList <- c(qCovarColList, "sex")
 if (args$adjBaseline %in% c("T", "TRUE", "True")) 
   covarColList <- c(covarColList, "baseline_trait")
 
@@ -50,6 +56,7 @@ fitNULLGLMM(
   phenoFile = phenoFile,
   phenoCol = args$cluster,
   covarColList = covarColList,
+  qCovarColList = qCovarColList,
   sampleIDColinphenoFile = args$sampleIDColinphenoFile,
   traitType = args$traitType,
   invNormalize = invNormalize,

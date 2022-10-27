@@ -39,7 +39,8 @@ Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/SAIGE_
 --cluster=${KI} \
 --adjBaseline=FALSE \
 --plinkFile=/well/lindgren/UKBIOBANK/ferreira/IMPUTED_association_analysis/grm_files/ukb_cal_v2_qced_pruned \
---covars=baseline_age,age_sq,UKB_assmt_centre,genotyping.array,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21 \
+--quant_covars=baseline_age,age_sq,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21 \
+--cat_covars=UKB_assmt_centre,genotyping.array \
 --sampleIDColinphenoFile=eid \
 --traitType=binary \
 --outputdir=/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/SAIGE_results/ 
