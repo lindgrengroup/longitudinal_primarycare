@@ -86,7 +86,15 @@ if (M != "random") {
 }
 
 resdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
-                 "/parameter_selection/")
+                 "/parameter_selection/medoid_initialisation/")
+dir.create(resdir)
+plotdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
+                 "/parameter_selection/medoid_initialisation/plots/")
+dir.create(plotdir)
+
+custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
+usecolpal <- colorRampPalette(custom_four_diverge)(K)
+names(usecolpal) <- paste0("k", 1:K)
 
 # Load data ----
 
@@ -96,8 +104,8 @@ covars_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_prim
 
 # Only retain 80% of data used for discovery
 training_ids <- read.table(paste0(main_filepath, "clustering/", 
-                              PHENO, "_", SEX_STRATA, "/ids_training.txt"),
-                       sep = "\t", header = F, stringsAsFactors = F)$V1
+                                  PHENO, "_", SEX_STRATA, "/ids_training.txt"),
+                           sep = "\t", header = F, stringsAsFactors = F)$V1
 training_ids <- as.character(training_ids)
 
 B <- model_dat$B
@@ -160,13 +168,11 @@ getCustDistMat <- function (id_list) {
 
 # Functions for clustering ----
 
-# Given a list of ids, calculate which id is closest to the group centre
-getMedoid <- function (id_list) {
-  id_means <- mn_mat[id_list, ]
-  gp_centroid <- colMeans(id_means)
-  # Euclidean distance from each id to centroid
-  mn_diff <- t(apply(id_means, 1, function (x) x - gp_centroid))^2
-  medoid_id <- id_list[which.min(rowSums(mn_diff))]
+# Given a list of ids, calculate medoid (id with min rowsum or colsum 
+# in custom distance matrix)
+getMedoid <- function (id_list, dmat) {
+  sub_mat <- dmat[id_list, ]
+  medoid_id <- id_list[which.min(rowSums(sub_mat))]
   return (medoid_id)
 }
 
@@ -184,7 +190,7 @@ getClusterBelonging <- function (id_list, medoid_list) {
   
   # Euclidean distance from each id to centroid
   closest_medoid <- lapply(1:nrow(id_means), 
-                          function (ii) getClosestMedoid(id_means[ii, ], medoid_pos))
+                           function (ii) getClosestMedoid(id_means[ii, ], medoid_pos))
   
   res <- data.frame(eid = rownames(id_means),
                     init_clust = unlist(closest_medoid))
@@ -192,8 +198,10 @@ getClusterBelonging <- function (id_list, medoid_list) {
   return (res)
 }
 
-## Calculate cluster medoids for initialisation, given list of individuals
-getInitialCentres <- function (id_list, myrs = M,
+## Calculate cluster medoids for initialisation, given list of individuals 
+# and distance matrix for individuals
+getInitialCentres <- function (id_list, dmat,
+                               myrs = M,
                                ncentres = K) {
   
   cat("######## Initialising cluster centres", "\n")
@@ -220,8 +228,9 @@ getInitialCentres <- function (id_list, myrs = M,
                            fc = diffs_assess) %>%
       mutate(init_clust = ntile(fc, ncentres))
     
-    init_meds <- get_id_q %>% group_by(init_clust) %>%
-      summarise(gp_medoid = getMedoid(eid))
+    init_meds <- get_id_q %>% 
+      group_by(init_clust) %>%
+      summarise(gp_medoid = getMedoid(eid, dmat))
     
     # Return indices of medoids and initial cluster assignment
     og_assignment <- get_id_q[, c("eid", "init_clust")]
@@ -254,11 +263,14 @@ itered_clustering <- lapply(1:S, function (si) {
   cat(paste0("Running iteration #", si), "\n")
   # Get ids
   id_list <- sample(VALID_IDS, NSAMPLES, replace = F)
+  # Distance matrix for these IDs
+  dmat <- getCustDistMat(id_list)
   
   # Initialisation
-  init_centres <- getInitialCentres(id_list, myrs = M, ncentres = K)
+  init_centres <- getInitialCentres(id_list, dmat,
+                                    myrs = M, ncentres = K)
   # Cluster
-  clust_res <- performClustering(dist_mat = getCustDistMat(id_list), 
+  clust_res <- performClustering(dist_mat = dmat, 
                                  ncentres = K, 
                                  init_centres = init_centres$medoid_index)
   return (clust_res)
@@ -293,9 +305,82 @@ reorderCentroids <- function (centroid_traj) {
   return (map_res)
 }
 
+# Plotting functions ----
+
+## Predictions
+getPredValuesClusterCentroid <- function (coef_mat) {
+  to_calc <- coef_mat[, -1]
+  pred_vals <- t(apply(to_calc, 1, 
+                       function (x) model_dat$B %*% x))
+  # Wrangle into ggplot format
+  for_plot <- as.data.frame(pred_vals)
+  colnames(for_plot) <- paste0("d", 1:ncol(for_plot))
+  for_plot$final_clust <- coef_mat$final_clust
+  
+  for_plot <- for_plot %>% pivot_longer(cols = -final_clust,
+                                        names_to = "t_diff", 
+                                        names_prefix = "d", 
+                                        values_to = "pred_value") %>%
+    mutate(t_diff = as.numeric(t_diff))
+  return (for_plot)
+}
+
+## Cluster centroid mean and S.D., wrangled into long format for plot
+getPlotDatClusterCentroids <- function (grouped_id_list) {
+  
+  full_dat <- mn_mat[grouped_id_list$eid, ]
+  full_dat$eid <- rownames(full_dat)
+  full_dat$final_clust <- 
+    grouped_id_list$final_clust[match(full_dat$eid, grouped_id_list$eid)]
+  full_dat$final_clust <- paste0("k", full_dat$final_clust)
+  
+  centroid_means <- full_dat %>% group_by(final_clust) %>%
+    summarise(across(-eid, mean))
+  centroid_sds <- full_dat %>% group_by(final_clust) %>%
+    summarise(across(-eid, sd))
+  
+  forloci <- centroid_means[, -1] - 1.96*centroid_sds[, -1]
+  forloci$final_clust <- centroid_means$final_clust
+  forloci <- forloci[, c("final_clust", 1:(ncol(forloci)-1))]
+  
+  forupci <- centroid_means[, -1] + 1.96*centroid_sds[, -1]
+  forupci$final_clust <- centroid_means$final_clust
+  forupci <- forupci[, c("final_clust", 1:(ncol(forupci)-1))]
+  
+  # Predict full trajectory for centroids (returns centroid x time matrix)
+  pred_mns <- getPredValuesClusterCentroid(centroid_means) %>%
+    rename(pred_mean_value = pred_value)
+  pred_locis <- getPredValuesClusterCentroid(forloci) %>%
+    rename(pred_loci_value = pred_value)
+  pred_upcis <- getPredValuesClusterCentroid(forupci) %>%
+    rename(pred_upci_value = pred_value)
+  
+  # Wrangle into ggplot format
+  for_plot <- full_join(pred_mns, pred_locis, by = c("final_clust", "t_diff"))
+  for_plot <- full_join(for_plot, pred_upcis, by = c("final_clust", "t_diff"))
+  
+  return (for_plot)
+}
+
+## Confusion matrix plots for initial vs final cluster assignment
+
+getPlotDatConfusionMat <- function (cmat) {
+  cmat <- cmat %>% mutate(init_clust = factor(paste0("k", init_clust), 
+                                              levels = paste0("k", 1:K)),
+                          final_clust = factor(paste0("k", final_clust), 
+                                               levels = paste0("k", K:1)))
+  res <- ggplot(cmat, aes(x = init_clust, y = final_clust, fill = count)) +
+    geom_tile() + 
+    geom_text(aes(label = count), size = 2) +
+    scale_fill_gradient(low = "white", high = "#009194", guide = "none") +
+    labs(x = "Initial", y = "Final") 
+  return (res)
+}
+
 # Apply to match cluster centroids across iterations ----
 
 cat("Corresponding clusters across iterations", "\n")
+
 combined_iters <- lapply(1:length(itered_clustering), function (si) {
   # Get cluster assignment
   df <- itered_clustering[[paste0("iter", si)]]$clust_assignment
@@ -310,6 +395,10 @@ combined_iters <- lapply(1:length(itered_clustering), function (si) {
   # Reassign centroids
   new_centroid_pos <- old_centroid_pos[remapping_order$new_clust, ]
   
+  reord <- itered_clustering[[paste0("iter", si)]]$clust_assignment
+  reord$final_clust <- 
+    remapping_order$old_clust[match(reord$final_clust, remapping_order$new_clust)]
+  
   # Pivot longer for tidyverse mean calculations
   for_mean_calc <- as.data.frame(new_centroid_pos)
   colnames(for_mean_calc) <- paste0("b", 1:ncol(for_mean_calc))
@@ -321,12 +410,17 @@ combined_iters <- lapply(1:length(itered_clustering), function (si) {
                                                   values_to = "b_val") %>%
     mutate(b_coef = as.numeric(b_coef),
            iteration = si)
-  return (for_mean_calc)
+  return (list(reordered = reord,
+          coef_dat = for_mean_calc))
 })
-combined_iters <- bind_rows(combined_iters)
+
+across_iters_mean_calc <- lapply(combined_iters, function (dlist) {
+  return (dlist$coef_dat)
+})
+across_iters_mean_calc <- bind_rows(across_iters_mean_calc)
 
 # Calculate mean centroid positions across iterations
-combined_centroid_mn <- combined_iters %>% 
+combined_centroid_mn <- across_iters_mean_calc %>% 
   group_by(clust, b_coef) %>%
   summarise(b_val = mean(b_val))
 # Pivot wider back to NCLUST X NDF format
@@ -354,3 +448,33 @@ to_ret <- list(K = K, L = L, M = M,
 
 saveRDS(to_ret, 
         paste0(resdir, "K", K, "_L", L, "_M", M, ".rds"))
+
+# Plot results ----
+
+## Centroid mean trajectories ---
+centroid_traj <- lapply(1:S, function (si) {
+  plot_res <- getPlotDatClusterCentroids(combined_iters[[si]]$reordered)
+  plot_res$iteration <- as.character(si)
+  return (plot_res)
+})
+centroid_traj <- bind_rows(centroid_traj)
+
+centroid_traj_plot <- ggplot(centroid_traj, 
+                             aes(x = t_diff, y = pred_mean_value,
+                                 col = final_clust)) +
+  facet_wrap(~iteration) +
+  geom_line() +
+  geom_ribbon(aes(ymin = pred_loci_value, ymax = pred_upci_value,
+                  fill = final_clust),
+              alpha = 0.1, linetype = 0) +
+  scale_color_manual(values = usecolpal, guide = "none") +
+  scale_fill_manual(values = usecolpal, guide = "none") +
+  labs(x = "Days from first measurement", 
+       y = "Cluster centroid predicted value")#
+
+png(paste0(plotdir, "sample_clustering_scheme_", PHENO, "_", SEX_STRATA, 
+           "_K", K, "_L", L, "_M", M, 
+           ".png"))
+print(centroid_traj_plot)
+dev.off()
+
