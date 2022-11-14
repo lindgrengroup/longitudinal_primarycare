@@ -50,7 +50,7 @@ full_dat <- lapply(PHENOTYPES, function (p) {
 })
 names(full_dat) <- PHENOTYPES
 
-# Residualise observed values by adjusting for confounders ----
+# Residualise observed values by adjusting for confounders, and standardise (normal) ----
 
 model_dat <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
@@ -73,12 +73,22 @@ model_dat <- lapply(PHENOTYPES, function (p) {
     minmod <- lm(formula(paste0("value ~ ", 
                              paste0(minimal_adj_covars, collapse = " + "))),
                  data = df)
+    # Mean and variance of residuals in minimally adjusted model
+    resid_min <- residuals(minmod)
+    mu_min <- mean(resid_min)
+    var_min <- var(resid_min)
+    
     # Full model
-    maxmod <- lm(formula(paste0("value ~ ", 
+    fullmod <- lm(formula(paste0("value ~ ", 
                                 paste0(full_adj_covars, collapse = " + "))),
                  data = df)
-    return (list(minmod = minmod,
-                 maxmod = maxmod))
+    # Mean and variance of residuals in fully adjusted model
+    resid_full <- residuals(fullmod)
+    mu_full <- mean(resid_full)
+    var_full <- var(resid_full)
+    
+    return (list(minmod = minmod, mu_min = mu_min, var_min = var_min,
+                 fullmod = fullmod, mu_full = mu_full, var_full = var_full))
   })
   names(res_list) <- SEX_STRATA
   return (res_list)
@@ -96,11 +106,11 @@ to_write <- lapply(PHENOTYPES, function (p) {
     if (sx != "sex_comb") df <- df %>% filter(sex == sx)
     
     res <- df
-    res$value_minadj <- residuals(model_dat[[p]][[sx]]$minmod)
-    res$value_fulladj <- residuals(model_dat[[p]][[sx]]$maxmod)
+    res$value_minadj_norm <- (residuals(model_dat[[p]][[sx]]$minmod) - model_dat[[p]][[sx]]$mu_min)/sqrt(var_min)
+    res$value_fulladj_norm <- (residuals(model_dat[[p]][[sx]]$fullmod) - model_dat[[p]][[sx]]$mu_full)/sqrt(var_full)
     
     to_save <- res[, c("eid", "t_diff", 
-                       "value", "value_minadj", "value_fulladj", 
+                       "value", "value_minadj_norm", "value_fulladj_norm", 
                        "age_t1", "value_t1")]
     return (to_save)
   })
@@ -110,4 +120,4 @@ to_write <- lapply(PHENOTYPES, function (p) {
 names(to_write) <- PHENOTYPES
 
 saveRDS(to_write, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")
+        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_scaled.rds")
