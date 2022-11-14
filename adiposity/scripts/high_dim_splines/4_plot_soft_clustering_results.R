@@ -21,17 +21,17 @@ names(custom_four_diverge) <- c("k1", "k2", "k3", "k4")
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
-parser$add_argument("--sex_strata", required = TRUE,
+parser$add_argument("--ss", required = TRUE,
                     help = "Sex strata")
 
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
-SEX_STRATA <- args$sex_strata
+SEX_STRATA <- args$ss
 K_chosen <- 4
 
 plotdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
-                  PHENO, "_", SEX_STRATA, "/plots/soft_clustering/")
+                  PHENO, "_", SEX_STRATA, "/plots/medoid_initialisation/")
 dir.create(plotdir)
 resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
                  PHENO, "_", SEX_STRATA, "/")
@@ -46,7 +46,7 @@ spline_posteriors <- model_dat$spline_posteriors
 model_resid_var <- model_dat$resid_var
 
 # Soft clustering probabilities
-clust_res <- read.table(paste0(resdir, "soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
+clust_res <- read.table(paste0(resdir, "medoid_init_soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
                                ".txt"),
                         sep = "\t", header = T, stringsAsFactors = F)
 

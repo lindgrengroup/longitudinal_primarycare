@@ -58,19 +58,22 @@ parser$add_argument("--phenotype", required = TRUE,
 parser$add_argument("--ss", required = TRUE,
                     help = "Sex strata")
 parser$add_argument("--K", required = TRUE,
-                    default = 5,
+                    default = 4,
                     help = "Number of clusters")
 parser$add_argument("--L", required = TRUE,
                     default = 2, 
                     help = "Only sample from individuals with at least L measurements")
 parser$add_argument("--M", required = TRUE,
-                    default = 1,
+                    default = 2,
                     help = "Initialise clusters with diff. at M years post-baseline")
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
+cat(paste0("PHENO: ", PHENO, "\n"))
 SEX_STRATA <- args$ss
+cat(paste0("SEX_STRATA: ", SEX_STRATA, "\n"))
 K <- as.numeric(args$K)
+cat(paste0("number clusters: ", K, "\n"))
 
 main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/"
 
@@ -78,12 +81,14 @@ main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/high
 NSAMPLES <- 5000 # number of individuals to sample each iteration
 S <- 10 # number of times to draw samples from population
 L <- as.numeric(args$L) # only sample from individuals with at least L measurements
+cat(paste0("minimum # measurements: ", L, "\n"))
 
 # For clustering
 M <- args$M
 if (M != "random") {
-  M <- as.numeric(args$M) # initialise clusters with n-tile diff. at M years post-baseline
+  M <- as.numeric(args$M) # initialise clusters with K-tile diff. at M years post-baseline
 }
+cat(paste0("K-tile difference at M yrs post-baseline: ", M, "\n"))
 
 resdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
                  "/parameter_selection/medoid_initialisation/")
@@ -101,6 +106,7 @@ names(usecolpal) <- paste0("k", 1:K)
 model_dat <- readRDS(paste0(main_filepath, "results/fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 covars_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
+cat(paste0("Number of ids in covariates data: ", nrow(covars_dat), "\n"))
 
 # Only retain 80% of data used for discovery
 training_ids <- read.table(paste0(main_filepath, "clustering/", 
@@ -117,6 +123,7 @@ covars_dat <- covars_dat %>%
   mutate(eid = as.character(eid)) %>%
   filter(eid %in% training_ids & FU_n >= L)
 VALID_IDS <- unique(covars_dat$eid)
+cat(paste0("\t", "Number of ids in training data: ", length(VALID_IDS), "\n"))
 
 spline_posteriors <- spline_posteriors[VALID_IDS]
 
@@ -470,7 +477,7 @@ centroid_traj_plot <- ggplot(centroid_traj,
   scale_color_manual(values = usecolpal, guide = "none") +
   scale_fill_manual(values = usecolpal, guide = "none") +
   labs(x = "Days from first measurement", 
-       y = "Cluster centroid predicted value")#
+       y = "Cluster centroid predicted value")
 
 png(paste0(plotdir, "sample_clustering_scheme_", PHENO, "_", SEX_STRATA, 
            "_K", K, "_L", L, "_M", M, 

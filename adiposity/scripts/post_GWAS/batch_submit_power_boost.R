@@ -10,15 +10,36 @@ submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/
 
 for (i in 1:nrow(compare_gp_giant)) {
   job_options <- paste(
+    "-v",
+    paste0(
+      "STRATA_NAME=\"", compare_gp_giant$strata[i], "\",",
+      "META_FILENAME=\"", compare_gp_giant$meta_filename[i], "\",",
+      "GP_N=\"", compare_gp_giant$gp_sample_size[i], "\",",
+      "GP_FILENAME=\"", compare_gp_giant$gp_filename[i], "\""
+    )
+  )
+  job_submission <- paste("qsub", job_options, submission_script)
+  system(job_submission)
+  print(job_submission)
+}
+
+
+
+submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/submit_sex_heterogeneity.sh"
+phenotypes <- c("BMI", "Weight")
+terms <- c("lmm_intercepts", "lmm_slopes_adj_int")
+
+for (p in phenotypes) {
+  for (trm in terms) {
+    job_options <- paste(
       "-v",
       paste0(
-        "STRATA_NAME=\"", compare_gp_giant$strata[i], "\",",
-        "META_FILENAME=\"", compare_gp_giant$meta_filename[i], "\",",
-        "GP_N=\"", compare_gp_giant$gp_sample_size[i], "\",",
-        "GP_FILENAME=\"", compare_gp_giant$gp_filename[i], "\""
+        "PHENO=\"", p, "\",",
+        "TERM=\"", trm, "\""
       )
     )
     job_submission <- paste("qsub", job_options, submission_script)
     system(job_submission)
     print(job_submission)
+  }
 }

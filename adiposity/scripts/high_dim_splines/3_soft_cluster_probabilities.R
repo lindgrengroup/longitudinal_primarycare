@@ -22,7 +22,7 @@ set.seed(RANDOM_SEED)
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
-parser$add_argument("--sex_strata", required = TRUE,
+parser$add_argument("--ss", required = TRUE,
                     help = "Sex strata")
 parser$add_argument("--nboots", default = 100,
                     required = TRUE,
@@ -31,12 +31,11 @@ parser$add_argument("--nboots", default = 100,
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
-SEX_STRATA <- args$sex_strata
+SEX_STRATA <- args$ss
 NBOOTS <- as.numeric(args$nboots)
 
 resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
-                 PHENO, "_", SEX_STRATA, "/")
-dir.create(resdir)
+                 PHENO, "_", SEX_STRATA)
 
 # Load data ----
 
@@ -44,7 +43,7 @@ model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adi
                             PHENO, "_", SEX_STRATA, ".rds"))
 
 clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
-                                PHENO, "_", SEX_STRATA, "/parameter_selection/K",
+                                PHENO, "_", SEX_STRATA, "/parameter_selection/medoid_initialisation/K",
                                 K_chosen, "_L", L_chosen, "_M", M_chosen, ".rds"))
 CLUST_NAMES <- paste0("k", 1:K_chosen)
 
@@ -107,7 +106,5 @@ soft_clust_res <- bind_rows(soft_clust_res) %>%
 soft_clust_res <- soft_clust_res[, c("eid", CLUST_NAMES)]
 
 write.table(soft_clust_res,
-            paste0(resdir, "soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
+            paste0(resdir, "/medoid_init_soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
                    ".txt"), sep = "\t", row.names = F, quote = F)
-
-

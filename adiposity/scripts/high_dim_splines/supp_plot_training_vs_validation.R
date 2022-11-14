@@ -1,81 +1,6 @@
 # Author: Samvida S. Venkatesh
 # Date: 24/05/2022
 
-# Script to plot silhouette scores for combinations of K, L, M ----
-# 
-# library(tidyverse)
-# theme_set(theme_bw())
-# 
-# RANDOM_SEED <- 160522
-# set.seed(RANDOM_SEED)
-# 
-# custom_teal_sequential <- c("#66BFBE", "#009593", "#005958")
-# names(custom_teal_sequential) <- c("2", "5", "10")
-# 
-# PHENOTYPES <- c("BMI", "Weight")
-# SEX_STRATA <- c("F", "M", "sex_comb")
-# 
-# main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
-# 
-# # Plot silhouette plot given data frame of K, L, M, mean score, and S.D. score
-# plotSilScores <- function (df) {
-#   df <- df %>% 
-#     mutate(K = as.numeric(K),
-#            L = as.factor(L),
-#            M = as.factor(M))
-#   resplot <- ggplot(df, aes(x = K, y = mean_silscore,
-#                         colour = L, fill = L)) +
-#     geom_point(aes(shape = M)) +
-#     geom_line(aes(group = interaction(L, M))) +
-#     geom_errorbar(aes(ymin = mean_silscore - 1.96*sd_silscore,
-#                       ymax = mean_silscore + 1.96*sd_silscore),
-#                   width = 0.1, alpha = 0.2) +
-#     scale_colour_manual(values = custom_teal_sequential) +
-#     scale_fill_manual(values = custom_teal_sequential) +
-#     scale_x_continuous(breaks = 2:8, labels = 2:8) +
-#     labs(y = "Mean (95% C.I.) across iterations silhouette score") +
-#     theme(axis.text = element_text(size = 6),
-#           axis.title = element_text(size = 8),
-#           legend.text = element_text(size = 6),
-#           legend.title = element_text(size = 8))
-#   return (resplot)
-# }
-# 
-# lapply(PHENOTYPES, function (p) {
-#   lapply(SEX_STRATA, function (sx) {
-#     all_combos <- list.files(paste0(main_filepath, p, "_", sx, "/parameter_selection/"),
-#                              pattern = "*.rds")
-#     centroid_dat <- lapply(all_combos, function (fname) {
-#       dat <- readRDS(paste0(main_filepath, p, "_", sx, "/parameter_selection/",
-#                                         fname))
-#       df_to_plot <- data.frame(K = dat$K, L = dat$L, M = dat$M,
-#                                mean_silscore = dat$silhouette_score$mean,
-#                                sd_silscore = dat$silhouette_score$sd)
-#       df_to_plot <- df_to_plot %>%
-#         mutate(K = as.numeric(K),
-#                L = as.character(L),
-#                M = as.character(M))
-#       return (df_to_plot)
-#     })
-#     all_parameters_dat <- bind_rows(centroid_dat)
-#     
-#     # subset_dat <- all_parameters_dat %>% filter(K %in% c(3, 4, 5) &
-#     #                                               L == "2")
-#     # 
-#     # png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/zoomed_in_silhouette_plot.png"),
-#     #     res = 300, units = "cm", height = 7, width = 7)
-#     # print(plotSilScores(subset_dat))
-#     # dev.off()
-#     
-#     png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/silhouette_plot.png"),
-#         res = 300, units = "cm", height = 7, width = 7)
-#     print(plotSilScores(all_parameters_dat))
-#     dev.off()
-#   })
-# })
-
-# Main script ----
-
 library(argparse)
 library(splines)
 library(zoo)
@@ -91,7 +16,7 @@ names(custom_four_diverge) <- c("1", "2", "3", "4")
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
-parser$add_argument("--sex_strata", required = TRUE,
+parser$add_argument("--ss", required = TRUE,
                     help = "Sex strata")
 parser$add_argument("--K", required = TRUE,
                     help = "Chosen number of clusters")
@@ -102,19 +27,18 @@ parser$add_argument("--M", required = TRUE,
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
-SEX_STRATA <- args$sex_strata
+SEX_STRATA <- args$ss
 K <- as.numeric(args$K)
 L <- args$L
 M <- args$M
 
-main_filepath <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/",
-                        PHENO, "_", SEX_STRATA, "/")
+main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
 
 # Read data ----
 
 # Centroids from chosen clustering method
-clust_centroids <- readRDS(paste0(main_filepath, 
-                                  "parameter_selection/K", K, "_L", L, "_M", M, ".rds"))
+clust_centroids <- readRDS(paste0(main_filepath, PHENO, "_", SEX_STRATA,  
+                                  "/parameter_selection/medoid_initialisation/K", K, "_L", L, "_M", M, ".rds"))
 clust_centroids <- clust_centroids$cluster_centroids
 
 # Modelling results for distance calculations 
@@ -129,11 +53,11 @@ general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/ge
   mutate(eid = as.character(eid))
 
 # Assignment of ids to training or validation sets 
-training_ids <- read.table(paste0(main_filepath, "/ids_training.txt"),
+training_ids <- read.table(paste0(main_filepath, PHENO, "_", SEX_STRATA, "/ids_training.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 training_ids <- data.frame(eid = as.character(training_ids),
                            id_type = "training")
-validation_ids <- read.table(paste0(main_filepath, "/ids_validation.txt"),
+validation_ids <- read.table(paste0(main_filepath, PHENO, "_", SEX_STRATA, "/ids_validation.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 validation_ids <- data.frame(eid = as.character(validation_ids),
                            id_type = "validation")
@@ -159,49 +83,6 @@ rownames(mn_mat) <- names(spline_posteriors)
 
 # Baseline data before clustering (subtract intercept - value at t0)
 mn_mat <- mn_mat - mn_mat[, 1]
-
-# Plot final cluster centroids to sanity check ----
-
-## Plotting functions ----
-
-## Predictions
-getPredValuesClusterCentroid <- function (coef_mat) {
-  pred_vals <- t(apply(coef_mat, 1, 
-                       function (x) B %*% x))
-  # Wrangle into ggplot format
-  for_plot <- as.data.frame(pred_vals)
-  colnames(for_plot) <- paste0("d", 1:ncol(for_plot))
-  for_plot$clust <- factor(as.character(1:nrow(for_plot)))
-  
-  for_plot <- for_plot %>% pivot_longer(cols = -clust,
-                                        names_to = "t_diff", 
-                                        names_prefix = "d", 
-                                        values_to = "pred_value") %>%
-    mutate(t_diff = as.numeric(t_diff))
-  return (for_plot)
-}
-
-## Apply ----
-
-sanity_check_cluster_centres <- getPredValuesClusterCentroid(clust_centroids[, -1])
-
-clust_centres_plot <- ggplot(sanity_check_cluster_centres, 
-                             aes(x = t_diff, y = pred_value, 
-                                 col = clust, fill = clust)) +
-  geom_line() +
-  scale_color_manual(values = custom_four_diverge, guide = "none") +
-  scale_fill_manual(values = custom_four_diverge, guide = "none") +
-  labs(x = "Days from first measurement", 
-       y = "Cluster centroid predicted value") + 
-  theme(axis.text = element_text(size = 6),
-        axis.title = element_text(size = 8),
-        legend.text = element_text(size = 6),
-        legend.title = element_text(size = 8))
-  
-png(filename = paste0(main_filepath, "/plots/cluster_centroids.png"),
-    res = 300, units = "cm", height = 7, width = 7)
-print(clust_centres_plot)
-dev.off()
 
 # Functions to assign all individuals to their closest cluster ----
 
@@ -254,7 +135,8 @@ sumstats_table <- full_dat %>%
                                  sep = ", ")) 
 
 write.table(sumstats_table,
-            paste0(main_filepath, "/training_vs_validation_cluster_properties.txt"),
+            paste0(main_filepath, "training_vs_validation/", 
+                   PHENO, "_", SEX_STRATA, "_cluster_properties.txt"),
             sep = "\t", row.names = F, quote = F)
 
 ## Plotting functions ----
@@ -284,12 +166,11 @@ violinCovarPlot <- function (dat, covar_name) {
 # Apply covariate plotting to all covariates 
 lapply(c("baseline_age", "baseline_trait", "FU_n", "FUyrs"), function (cvname) {
   
-  png(filename = paste0(main_filepath, "/plots/training_vs_validation_",
-                        cvname, ".png"),
+  png(filename = paste0(main_filepath, "training_vs_validation/", PHENO, "_",
+                        SEX_STRATA, "_", cvname, ".png"),
       res = 300, units = "cm", height = 7, width = 7)
   print(violinCovarPlot(to_plot, cvname))
   dev.off()
-
 })
 
 to_plot <- left_join(orig_popn_dat, final_clust_assignments, by = "eid")
@@ -325,46 +206,52 @@ plotPopnTrajCluster <- function (dat) {
                          color = clust, linetype = id_lty)) +
     # Add a thick line for rolling average 
     geom_line() +
-    scale_color_manual(values = custom_four_diverge) +
-    scale_x_continuous(guide = guide_axis(check.overlap = TRUE))
+    scale_color_manual(values = custom_four_diverge, guide = "none") +
+    scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
+    labs(x = "Age (years)", 
+         y = "Mean value") + 
+    theme(axis.text = element_text(size = 6),
+          axis.title = element_text(size = 8),
+          legend.position = "none")
   
   return (all_plot)
 }
 
-png(filename = paste0(main_filepath, "/plots/training_vs_validation_trajectories.png"),
+png(filename = paste0(main_filepath, "training_vs_validation/", PHENO, "_",
+                      SEX_STRATA, "_population_trajectories.png"),
     res = 300, units = "cm", height = 7, width = 7)
 print(plotPopnTrajCluster(to_plot))
 dev.off()
 
-# Write file for GWAS ----
-
-# IDs that passed sample QC
-ids_passed_qc <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/sample_qc/", 
-                             PHENO, "_", SEX_STRATA, "_ids_passed_qc.txt"),
-                      sep = "\t", header = T)
-ids_passed_qc$IID <- as.character(ids_passed_qc$IID)
-
-PCs <- paste0("PC", c(1:21))
-COVARS_LIST <- c("UKB_assmt_centre", "genotyping.array", 
-                 "year_of_birth", "baseline_age", "age_sq", 
-                 "FU_n", "FUyrs", "sex", PCs)
-
-# Wrangle data to wide form (k1, k2, etc. for cluster belonging)
-to_write <- full_dat %>% select(all_of(c("eid", "clust", COVARS_LIST))) %>%
-  filter(eid %in% ids_passed_qc$IID) %>%
-  mutate(clust = paste0("k", clust)) %>%
-  pivot_wider(id_cols = -clust, 
-              names_from = clust, 
-              values_from = clust, 
-              values_fn = function (x) 1, 
-              values_fill = 0)
-
-# Create group columns
-to_write <- to_write %>% 
-  mutate(k1_k2 = ifelse(k1 + k2 > 0, 1, 0))
-
-# Write results to table
-write.table(to_write,
-            paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/cluster_membership_", 
-                   PHENO, "_", SEX_STRATA, ".txt"),
-            sep = " ", row.names = F, quote = F)
+# # Write file for GWAS [HARD CLUSTERING] ----
+# 
+# # IDs that passed sample QC
+# ids_passed_qc <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/sample_qc/", 
+#                              PHENO, "_", SEX_STRATA, "_ids_passed_qc.txt"),
+#                       sep = "\t", header = T)
+# ids_passed_qc$IID <- as.character(ids_passed_qc$IID)
+# 
+# PCs <- paste0("PC", c(1:21))
+# COVARS_LIST <- c("UKB_assmt_centre", "genotyping.array", 
+#                  "year_of_birth", "baseline_age", "age_sq", 
+#                  "FU_n", "FUyrs", "sex", PCs)
+# 
+# # Wrangle data to wide form (k1, k2, etc. for cluster belonging)
+# to_write <- full_dat %>% select(all_of(c("eid", "clust", COVARS_LIST))) %>%
+#   filter(eid %in% ids_passed_qc$IID) %>%
+#   mutate(clust = paste0("k", clust)) %>%
+#   pivot_wider(id_cols = -clust, 
+#               names_from = clust, 
+#               values_from = clust, 
+#               values_fn = function (x) 1, 
+#               values_fill = 0)
+# 
+# # Create group columns
+# to_write <- to_write %>% 
+#   mutate(k1_k2 = ifelse(k1 + k2 > 0, 1, 0))
+# 
+# # Write results to table
+# write.table(to_write,
+#             paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/cluster_membership_", 
+#                    PHENO, "_", SEX_STRATA, ".txt"),
+#             sep = " ", row.names = F, quote = F)
