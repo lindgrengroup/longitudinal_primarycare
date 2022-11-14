@@ -106,8 +106,9 @@ to_write <- lapply(PHENOTYPES, function (p) {
     if (sx != "sex_comb") df <- df %>% filter(sex == sx)
     
     res <- df
-    res$value_minadj_norm <- (residuals(model_dat[[p]][[sx]]$minmod) - model_dat[[p]][[sx]]$mu_min)/sqrt(var_min)
-    res$value_fulladj_norm <- (residuals(model_dat[[p]][[sx]]$fullmod) - model_dat[[p]][[sx]]$mu_full)/sqrt(var_full)
+    mod_dat <- model_dat[[p]][[sx]]
+    res$value_minadj_norm <- (residuals(mod_dat$minmod) - mod_dat$mu_min)/sqrt(mod_dat$var_min)
+    res$value_fulladj_norm <- (residuals(mod_dat$fullmod) - mod_dat$mu_full)/sqrt(mod_dat$var_full)
     
     to_save <- res[, c("eid", "t_diff", 
                        "value", "value_minadj_norm", "value_fulladj_norm", 
@@ -120,4 +121,4 @@ to_write <- lapply(PHENOTYPES, function (p) {
 names(to_write) <- PHENOTYPES
 
 saveRDS(to_write, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_scaled.rds")
+        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")
