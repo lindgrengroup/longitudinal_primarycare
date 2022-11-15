@@ -15,14 +15,14 @@ SEX_STRATA <- c("F", "M", "sex_comb")
 # Add sex as covariate for sex-combined analyses
 MOD_COVARS <- c("baseline_age", "age_sq")
 # Add data provider as covariate if there is more than one data provider
-ADD_COVARS <- c("year_of_birth", "smoking_status")
+ADD_COVARS <- c("year_of_birth")
 
 dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[[PHENO]]
 dat$eid <- as.character(dat$eid)
 covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
 covars$eid <- as.character(covars$eid)
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220131_QCd_demographic_covariates.txt",
+general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -34,7 +34,7 @@ model_dat <- left_join(dat,
                    by = "eid")
 model_dat <- left_join(model_dat, 
                        general_covars[, c("eid", 
-                                          "sex", "year_of_birth", "smoking_status")],
+                                          "sex", "year_of_birth")],
                        by = "eid")
 model_dat <- model_dat %>% 
   mutate(t = age_event - baseline_age)
@@ -78,7 +78,7 @@ names(minimal_models) <- SEX_STRATA
 
 # Save minimal_models
 saveRDS(minimal_models, 
-        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/lmm_models/",
+        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/",
                PHENO, "_minimal_model.rds"))
 
 full_models <- lapply(SEX_STRATA, function (sx) {
@@ -97,7 +97,7 @@ names(full_models) <- SEX_STRATA
 
 # Save minimal_models
 saveRDS(full_models, 
-        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/lmm_models/",
+        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/",
                PHENO, "_full_model.rds"))
 
 # Save coefficient values (fixef + ranef) for individuals ----
@@ -130,13 +130,13 @@ getBLUPS <- function (mod) {
 model_blups <- lapply(SEX_STRATA, function (sx) {
   min_blups <- getBLUPS(minimal_models[[sx]])
   write.table(min_blups, 
-              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/lmm_models/",
+              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/",
                      PHENO, "_", sx, "_blups_minimal_model.txt"),
               sep = "\t", row.names = F, col.names = T, quote = F)
   
   full_blups <- getBLUPS(full_models[[sx]])
   write.table(full_blups, 
-              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/lmm_models/",
+              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/",
                      PHENO, "_", sx, "_blups_full_model.txt"),
               sep = "\t", row.names = F, col.names = T, quote = F)
 })
