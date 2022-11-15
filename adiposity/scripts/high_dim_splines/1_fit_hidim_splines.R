@@ -122,7 +122,7 @@ model_dat <- split(dat, f = dat$eid)
 ALL_IDS <- names(model_dat)
 
 spline_posteriors <- lapply(model_dat, function (id_df) {
-  y <- id_df$value_fulladj
+  y <- id_df$value_fulladj_norm
   X <- matrix(0, nrow = length(diff_day_unique), ncol = nrow(id_df))
   for (j in 1:nrow(id_df)) {
     fill_val <- as.numeric(id_df[j, "t_diff"])
@@ -142,7 +142,7 @@ resid_vars_check <- lapply(ALL_IDS, function (id) {
   pred_dat <- B %*% spline_posteriors[[id]]$mu
   
   check <- data.frame(t_diff = obs_dat$t_diff,
-                      obs_val = obs_dat$value_fulladj)
+                      obs_val = obs_dat$value_fulladj_norm)
   check$pred_val <- pred_dat[check$t_diff]
   var <- 1/nrow(check) * sum((check$obs_val - check$pred_val)^2)
   return (var)
