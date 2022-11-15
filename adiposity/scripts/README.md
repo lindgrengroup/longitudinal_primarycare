@@ -2,17 +2,6 @@ Scripts in this folder:
 
 ## MAIN ANALYSES
 
-### Linear mixed models
-1. **1_apply_lmms.R** - Build linear mixed effects models for effect of time (from baseline measurement) on trait, allowing for fixed and random intercepts and slopes; adjust for covariates (baseline age, age-squared, sex, genetic PCs, and data provider). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for intercept and slope as the fixed + random effect for each individual. 
-
-### High dimensional splines (in collaboration with George Nicholson)
-**0_prep_data.R** - Get data, adjust outcome for various confounders, calculate time from first measurement in days. 
-1. **1_fit_hidim_splines.R** - Calculate subject-specific posteriors and save B-spline matrix, spline posteriors, and residual variance. Plot samples of fitted trajectories to monitor fit. 
-2. **2_sample_clustering_scheme.R** - Try various samples to initialise clustering - based on L (minimum length of follow up) and M (quantile difference at M years post-baseline). Clustering is based on baselined spline posteriors generated in (1), using a custom distance matrix that is an inverse-variance weighted Euclidean distance.
-3. **3_assign_clusters.R** - Correspond cluster centroids between various sampling initialisation schemes. Pick best M and L combination from above for initialisation of clusters. Assign every individual to closest cluster centroid. 
-4. **4_plot_clustering_results...** - Once clusters have been determined, plot modelled trajectories, observed trajectories, and associations between clusters and various covariates.
-5. **5_compare_hidim_cspline.R** - Compare results from clustering based on high-dimensional spline models to those below (based on cubic spline models).
-
 ### Cubic splines
 1. **1_apply_time_splines.R** - Build cubic spline mixed effects models for effect of time on trait, allowing for fixed and random intercepts and spline effects of time. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (baseline age, baseline age-squared, and sex). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
 2. **2_plot_cspline_predictions.R** - Plot model predictions for various subsets of individuals (random, high or low values of baseline trait, baseline age, covariates, etc.) 
