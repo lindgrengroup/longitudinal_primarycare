@@ -109,7 +109,7 @@ getBLUPS <- function (mod) {
   return (res)
 }
 
-lapply(PHENO, function (p) {
+lapply(PHENOS, function (p) {
   lapply(SEX_STRATA, function (sx) {
     full_blups <- getBLUPS(full_models[[p]][[sx]])
     write.table(full_blups, 
