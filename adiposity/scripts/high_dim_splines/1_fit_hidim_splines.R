@@ -22,12 +22,15 @@ args <- parser$parse_args()
 PHENO <- args$phenotype
 SEX_STRATA <- args$sex_strata
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/"
+plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/plots/"
+resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/"
+
+dir.create(plotdir)
+dir.create(resdir)
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")[[PHENO]][[SEX_STRATA]]
+dat <- dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")[[PHENO]][[SEX_STRATA]]
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)
@@ -105,8 +108,8 @@ fit_subj_posterior_under_simple_prior <- function(Z, y, precision_smooth) {
 
 # Set parameters
 
-AR1_RHO <- 0.95 # Main smoothness parameter, typically useful between about .9 and .995
-AR1_NOISE_SD <- 1 # Can leave this as is typically
+AR1_RHO <- 0.99 # Main smoothness parameter
+AR1_NOISE_SD <- 2.5 
 AR1_INTERCEPT_SD <- 100 # A big number for noninformative intercept in AR1
 Sig_smooth <- ar1_covariance(n_time = NDF_SPLINE, 
                              rho = AR1_RHO, 
