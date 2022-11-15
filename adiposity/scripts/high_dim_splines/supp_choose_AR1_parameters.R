@@ -40,8 +40,8 @@ names(B) <- PHENOTYPES
 
 # Select subset of IDs to visualise modelling results ----
 
-NSAMPLE <- 16
-NQS <- 4 # number of quantiles to sample within
+NSAMPLE <- 25
+NQS <- 5 # number of quantiles to sample within
 
 ids_select <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
@@ -127,13 +127,13 @@ plotPreds <- function (p, sx, pdat, varying_par) {
                                              ids_fit$eid)]
   
   if (varying_par == "ar1_rho") {
-    colpal_use <- brewer.pal(n = 9, "Blues")[5:9]
+    colpal_use <- brewer.pal(n = 9, "Blues")[3:9]
   } else if (varying_par == "ar1_noise_sd") {
-    colpal_use <- brewer.pal(n = 9, "Oranges")[5:9] 
+    colpal_use <- brewer.pal(n = 9, "Oranges")[3:9] 
   } else if (varying_par == "ar1_isd") { 
-    colpal_use <- brewer.pal(n = 9, "Greens")[5:9]
+    colpal_use <- brewer.pal(n = 9, "Greens")[3:9]
   } else {
-    colpal_use <- brewer.pal(n = 9, "Greys")[5:9]
+    colpal_use <- brewer.pal(n = 9, "Greys")[3:9]
   }
   
   # Plot
@@ -141,8 +141,7 @@ plotPreds <- function (p, sx, pdat, varying_par) {
     pdat <- pdat %>%
       mutate(vpar = factor(!!as.symbol(varying_par)))
     fit_plot <- ggplot(pdat, aes(x = t_diff)) +
-      facet_wrap(~plot_id, nrow = NQS, 
-                 scales = "free_y") +
+      facet_wrap(~plot_id, nrow = NQS, scales = "free_y") +
       geom_point(data = raw_sample,
                  aes(x = t_diff, y = value_fulladj_norm)) +
       geom_line(aes(y = fit_mean, colour = vpar)) +
@@ -151,23 +150,22 @@ plotPreds <- function (p, sx, pdat, varying_par) {
                          breaks = scales::pretty_breaks(n = 3)) +
       scale_y_continuous(guide = guide_axis(check.overlap = TRUE),
                          breaks = scales::pretty_breaks(n = 3)) +
-      labs(title = paste0("Varying ", varying_par)) +
       theme(axis.text = element_text(size = 6)) +
-      labs(x = "Days from first measurement", y = "Adj. standardised value")
+      labs(x = "Days from first measurement", y = "Adj. standardised value",
+           title = paste0("Varying ", varying_par))
   } else {
     fit_plot <- ggplot(pdat, aes(x = t_diff)) +
-      facet_wrap(~plot_id, nrow = NQS, 
-                 scales = "free_y") +
+      facet_wrap(~plot_id, nrow = NQS) +
       geom_point(data = raw_sample,
                  aes(x = t_diff, y = value_fulladj_norm)) +
       geom_line(aes(y = fit_mean)) +
       scale_x_continuous(guide = guide_axis(check.overlap = TRUE),
                          breaks = scales::pretty_breaks(n = 3)) +
-      scale_y_continuous(guide = guide_axis(check.overlap = TRUE),
+      scale_y_continuous(limits = c(-1.5, 1.5),
                          breaks = scales::pretty_breaks(n = 3)) +
-      labs(title = paste0("Varying ", varying_par)) +
       theme(axis.text = element_text(size = 6)) +
-      labs(x = "Days from first measurement", y = "Adj. standardised value")
+      labs(x = "Days from first measurement", y = "Adj. standardised value",
+           title = paste0("Varying ", varying_par))
   }
   
   return (fit_plot)
@@ -176,9 +174,9 @@ plotPreds <- function (p, sx, pdat, varying_par) {
 # Fit models ----
 
 # Parameters to try
-AR1_RHO <- c(0.95, 0.99, 0.995) # Main smoothness parameter
-AR1_NOISE_SD <- c(1, 2.5, 5) # Overfitting vs underfitting control
-AR1_INTERCEPT_SD <- c(10, 50, 100) # A big number for noninformative intercept in AR1
+AR1_RHO <- c(0.99, 0.9925, 0.995, 0.975, 0.999) # Main smoothness parameter
+AR1_NOISE_SD <- c(2, 5, 10, 20) # Overfitting vs underfitting control
+AR1_INTERCEPT_SD <- 100 # A big number for noninformative intercept in AR1
 
 # Create the precision smooths for each combination of parameters
 prec_smooths <- lapply(AR1_RHO, function (ar1r) {
@@ -241,31 +239,25 @@ lapply(PHENOTYPES, function (p) {
     full_res <- bind_rows(full_res)
     
     # Plot results coloured by various aspects
-    # Fix RHO and NOISE_SD
-    pdat <- full_res %>% filter(ar1_rho == 0.99 & ar1_noise_sd == 2.5)
-    png(paste0(plotdir, p, "_", sx, "_fits_ar1_rho_0.99_sigsq_2.5.png"),
-        res = 300, units = "cm", height = 15, width = 20)
-    print(plotPreds(p, sx, pdat, varying_par = "ar1_isd"))
-    dev.off()
     
-    # Fix NOISE_SD and INTERCEPT_SD
-    pdat <- full_res %>% filter(ar1_noise_sd == 2.5 & ar1_isd == 100)
-    png(paste0(plotdir, p, "_", sx, "_fits_sigsq_2.5_ar1_isd_100.png"),
-        res = 300, units = "cm", height = 15, width = 20)
+    # Fix NOISE_SD
+    pdat <- full_res %>% filter(ar1_noise_sd == 5)
+    png(paste0(plotdir, p, "_", sx, "_fits_sigsq_5_ar1_isd_100.png"),
+        res = 300, units = "cm", height = 20, width = 25)
     print(plotPreds(p, sx, pdat, varying_par = "ar1_rho"))
     dev.off()
     
-    # Fix RHO and INTERCEPT_SD
-    pdat <- full_res %>% filter(ar1_rho == 0.99 & ar1_isd == 100)
-    png(paste0(plotdir, p, "_", sx, "_fits_ar1_rho_0.99_ar1_isd_100.png"),
-        res = 300, units = "cm", height = 15, width = 20)
+    # Fix RHO
+    pdat <- full_res %>% filter(ar1_rho == 0.995)
+    png(paste0(plotdir, p, "_", sx, "_fits_ar1_rho_0.995_ar1_isd_100.png"),
+        res = 300, units = "cm", height = 20, width = 25)
     print(plotPreds(p, sx, pdat, varying_par = "ar1_noise_sd"))
     dev.off()
     
     # FIX ALL
-    pdat <- full_res %>% filter(ar1_rho == 0.99 & ar1_noise_sd == 2.5 & ar1_isd == 100)
-    png(paste0(plotdir, p, "_", sx, "_fits_ar1_rho_0.99_sigsq_2.5_ar1_isd_100.png"),
-        res = 300, units = "cm", height = 15, width = 20)
+    pdat <- full_res %>% filter(ar1_rho == 0.995 & ar1_noise_sd == 10)
+    png(paste0(plotdir, p, "_", sx, "_fits_ar1_rho_0.995_sigsq_10_ar1_isd_100.png"),
+        res = 300, units = "cm", height = 20, width = 25)
     print(plotPreds(p, sx, pdat, varying_par = "none"))
     dev.off()
     
