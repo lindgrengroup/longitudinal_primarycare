@@ -75,7 +75,7 @@ cat(paste0("SEX_STRATA: ", SEX_STRATA, "\n"))
 K <- as.numeric(args$K)
 cat(paste0("number clusters: ", K, "\n"))
 
-main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/"
+main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/"
 
 # For sampling scheme
 NSAMPLES <- 5000 # number of individuals to sample each iteration
@@ -91,10 +91,10 @@ if (M != "random") {
 cat(paste0("K-tile difference at M yrs post-baseline: ", M, "\n"))
 
 resdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
-                 "/parameter_selection/")
+                 "/parameter_selection/medoid_initialisation/")
 dir.create(resdir)
 plotdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
-                 "/parameter_selection/plots/")
+                 "/parameter_selection/medoid_initialisation/plots/")
 dir.create(plotdir)
 
 custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
@@ -103,14 +103,13 @@ names(usecolpal) <- paste0("k", 1:K)
 
 # Load data ----
 
-model_dat <- readRDS(paste0(main_filepath, "results/with_rvar_fit_objects_", 
+model_dat <- readRDS(paste0(main_filepath, "results/fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
-
 covars_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
 cat(paste0("Number of ids in covariates data: ", nrow(covars_dat), "\n"))
 
 # Only retain 80% of data used for discovery
-training_ids <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+training_ids <- read.table(paste0(main_filepath, "clustering/", 
                                   PHENO, "_", SEX_STRATA, "/ids_training.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 training_ids <- as.character(training_ids)
@@ -130,11 +129,6 @@ spline_posteriors <- spline_posteriors[VALID_IDS]
 
 # Create B-spline coefficient matrices for distance matrix construction ----
 
-# Create D-matrix for removing intercept
-D <- diag(x = 1, nrow = (ncol(B)-1), ncol = (ncol(B)-1))
-D <- cbind(rep(-1, (ncol(B)-1)), D)
-D <- rbind(rep(0, ncol(B)), D)
-
 # Create mean and S.D. matrix
 # Matrix of means (id x basis)
 mn_mat <- lapply(spline_posteriors, function (spobj) {
@@ -142,53 +136,40 @@ mn_mat <- lapply(spline_posteriors, function (spobj) {
 })
 mn_mat <- bind_rows(mn_mat)
 rownames(mn_mat) <- names(spline_posteriors)
-# Remove intercepts
-dmn_mat <- t(D %*% t(mn_mat))
-rownames(dmn_mat) <- names(spline_posteriors)
 
 # Matrix of standard deviations (id x basis)
 sd_mat <- lapply(spline_posteriors, function (spobj) {
-  vars <- spobj$Sig
-  return (sqrt(diag(vars * model_resid_var)))
+  return (sqrt(diag(spobj$Sig * model_resid_var)))
 })
-sd_mat <- as.data.frame(bind_rows(sd_mat))
+sd_mat <- bind_rows(sd_mat)
+sd_mat <- as.data.frame(sd_mat)
 rownames(sd_mat) <- names(spline_posteriors)
 
-# with intercept removed
-dsd_mat <- lapply(spline_posteriors, function (spobj) {
-  dvars <- D %*% spobj$Sig %*% t(D)
-  return (sqrt(diag(dvars * model_resid_var)))
-})
-dsd_mat <- t(bind_rows(dsd_mat))
-rownames(dsd_mat) <- names(spline_posteriors)
+# Baseline data before clustering (subtract intercept - value at t0)
+mn_mat <- mn_mat - mn_mat[, 1]
 
 # Function for distance matrix calculation ----
 
 # Given vector of ids, calculate distances between each pair of ids in vector
 getCustDistMat <- function (id_list) {
   cat("######## Building distance matrix", "\n")
-  sub_mn <- dmn_mat[id_list, ]
-  sub_sd <- dsd_mat[id_list, ]
+  sub_mn <- mn_mat[id_list, ]
+  sub_sd <- sd_mat[id_list, ]
   # Initialise empty distance matrix
-  nids <- length(id_list)
-  dist_res <- matrix(NA, nids, nids,
+  dist_res <- matrix(NA, length(id_list), length(id_list),
                      dimnames = list(id_list, id_list))
-  # Loop through each id except the last (as we would have already gone through it)
-  for (j in 1:(nids-1)) {
-    mn_curr <- sub_mn[j, ]
-    mn_diff <- t(apply(sub_mn[j:nids, ], 1, function (x) (x - mn_curr)^2))
+  # Loop through each id
+  for (j in 1:length(id_list)) {
+    mn_curr <- unlist(sub_mn[j, ])
+    mn_diff <- t(apply(sub_mn[j:length(id_list), ], 1, function (x) x - mn_curr))^2
     
-    v_curr <- sub_sd[j, ]^2
-    v_all <- t(apply(sub_sd[j:nids, ], 1, function (x) x^2 + v_curr))
+    v_curr <- unlist(sub_sd[j, ]^2)
+    v_all <- t(apply(sub_sd[j:length(id_list), ], 1, function (x) x^2 + v_curr))
     
-    cust_ds <- mn_diff / v_all
-    # Replace NaNs that come from 0/0 division with 0s
-    cust_ds[is.na(cust_ds)] <- 0
-    dist_curr <- sqrt(rowSums(cust_ds))
-    dist_res[j, j:nids] <- dist_res[j:nids, j] <- dist_curr
+    dist_curr <- sqrt(rowSums(mn_diff / v_all))
+    dist_res[j, j:length(id_list)] <- dist_res[j:length(id_list), j] <- dist_curr
   }
-  # Return matrix, replacing the last NA with 0 (as this is the distance of the last id to itself)
-  dist_res[nids, nids] <- 0
+  # Return matrix
   return (dist_res)
 }
 
@@ -211,8 +192,8 @@ getClosestMedoid <- function (x1, mat_xs) {
 
 # Given a list of ids and medoids, assign ids to closest medoid
 getClusterBelonging <- function (id_list, medoid_list) {
-  id_means <- dmn_mat[id_list, ]
-  medoid_pos <- dmn_mat[medoid_list, ]
+  id_means <- mn_mat[id_list, ]
+  medoid_pos <- mn_mat[medoid_list, ]
   
   # Euclidean distance from each id to centroid
   closest_medoid <- lapply(1:nrow(id_means), 
@@ -243,7 +224,7 @@ getInitialCentres <- function (id_list, dmat,
     
   } else {
     # Predict full trajectory for all individuals (returns id x time matrix)
-    pred_mat <- t(apply(dmn_mat[id_list, ], 1, 
+    pred_mat <- t(apply(mn_mat[id_list, ], 1, 
                         function (x) model_dat$B %*% x))
     
     # Get fold-change between 1st and M*365th measurement for each individual
@@ -309,7 +290,7 @@ names(itered_clustering) <- paste0("iter", 1:S)
 # Returns matrix of NCLUST x NDF 
 calcGroupCentroids <- function (grouped_id_list) {
   # Get coefficients for the given ids
-  sub_mn <- as.data.frame(dmn_mat[grouped_id_list$eid, ])
+  sub_mn <- mn_mat[grouped_id_list$eid, ]
   sub_mn$eid <- rownames(sub_mn)
   sub_mn$clust <- 
     grouped_id_list$final_clust[match(sub_mn$eid, grouped_id_list$eid)]
@@ -354,7 +335,7 @@ getPredValuesClusterCentroid <- function (coef_mat) {
 ## Cluster centroid mean and S.D., wrangled into long format for plot
 getPlotDatClusterCentroids <- function (grouped_id_list) {
   
-  full_dat <- as.data.frame(dmn_mat[grouped_id_list$eid, ])
+  full_dat <- mn_mat[grouped_id_list$eid, ]
   full_dat$eid <- rownames(full_dat)
   full_dat$final_clust <- 
     grouped_id_list$final_clust[match(full_dat$eid, grouped_id_list$eid)]
@@ -367,11 +348,11 @@ getPlotDatClusterCentroids <- function (grouped_id_list) {
   
   forloci <- centroid_means[, -1] - 1.96*centroid_sds[, -1]
   forloci$final_clust <- centroid_means$final_clust
-  forloci <- forloci[, c("final_clust", paste0("V", 1:(ncol(forloci)-1)))]
+  forloci <- forloci[, c("final_clust", 1:(ncol(forloci)-1))]
   
   forupci <- centroid_means[, -1] + 1.96*centroid_sds[, -1]
   forupci$final_clust <- centroid_means$final_clust
-  forupci <- forupci[, c("final_clust", paste0("V", 1:(ncol(forupci)-1)))]
+  forupci <- forupci[, c("final_clust", 1:(ncol(forupci)-1))]
   
   # Predict full trajectory for centroids (returns centroid x time matrix)
   pred_mns <- getPredValuesClusterCentroid(centroid_means) %>%

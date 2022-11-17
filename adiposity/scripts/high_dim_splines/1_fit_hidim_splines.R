@@ -30,7 +30,7 @@ dir.create(resdir)
 
 # Load data ----
 
-dat <- dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")[[PHENO]][[SEX_STRATA]]
+dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")[[PHENO]][[SEX_STRATA]]
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)
@@ -159,14 +159,13 @@ resid_var_plot <- ggplot(resid_vars_check, aes(x = var)) +
        title = paste0("Mean: ", round(mean_rvar, 3),
                       " Median: ", round(median_rvar, 3)))
 
-pdf(paste0(plotdir, "resid_var_check_", PHENO, "_", SEX_STRATA, ".pdf"),
-    onefile = T)
+png(paste0(plotdir, "resid_var_check_", PHENO, "_", SEX_STRATA, ".png"))
 print(resid_var_plot)
-print(resid_var_plot + scale_x_continuous(limits = c(0, 10)))
 dev.off()
 
 saveRDS(list(B = B,
-             spline_posteriors = spline_posteriors),
+             spline_posteriors = spline_posteriors,
+             resid_var = median_rvar),
         paste0(resdir, "fit_objects_", PHENO, "_", SEX_STRATA, ".rds"))
 
 # Plot fitted values for sample data ----
