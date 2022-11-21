@@ -18,7 +18,7 @@ eid_pheno_matrix <- eid_pheno_matrix[, -1]
 
 # Disease dictionary
 dictionary <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/UKB_codelists/chronological-map-phenotypes/annot_dictionary.txt",
-                         sep = "\t", header = T, stringsAsFactors = F)
+                         sep = "\t", header = T, stringsAsFactors = F, quote = "")
 DISEASES <- dictionary$phenotype
 colnames(eid_pheno_matrix) <- DISEASES
 

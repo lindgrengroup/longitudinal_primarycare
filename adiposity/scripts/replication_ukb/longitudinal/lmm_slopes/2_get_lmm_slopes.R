@@ -14,7 +14,7 @@ SEX_STRATA <- c("F", "M", "sex_comb")
 # Add sex as covariate for sex-combined analyses
 MOD_COVARS <- c("baseline_age", "age_sq")
 # Add data provider as covariate if there is more than one data provider
-ADD_COVARS <- c("year_of_birth", "smoking_status")
+ADD_COVARS <- c("year_of_birth")
 
 dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/main_data_adipo_change.rds")[PHENO]
 
@@ -30,6 +30,10 @@ general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/ge
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
+indivs_dementia <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/eids_with_dementia.txt",
+                              sep = "\t", header = F, stringsAsFactors = F)$V1
+indivs_dementia <- as.character(indivs_dementia)
+
 # Wrangle data ----
 
 # Exclude individuals in discovery strata
@@ -43,8 +47,9 @@ model_dat <- lapply(PHENO, function (p) {
            age_sq = baseline_age^2,
            t = age_event - baseline_age)
   res <- left_join(res, general_covars[, c("eid", 
-                                           "sex", "year_of_birth", "smoking_status")],
+                                           "sex", "year_of_birth")],
                    by = "eid")
+  res$dementia_status <- res$eid %in% indivs_dementia
   return (res)
 })
 names(model_dat) <- PHENO
@@ -77,13 +82,19 @@ full_models <- lapply(PHENO, function (p) {
     sub_dat <- model_dat[[p]]
     if (sx != "sex_comb") 
       sub_dat <- model_dat[[p]] %>% filter(sex == sx)
+    # Get subset of data without dementia
+    sub_dat_no_dementia <- sub_dat %>% filter(!dementia_status)
     
     # Get formula
     mod_form <- makeFormula(sub_dat, add_adjust = T)
     
     # Run models
-    lmod <- lmer(formula(mod_form), data = sub_dat, REML = F)
-    return (lmod)
+    lmod_all <- lmer(formula(mod_form), data = sub_dat, REML = F)
+    lmod_no_dementia <- lmer(formula(mod_form), data = sub_dat_no_dementia, 
+                             REML = F)
+    
+    return (list(lmod_all = lmod_all,
+                 lmod_no_dementia = lmod_no_dementia))
   })
   names(res) <- SEX_STRATA
   return (res)
@@ -122,10 +133,16 @@ getBLUPS <- function (mod) {
 
 lapply(PHENO, function (p) {
   lapply(SEX_STRATA, function (sx) {
-    full_blups <- getBLUPS(full_models[[p]][[sx]])
-    write.table(full_blups, 
+    all_blups <- getBLUPS(full_models[[p]][[sx]]$lmod_all)
+    write.table(all_blups, 
                 paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/lmm_models/",
-                       p, "_", sx, "_blups_full_model.txt"),
+                       p, "_", sx, "_all_blups.txt"),
+                sep = "\t", row.names = F, col.names = T, quote = F)
+    
+    blups_no_dementia <- getBLUPS(full_models[[p]][[sx]]$lmod_no_dementia)
+    write.table(blups_no_dementia, 
+                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/lmm_models/",
+                       p, "_", sx, "_blups_no_dementia.txt"),
                 sep = "\t", row.names = F, col.names = T, quote = F)
   })
 })

@@ -13,7 +13,7 @@ ADJ_COVARS <- c("baseline_age", "age_sq", "UKB_assmt_centre") # add sex for sc a
 blups <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
     df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/lmm_models/",
-                            p, "_", sx, "_blups_full_model.txt"), 
+                            p, "_", sx, "_all_blups.txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)
     df$eid <- as.character(df$eid)
     return (df)
