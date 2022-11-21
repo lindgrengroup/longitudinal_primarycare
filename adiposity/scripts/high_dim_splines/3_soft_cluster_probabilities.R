@@ -34,16 +34,16 @@ PHENO <- args$phenotype
 SEX_STRATA <- args$ss
 NBOOTS <- as.numeric(args$nboots)
 
-resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
                  PHENO, "_", SEX_STRATA)
 
 # Load data ----
 
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
-clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
-                                PHENO, "_", SEX_STRATA, "/parameter_selection/medoid_initialisation/K",
+clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
+                                PHENO, "_", SEX_STRATA, "/parameter_selection/K",
                                 K_chosen, "_L", L_chosen, "_M", M_chosen, ".rds"))
 CLUST_NAMES <- paste0("k", 1:K_chosen)
 
@@ -53,15 +53,29 @@ B <- model_dat$B
 spline_posteriors <- model_dat$spline_posteriors
 model_resid_var <- model_dat$resid_var
 
+# Create D-matrix for removing intercept
+D <- diag(x = 1, nrow = (ncol(B)-1), ncol = (ncol(B)-1))
+D <- cbind(rep(-1, (ncol(B)-1)), D)
+D <- rbind(rep(0, ncol(B)), D)
+
+# Matrix of means (id x basis)
+mn_mat <- lapply(spline_posteriors, function (spobj) {
+  return (as.data.frame(t(spobj$mu)))
+})
+mn_mat <- bind_rows(mn_mat)
+rownames(mn_mat) <- names(spline_posteriors)
+# Remove intercepts
+dmn_mat <- t(D %*% t(mn_mat))
+rownames(dmn_mat) <- names(spline_posteriors)
+
 # Functions to generate bootstrapped position vectors for an individual ----
 
 createCoefSamples <- function (id, nboots = 100) {
-  mu_vec <- spline_posteriors[[id]]$mu
-  # Baseline mean vector by subtracting first measurement 
-  mu_vec <- mu_vec - mu_vec[1]
+  mu_vec <- dmn_mat[id, ]
+  cov_mat <- D %*% spline_posteriors[[id]]$Sig %*% t(D)
   res <- mvrnorm(n = nboots,
                  mu = mu_vec,
-                 Sigma = spline_posteriors[[id]]$Sig)
+                 Sigma = cov_mat)
   return (res)
 }
 
@@ -106,5 +120,5 @@ soft_clust_res <- bind_rows(soft_clust_res) %>%
 soft_clust_res <- soft_clust_res[, c("eid", CLUST_NAMES)]
 
 write.table(soft_clust_res,
-            paste0(resdir, "/medoid_init_soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
+            paste0(resdir, "/soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
                    ".txt"), sep = "\t", row.names = F, quote = F)

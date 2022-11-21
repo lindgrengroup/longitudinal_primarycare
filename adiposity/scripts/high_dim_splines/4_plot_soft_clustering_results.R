@@ -13,8 +13,12 @@ theme_set(theme_bw())
 
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
+
 custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
 names(custom_four_diverge) <- c("k1", "k2", "k3", "k4")
+
+custom_three_seq <- c("#7E3748", "#D35C79", "#E49DAE")
+names(custom_three_seq) <- c("k1", "k1_k2", "k1_k2_k3")
 
 # Get arguments ----
 
@@ -30,23 +34,23 @@ PHENO <- args$phenotype
 SEX_STRATA <- args$ss
 K_chosen <- 4
 
-plotdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
-                  PHENO, "_", SEX_STRATA, "/plots/medoid_initialisation/")
+plotdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
+                  PHENO, "_", SEX_STRATA, "/plots/")
 dir.create(plotdir)
-resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
                  PHENO, "_", SEX_STRATA, "/")
 
 # Load data ----
 
 # High-dimensional spline modelling results
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
-                            PHENO, "_", SEX_STRATA, ".rds"))
-B <- model_dat$B
-spline_posteriors <- model_dat$spline_posteriors
-model_resid_var <- model_dat$resid_var
+# model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
+#                             PHENO, "_", SEX_STRATA, ".rds"))
+# B <- model_dat$B
+# spline_posteriors <- model_dat$spline_posteriors
+# model_resid_var <- model_dat$resid_var
 
 # Soft clustering probabilities
-clust_res <- read.table(paste0(resdir, "medoid_init_soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
+clust_res <- read.table(paste0(resdir, "soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
                                ".txt"),
                         sep = "\t", header = T, stringsAsFactors = F)
 
@@ -60,17 +64,18 @@ general_covars$eid <- as.character(general_covars$eid)
 
 covars <- merge(covars, general_covars, by = "eid")
 
-# Original data
-orig_popn_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")[[PHENO]][[SEX_STRATA]]
+# # Original data
+# orig_popn_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")[[PHENO]][[SEX_STRATA]]
 
 # Plot soft clustering results ----
 
 CAT_COVARS <- "sex"
 QUANT_COVARS <- c("baseline_age", "baseline_trait",
-                  "FUyrs", "FU_n",
-                  "year_of_birth", "age_at_death")
+                  "FUyrs", "FU_n", "year_of_birth")
 
 ## Plots for max probability per individual -----
+
+## This is to check whether uncertainty is correlated with a known covariate
 
 # Histogram
 for_hist <- clust_res %>%
@@ -109,163 +114,212 @@ png(paste0(plotdir, "max_probabilities_vs_covars.png"))
 print(arranged_plots)
 dev.off()
 
-## Plots for probability of one cluster vs another -----
+## Plots for probability of each cluster per individual -----
 
-pairs_plot <- ggpairs(clust_res, columns = 2:(K_chosen+1))
-png(paste0(plotdir, "clust_probs_pairs_plot.png"))
-print(pairs_plot)
-dev.off()
+## This is to check whether uncertainty is correlated with a known covariate
+# FOR EACH CLUSTER
+# AND CLUSTER COMBINATION THAT WE WILL TEST IN GWAS - k1, k1+k2, k1+k2+k3 
 
-## Heatmaps ----
+clust_res_supp <- clust_res %>%
+  mutate(eid = as.character(eid),
+         k1_k2 = k1 + k2,
+         k1_k2_k3 = k1 + k2 + k3) %>%
+  left_join(covars, by = "eid")
 
-# B-coefficients mean matrix
-mn_mat <- lapply(spline_posteriors, function (spobj) {
-  return (as.data.frame(t(spobj$mu)))
-})
-mn_mat <- bind_rows(mn_mat)
-rownames(mn_mat) <- names(spline_posteriors)
-
-# Function to RINT coefficient for plotting
-RINTx <- function (x) {
-  return (qnorm((rank(x) - 0.5) / sum(!is.na(x))))
-}
-
-# Function to order ids by probability of belonging to cluster "k"
-orderIDs <- function (cluster = "k1") {
-  return (order(clust_res[, cluster], decreasing = T))
-}
-
-# Function to plot heatmap ordered by p(clusterK)
-plotOrderedHeat <- function (cluster = "k1") {
-  ids_order <- as.character(clust_res$eid[orderIDs(cluster)])
-  # Arrange B-coef matrix
-  plot_mat <- as.matrix(mn_mat[ids_order, ])
-  # For plotting, scale each column (RINT) to see differences better
-  plot_mat <- apply(plot_mat, 2, FUN = RINTx)
+quantPerClust <- function (qcov, kclust_list) {
+  if (length(kclust_list) == 4) colpal_use <- custom_four_diverge
+  else if (length(kclust_list) == 3) colpal_use <- custom_three_seq
   
-  png(paste0(plotdir, "heatmaps_ordered_", cluster, ".png"),
-      width = 21, height = 29.7, units = "cm", res = 300)
-  pheatmap(plot_mat, 
-           cluster_rows = F, cluster_cols = F,
-           scale = "none", 
-           treeheight_col = 0, treeheight_row = 0,
-           show_rownames = F, show_colnames = F,
-           color = colorRampPalette(c("navy", "white", "red"))(50),
-           legend = T, fontsize = 10,
-           main = paste0("B-coefs in ", PHENO, "_", SEX_STRATA))
-  dev.off()
+  plot_list <- lapply(kclust_list, function (kname) {
+    res <- ggplot(clust_res_supp %>% 
+                    filter(!is.na(!!as.symbol(qcov))), 
+                  aes(x = !!as.symbol(qcov), y = !!as.symbol(kname))) +
+      geom_point(color = colpal_use[kname], alpha = 0.2, size = 0.5) +
+      geom_smooth(method = "lm", se = F, color = "black") +
+      scale_y_continuous(limits = c(0, 1)) +
+      labs(x = qcov, y = paste0("prob ", kname)) +
+      theme(axis.text = element_text(size = 6),
+            axis.title = element_text(size = 8),
+            legend.position = "none")
+    return (res)
+  })
+  arranged_plots <- ggarrange(plotlist = plot_list, ncol = 2, nrow = 2)
+  return (arranged_plots)
 }
 
-# Probability bar plots to go alongside the histogram
-plotOrderedBars <- function (cluster = "k1") {
-  # Rename IDs and flip the factor levels to retain correct order for plot
-  dat <- clust_res[orderIDs(cluster), ]
-  dat$eid <- factor(as.character(1:nrow(dat)),
-                    levels = as.character(nrow(dat):1))
-  
-  resplot <- ggplot(dat, aes(x = !!as.symbol(cluster),
-                             y = eid)) +
-    geom_col(width = 1, 
-             color = custom_four_diverge[cluster],
-             fill = custom_four_diverge[cluster]) +
-    theme(axis.text.y = element_blank(), 
-          axis.ticks.y = element_blank(), 
-          axis.title.y = element_blank())
-  png(paste0(plotdir, "barprobs_", cluster, ".png"),
-      width = 21/2, height = 29.7, units = "cm", res = 300)
-  print(resplot)
-  dev.off()
-}
+klists <- list(per_clust = c("k1", "k2", "k3", "k4"),
+               per_gwas_strat = c("k1", "k1_k2", "k1_k2_k3"))
 
-lapply(paste0("k", 1:K_chosen), function (clustk) {
-  plotOrderedHeat(clustk)
-  plotOrderedBars(clustk)
+lapply(QUANT_COVARS, function (qcov) {
+  lapply(c("per_clust", "per_gwas_strat"), function (kl) {
+    to_plot <- quantPerClust(qcov, klists[[kl]])
+    png(paste0(plotdir, qcov, "_", kl, ".png"),
+        res = 300, units = "cm", width = 10, height = 10)
+    print(to_plot)
+    dev.off()
+  })
 })
+
+## ARCHIVED SOMEWHAT UNHELPFUL VISUALISATIONS
 
 ## Population trajectories ----
 
-# On the scale of adjusted values and time from first measurement
-getSummDat <- function (cluster = "k1", prob_assign = 0.75,
-                        valtype = "value", timetype = "age_t1") {
-  keep_ids <- as.character(clust_res$eid[which(clust_res[, cluster] >= prob_assign)])
-  
-  if (timetype == "age_t1") {
-    round_yrs = 0.25
-    roll_yrs = 2
-  } else if (timetype == "t_diff") {
-    round_yrs = 100
-    roll_yrs = 1000
-  }
-  
-  dat_summ <- orig_popn_dat %>%
-    filter(eid %in% keep_ids) %>%
-    mutate(time_bin = plyr::round_any(!!as.symbol(timetype), round_yrs, f = round)) %>%
-    group_by(time_bin) %>%
-    summarise(plot_value = mean_se(!!as.symbol(valtype), 1.96)) %>%
-    unnest(plot_value) 
-  
-  # Get rolling average across 10 years
-  dat_summ <- dat_summ %>% 
-    mutate(interval_width = seq_along(time_bin) - 
-             findInterval(time_bin - roll_yrs, time_bin),
-           mean_value_rolled = rollapply(y, interval_width, mean, 
-                                         fill = NA),
-           lci_value_rolled = rollapply(ymin, interval_width, mean, 
-                                        fill = NA),
-           uci_value_rolled = rollapply(ymax, interval_width, mean, 
-                                        fill = NA))
-  to_return <- dat_summ %>%
-    select(all_of(c("time_bin", "mean_value_rolled", 
-                    "lci_value_rolled", "uci_value_rolled")))
-  return (to_return)
-}
+# # On the scale of adjusted values and time from first measurement
+# getSummDat <- function (cluster = "k1", prob_assign = 0.75,
+#                         valtype = "value", timetype = "age_t1") {
+#   keep_ids <- as.character(clust_res$eid[which(clust_res[, cluster] >= prob_assign)])
+#   
+#   if (timetype == "age_t1") {
+#     round_yrs = 0.25
+#     roll_yrs = 2
+#   } else if (timetype == "t_diff") {
+#     round_yrs = 100
+#     roll_yrs = 1000
+#   }
+#   
+#   dat_summ <- orig_popn_dat %>%
+#     filter(eid %in% keep_ids) %>%
+#     mutate(time_bin = plyr::round_any(!!as.symbol(timetype), round_yrs, f = round)) %>%
+#     group_by(time_bin) %>%
+#     summarise(plot_value = mean_se(!!as.symbol(valtype), 1.96)) %>%
+#     unnest(plot_value) 
+#   
+#   # Get rolling average across 10 years
+#   dat_summ <- dat_summ %>% 
+#     mutate(interval_width = seq_along(time_bin) - 
+#              findInterval(time_bin - roll_yrs, time_bin),
+#            mean_value_rolled = rollapply(y, interval_width, mean, 
+#                                          fill = NA),
+#            lci_value_rolled = rollapply(ymin, interval_width, mean, 
+#                                         fill = NA),
+#            uci_value_rolled = rollapply(ymax, interval_width, mean, 
+#                                         fill = NA))
+#   to_return <- dat_summ %>%
+#     select(all_of(c("time_bin", "mean_value_rolled", 
+#                     "lci_value_rolled", "uci_value_rolled")))
+#   return (to_return)
+# }
+# 
+# plotTrajectories <- function (plot_dat) {
+#   popn_traj_plot <- ggplot(plot_dat,
+#                            aes(x = time_bin, y = mean_value_rolled, 
+#                                color = clust, fill = clust)) +
+#     geom_line() +
+#     geom_ribbon(aes(ymin = lci_value_rolled, 
+#                     ymax = uci_value_rolled), linetype = 0,
+#                 alpha = 0.2) +
+#     scale_color_manual(values = custom_four_diverge) +
+#     scale_fill_manual(values = custom_four_diverge) +
+#     theme(legend.position = "none") +
+#     scale_x_continuous(guide = guide_axis(check.overlap = TRUE))
+#   return (popn_traj_plot)
+# }
+# 
+# # Apply to adj- and baselined- data
+# 
+# to_plot_adj_baselined <- lapply(paste0("k", 1:K_chosen), function (clustk) {
+#   summ_clust <- getSummDat(cluster = clustk, 
+#                            prob_assign = 0.75,
+#                            valtype = "value_fulladj_norm", 
+#                            timetype = "t_diff") %>%
+#     mutate(clust = clustk)
+#   return (summ_clust)
+# })
+# to_plot_adj_baselined <- bind_rows(to_plot_adj_baselined) %>%
+#   mutate(clust = factor(clust, 
+#                         levels = paste0("k", 1:K_chosen)))
+# png(paste0(plotdir, "popn_trajectories_adj_dat.png"))
+# print(plotTrajectories(to_plot_adj_baselined))
+# dev.off()
+# 
+# # Apply to raw data
+# 
+# to_plot_raw <- lapply(paste0("k", 1:K_chosen), function (clustk) {
+#   summ_clust <- getSummDat(cluster = clustk, 
+#                            prob_assign = 0.75,
+#                            valtype = "value", 
+#                            timetype = "age_t1") %>%
+#     mutate(clust = clustk)
+#   return (summ_clust)
+# })
+# to_plot_raw <- bind_rows(to_plot_raw) %>%
+#   mutate(clust = factor(clust, 
+#                         levels = paste0("k", 1:K_chosen)))
+# png(paste0(plotdir, "popn_trajectories_raw.png"))
+# print(plotTrajectories(to_plot_raw) +
+#         scale_x_continuous(limits = c(30, 70)))
+# dev.off()
 
-plotTrajectories <- function (plot_dat) {
-  popn_traj_plot <- ggplot(plot_dat,
-                           aes(x = time_bin, y = mean_value_rolled, 
-                               color = clust, fill = clust)) +
-    geom_line() +
-    geom_ribbon(aes(ymin = lci_value_rolled, 
-                    ymax = uci_value_rolled), linetype = 0,
-                alpha = 0.2) +
-    scale_color_manual(values = custom_four_diverge) +
-    scale_fill_manual(values = custom_four_diverge) +
-    theme(legend.position = "none") +
-    scale_x_continuous(guide = guide_axis(check.overlap = TRUE))
-  return (popn_traj_plot)
-}
 
-# Apply to adj- and baselined- data
+## Plots for probability of one cluster vs another -----
 
-to_plot_adj_baselined <- lapply(paste0("k", 1:K_chosen), function (clustk) {
-  summ_clust <- getSummDat(cluster = clustk, 
-                           prob_assign = 0.75,
-                           valtype = "value_fulladj", 
-                           timetype = "t_diff") %>%
-    mutate(clust = clustk)
-  return (summ_clust)
-})
-to_plot_adj_baselined <- bind_rows(to_plot_adj_baselined) %>%
-  mutate(clust = factor(clust, 
-                        levels = paste0("k", 1:K_chosen)))
-png(paste0(plotdir, "popn_trajectories_adj_dat.png"))
-print(plotTrajectories(to_plot_adj_baselined))
-dev.off()
+# pairs_plot <- ggpairs(clust_res, columns = 2:(K_chosen+1))
+# png(paste0(plotdir, "clust_probs_pairs_plot.png"))
+# print(pairs_plot)
+# dev.off()
 
-# Apply to raw data
+## Heatmaps ----
 
-to_plot_raw <- lapply(paste0("k", 1:K_chosen), function (clustk) {
-  summ_clust <- getSummDat(cluster = clustk, 
-                           prob_assign = 0.75,
-                           valtype = "value", 
-                           timetype = "age_t1") %>%
-    mutate(clust = clustk)
-  return (summ_clust)
-})
-to_plot_raw <- bind_rows(to_plot_raw) %>%
-  mutate(clust = factor(clust, 
-                        levels = paste0("k", 1:K_chosen)))
-png(paste0(plotdir, "popn_trajectories_raw.png"))
-print(plotTrajectories(to_plot_raw) +
-        scale_x_continuous(limits = c(30, 70)))
-dev.off()
+# # B-coefficients mean matrix
+# mn_mat <- lapply(spline_posteriors, function (spobj) {
+#   return (as.data.frame(t(spobj$mu)))
+# })
+# mn_mat <- bind_rows(mn_mat)
+# rownames(mn_mat) <- names(spline_posteriors)
+# 
+# # Function to RINT coefficient for plotting
+# RINTx <- function (x) {
+#   return (qnorm((rank(x) - 0.5) / sum(!is.na(x))))
+# }
+# 
+# # Function to order ids by probability of belonging to cluster "k"
+# orderIDs <- function (cluster = "k1") {
+#   return (order(clust_res[, cluster], decreasing = T))
+# }
+# 
+# # Function to plot heatmap ordered by p(clusterK)
+# plotOrderedHeat <- function (cluster = "k1") {
+#   ids_order <- as.character(clust_res$eid[orderIDs(cluster)])
+#   # Arrange B-coef matrix
+#   plot_mat <- as.matrix(mn_mat[ids_order, ])
+#   # For plotting, scale each column (RINT) to see differences better
+#   plot_mat <- apply(plot_mat, 2, FUN = RINTx)
+#   
+#   png(paste0(plotdir, "heatmaps_ordered_", cluster, ".png"),
+#       width = 21, height = 29.7, units = "cm", res = 300)
+#   pheatmap(plot_mat, 
+#            cluster_rows = F, cluster_cols = F,
+#            scale = "none", 
+#            treeheight_col = 0, treeheight_row = 0,
+#            show_rownames = F, show_colnames = F,
+#            color = colorRampPalette(c("navy", "white", "red"))(50),
+#            legend = T, fontsize = 10,
+#            main = paste0("B-coefs in ", PHENO, "_", SEX_STRATA))
+#   dev.off()
+# }
+# 
+# # Probability bar plots to go alongside the histogram
+# plotOrderedBars <- function (cluster = "k1") {
+#   # Rename IDs and flip the factor levels to retain correct order for plot
+#   dat <- clust_res[orderIDs(cluster), ]
+#   dat$eid <- factor(as.character(1:nrow(dat)),
+#                     levels = as.character(nrow(dat):1))
+#   
+#   resplot <- ggplot(dat, aes(x = !!as.symbol(cluster),
+#                              y = eid)) +
+#     geom_col(width = 1, 
+#              color = custom_four_diverge[cluster],
+#              fill = custom_four_diverge[cluster]) +
+#     theme(axis.text.y = element_blank(), 
+#           axis.ticks.y = element_blank(), 
+#           axis.title.y = element_blank())
+#   png(paste0(plotdir, "barprobs_", cluster, ".png"),
+#       width = 21/2, height = 29.7, units = "cm", res = 300)
+#   print(resplot)
+#   dev.off()
+# }
+# 
+# lapply(paste0("k", 1:K_chosen), function (clustk) {
+#   plotOrderedHeat(clustk)
+#   plotOrderedBars(clustk)
+# })

@@ -18,7 +18,7 @@ custom_teal_sequential <- c("#66BFBE", "#009593", "#005958")
 names(custom_teal_sequential) <- c("2", "5", "10")
 custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
 
-main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
+main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/"
 
 # Script to plot silhouette scores for combinations of K, L, M ----
 
@@ -67,18 +67,20 @@ lapply(PHENOTYPES, function (p) {
     })
     all_parameters_dat <- bind_rows(centroid_dat)
 
-    # subset_dat <- all_parameters_dat %>% filter(K %in% c(3, 4, 5) &
-    #                                               L == "2")
-    #
-    # png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/zoomed_in_silhouette_plot.png"),
-    #     res = 300, units = "cm", height = 7, width = 7)
-    # print(plotSilScores(subset_dat))
-    # dev.off()
+    subset_dat <- all_parameters_dat %>% filter(K %in% c(3, 4, 5) &
+                                                  L == "2")
 
-    png(filename = paste0(main_filepath, p, "_", sx, "/parameter_selection/silhouette_plot.png"),
+    png(filename = paste0(main_filepath, 
+                          "/silhouette_plots/zoomed_in_", p, "_", sx, ".png"),
         res = 300, units = "cm", height = 7, width = 7)
-    print(plotSilScores(all_parameters_dat))
+    print(plotSilScores(subset_dat))
     dev.off()
+
+    # png(filename = paste0(main_filepath, "/silhouette_plots/", p, "_", sx, 
+    #                       "_silhouette_plot.png"),
+    #     res = 300, units = "cm", height = 7, width = 7)
+    # print(plotSilScores(all_parameters_dat))
+    # dev.off()
   })
 })
 
@@ -99,11 +101,11 @@ K <- 2:8
 
 centroid_dat <- lapply(K, function (k) {
   all_combos <- list.files(paste0(main_filepath, PHENO, "_", SEX_STRATA, 
-                                  "/parameter_selection/medoid_initialisation/"),
+                                  "/parameter_selection/"),
                            pattern = paste0("^K", k))
   res_list <- lapply(all_combos, function (fname) {
     dat <- readRDS(paste0(main_filepath, PHENO, "_", SEX_STRATA, 
-                          "/parameter_selection/medoid_initialisation/",
+                          "/parameter_selection/",
                           fname))
     metadat <- data.frame(L = as.character(dat$L), 
                           M = as.character(dat$M),
@@ -117,7 +119,7 @@ centroid_dat <- lapply(K, function (k) {
 names(centroid_dat) <- paste0("k", K)
 
 # Modelling results for distance calculations 
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
 ## Calculate mean matrix of coefficients needed for distance calculations ----

@@ -4,6 +4,7 @@
 # Compare soft-clustering results from the two initialisations (true medoid, Euclidean distance-based medoid)
 
 library(tidyverse)
+library(ggpubr)
 theme_set(theme_bw())
 
 # Read data ----
@@ -49,7 +50,7 @@ oldVsNewPlot <- function (df, clustk) {
   resplot <- ggplot(sub_df, aes(x = old, y = new)) +
     geom_point(colour = custom_four_diverge[clustk],
                fill = custom_four_diverge[clustk]) +
-    labs(x = "old_dist_init", y = "true_medoid_init",
+    labs(x = "old_dist_baselining", y = "new_dist_baselining",
          title = clustk)
   return (resplot)
 }
