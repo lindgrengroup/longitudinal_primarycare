@@ -73,10 +73,15 @@ model_dat <- lapply(PHENOTYPES, function (p) {
     if (length(unique(df$data_provider)) > 1) 
       full_adj_covars <- c(full_adj_covars, "data_provider")
     # Full model
-    maxmod <- lm(formula(paste0("value ~ ", 
+    fullmod <- lm(formula(paste0("value ~ ", 
                                 paste0(full_adj_covars, collapse = " + "))),
                  data = df)
-    return (maxmod)
+    # Mean and variance of residuals in fully adjusted model
+    resid_full <- residuals(fullmod)
+    mu_full <- mean(resid_full)
+    var_full <- var(resid_full)
+    
+    return (list(fullmod = fullmod, mu_full = mu_full, var_full = var_full))
   })
   names(res_list) <- SEX_STRATA
   return (res_list)
@@ -94,10 +99,11 @@ to_write <- lapply(PHENOTYPES, function (p) {
     if (sx != "sex_comb") df <- df %>% filter(sex == sx)
     
     res <- df
-    res$value_fulladj <- residuals(model_dat[[p]][[sx]])
+    mod_dat <- model_dat[[p]][[sx]]
+    res$value_fulladj_norm <- (residuals(mod_dat$fullmod) - mod_dat$mu_full)/sqrt(mod_dat$var_full)
     
     to_save <- res[, c("eid", "t_diff", 
-                       "value", "value_fulladj", 
+                       "value", "value_fulladj_norm", 
                        "age_t1", "value_t1")]
     return (to_save)
   })

@@ -78,8 +78,8 @@ fit_subj_posterior_under_simple_prior <- function(Z, y, precision_smooth) {
 
 # Set parameters
 
-AR1_RHO <- 0.95 # Main smoothness parameter, typically useful between about .9 and .995
-AR1_NOISE_SD <- 1 # Can leave this as is typically
+AR1_RHO <- 0.99 # Main smoothness parameter
+AR1_NOISE_SD <- 2.5 
 AR1_INTERCEPT_SD <- 100 # A big number for noninformative intercept in AR1
 Sig_smooth <- ar1_covariance(n_time = NDF_SPLINE, 
                              rho = AR1_RHO, 
@@ -100,7 +100,7 @@ names(model_dat) <- PHENOTYPES
 spline_posteriors <- lapply(PHENOTYPES, function (p) {
   per_sex <- lapply(SEX_STRATA, function (sx) {
     to_return <- lapply(model_dat[[p]][[sx]], function (id_df) {
-      y <- id_df$value_fulladj
+      y <- id_df$value_fulladj_norm
       X <- matrix(0,
                   nrow = min(max(dat[[p]][[sx]]$t_diff), MAX_N_DAYS) + 1, 
                   ncol = nrow(id_df))
