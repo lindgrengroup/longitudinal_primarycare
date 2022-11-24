@@ -6,7 +6,6 @@ Scripts in this folder:
 **3c_perform_variant_assocns_b0_quartiles_PLINK.sh** - Same as (3b) but phenotypes are split into quartiles based on intercepts from linear mixed models, as found in (2a). 
 4. **4b_ and 4c_plot_qq_manhattan.R** - QQ plots and Manhattan plots for associations of various model parameters with subset of metabolic and endocrine variants (as described in *../general_scripts/extract_gwascat_variants.R*) \
 **generic_submit_BOLT_scripts.R** - Loops over all strata and parameters (lmm intercepts, lmm slopes adjusted for baseline, cubic spline intercepts) to submit BOLT GWAS, filtering, etc. Relies on helper scripts in *./BOLT_helpers/*. See README in *./BOLT_helpers/* for more details. \
-**generic_submit_SAIGE_scripts.R** - Loops over all strata and clusters to submit SAIGE step 1, step 2, or results filtering for cluster membership as the GWAS trait. Relies on helper scripts in *./SAIGE_helpers/*. See README in *./SAIGE_helpers/* for more details.
-
+**softprob_linear_regression_GWAS.sh** - Follows the same structure as *./BOLT_helpers/1_perform_GWAS_BOLT.sh* but includes the covariates needed for soft-probability GWAS as these traits are not adjusted for covariates prior to GWAS. \
 
 Within the *./BOLT_helpers/* and *./SAIGE_helpers/* folders are the scripts to perform GWAS, filter results and plot QQ-plots and Manhattan plots, perform finemapping, etc. (labelled appropriately, with more details in the respective README files) 

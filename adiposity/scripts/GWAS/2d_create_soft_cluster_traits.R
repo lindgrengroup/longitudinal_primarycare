@@ -5,7 +5,7 @@ library(tidyverse)
 
 # Read data ----
 
-result_prefix <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/traits_for_GWAS/"
+result_prefix <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/traits_for_GWAS/"
 
 # Clustering results 
 PHENOTYPES <- c("BMI", "Weight")
@@ -13,7 +13,7 @@ SEX_STRATA <- c("F", "M", "sex_comb")
 
 cluster_results <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/",
+    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/",
                              p, "_", sx, "/soft_clustering_probs_", p, "_", sx, ".txt"),
                       sep = "\t", header = T, stringsAsFactors = F)
     res$eid <- as.character(res$eid)
@@ -56,7 +56,7 @@ covars <- lapply(covars, function (df) {
 })
 
 # Already contains genotyping array, UKB asst centre, and PCs
-ADD_COVARS_LIST <- c("sex", "baseline_age", "age_sq", "FUyrs", "FU_n")
+ADD_COVARS_LIST <- c("sex", "baseline_trait", "baseline_age", "age_sq", "FUyrs", "FU_n")
 
 # Logit-transform probabilities to create phenotype for linear GWAS ----
 
@@ -81,8 +81,13 @@ lapply(PHENOTYPES, function (p) {
     res <- cluster_results[[p]][[sx]]
     res <- res %>% filter(eid %in% ids_passed_qc[[p]][[sx]]$IID)
     
-    # Convert cluster probabilities to logit for GWAS
-    logit_probs <- apply(res[, -1], 2, FUN = function (x) {
+    # Create GWAS traits
+    res <- res %>% 
+      mutate(k1_k2 = k1 + k2,
+             k1_k2_k3 = k1 + k2 + k3)
+    
+    logit_probs <- apply(res[, c("k1", "k1_k2", "k1_k2_k3")], 2, 
+                         FUN = function (x) {
       getLogit(squeezeProbs(x, nsamples = 100))
     })
     
@@ -90,9 +95,8 @@ lapply(PHENOTYPES, function (p) {
     to_write <- data.frame(FID = res$eid, 
                            IID = res$eid,
                            k1 = logit_probs[, "k1"], 
-                           k2 = logit_probs[, "k2"],
-                           k3 = logit_probs[, "k3"], 
-                           k4 = logit_probs[, "k4"]) 
+                           k1_k2 = logit_probs[, "k1_k2"],
+                           k1_k2_k3 = logit_probs[, "k1_k2_k3"]) 
     write.table(to_write, 
                 paste0(result_prefix, p, "_", sx, "_soft_clust_probs.txt"),
                 sep = "\t", row.names = F, quote = F)
@@ -109,7 +113,7 @@ lapply(PHENOTYPES, function (p) {
     df <- left_join(df, 
                     covars[[p]][, c("IID", "FID", ADD_COVARS_LIST)], by = c("IID", "FID"))
     write.table(df, 
-                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/GWAS/sample_qc/", 
+                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/sample_qc/", 
                        p, "_", sx, "_covariates.txt"),
                 sep = "\t", row.names = F, quote = F)
   })
