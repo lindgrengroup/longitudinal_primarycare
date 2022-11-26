@@ -43,6 +43,10 @@ dir.create(resdir)
 # From replication dataset
 model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
+model_dat$resid_var <- 0.001 # from plots
+saveRDS(model_dat,
+        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/fit_objects_", 
+               PHENO, "_", SEX_STRATA, ".rds"))
 
 # From discovery dataset
 clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 

@@ -6,22 +6,16 @@ library(tidyverse)
 # Read data ----
 
 PHENOTYPES <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/code_lists/qcd_traits_available.txt",
-                     sep = "\t", header = F, stringsAsFactors = F)$V1
+                         sep = "\t", header = F, stringsAsFactors = F)$V1
 REMOVE_PHENOS <- c("BMI", "WC", "Weight", "WHR", 
                    "FAI", "Progesterone", "Prolactin")
 PHENOTYPES <- PHENOTYPES[!PHENOTYPES %in% REMOVE_PHENOS]
 
-SEX_STRATA <- c("F", "M", "sex_comb")
-
 # IDs to put through QC
 sample_ids <- lapply(PHENOTYPES, function (p) {
-  get_ids <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/lmm_models/",
-                            p, "_", sx, "_blups_full_model.txt"), 
-                     sep = "\t", header = T, stringsAsFactors = F)$eid
-    return (res)
-  })
-  names(get_ids) <- SEX_STRATA
+  get_ids <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/lmm_models/",
+                               p, "_sex_comb_blups_full_model.txt"), 
+                        sep = "\t", header = T, stringsAsFactors = F)$eid
   return (get_ids)
 })
 names(sample_ids) <- PHENOTYPES
@@ -46,19 +40,16 @@ colnames(pheno)[1] <- "eid"
 # Prepare data for genotyping QC ----
 
 for_gen_QC <- lapply(PHENOTYPES, function (p) {
-  keep_ids <- main_longit_dat[[p]] %>% 
-    filter(!eid %in% gp_ids) %>%
-    select(eid)
   # Get QC file info for these ids
-  df <- qc[qc$eid %in% keep_ids$eid, c("eid", "Submitted.Gender", "Inferred.Gender",
-                                   "het.missing.outliers", "excess.relatives",
-                                   "in.Phasing.Input.chr1_22", 
-                                   "in.white.British.ancestry.subset",
-                                   "putative.sex.chromosome.aneuploidy",
-                                   "sample.qc.missing.rate",
-                                   "in.kinship.table",
-                                   "excluded.from.kinship.inference",
-                                   "genotyping.array")]
+  df <- qc[qc$eid %in% sample_ids[[p]], c("eid", "Submitted.Gender", "Inferred.Gender",
+                                          "het.missing.outliers", "excess.relatives",
+                                          "in.Phasing.Input.chr1_22", 
+                                          "in.white.British.ancestry.subset",
+                                          "putative.sex.chromosome.aneuploidy",
+                                          "sample.qc.missing.rate",
+                                          "in.kinship.table",
+                                          "excluded.from.kinship.inference",
+                                          "genotyping.array")]
   # Merge phenotype file info 
   # (f.22001.0.0: genotyped and recommended exclusion)
   # (f.54.0.0: UKB assessment centre)

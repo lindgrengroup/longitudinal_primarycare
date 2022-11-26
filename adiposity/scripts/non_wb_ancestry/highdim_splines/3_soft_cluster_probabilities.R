@@ -22,6 +22,8 @@ set.seed(RANDOM_SEED)
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
+parser$add_argument("--ancestry", required = TRUE,
+                    help = "Ancestry group to model")
 parser$add_argument("--sex_strata", required = TRUE,
                     help = "Sex strata")
 parser$add_argument("--nboots", default = 100,
@@ -31,18 +33,22 @@ parser$add_argument("--nboots", default = 100,
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
+ANCESTRY <- args$ancestry
 SEX_STRATA <- args$sex_strata
 NBOOTS <- as.numeric(args$nboots)
 
-resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/", 
-                 PHENO, "_", SEX_STRATA, "/")
+resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/softclust_probs/")
 dir.create(resdir)
 
 # Load data ----
 
 # From replication dataset
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/fit_objects_", 
-                            PHENO, "_", SEX_STRATA, ".rds"))
+model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/fit_objects_", 
+                            PHENO, "_", ANCESTRY, "_", SEX_STRATA, ".rds"))
+model_dat$resid_var <- 0.001 # from plots
+saveRDS(model_dat,
+        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/fit_objects_", 
+               PHENO, "_", ANCESTRY, "_", SEX_STRATA, ".rds"))
 
 # From discovery dataset
 clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
@@ -123,6 +129,6 @@ soft_clust_res <- bind_rows(soft_clust_res) %>%
 soft_clust_res <- soft_clust_res[, c("eid", CLUST_NAMES)]
 
 write.table(soft_clust_res,
-            paste0(resdir, "soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
+            paste0(resdir, "soft_clustering_probs_", PHENO, "_", ANCESTRY, "_", SEX_STRATA, 
                    ".txt"), sep = "\t", row.names = F, quote = F)
 
