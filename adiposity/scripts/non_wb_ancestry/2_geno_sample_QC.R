@@ -50,7 +50,7 @@ for_gen_QC <- lapply(PHENOTYPES, function (p) {
     filter(!eid %in% gp_ids) %>%
     select(eid)
   # Get QC file info for these ids
-  df <- qc[qc$eid %in% keep_ids$eid, c("eid", "Submitted.Gender", "Inferred.Gender",
+  df <- qc[qc$eid %in% keep_ids, c("eid", "Submitted.Gender", "Inferred.Gender",
                                    "het.missing.outliers", "excess.relatives",
                                    "in.Phasing.Input.chr1_22", 
                                    "in.white.British.ancestry.subset",
