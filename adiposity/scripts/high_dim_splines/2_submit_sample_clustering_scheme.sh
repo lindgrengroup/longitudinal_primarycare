@@ -3,18 +3,15 @@
 # Author: Samvida S. Venkatesh
 # Date: 17/12/21
 
-#SBATCH -A lindgren.prj
-#SBATCH -p short
-#SBATCH -c 4
-#SBATCH -J cluster_sampling_scheme
+#$ -cwd
+#$ -P lindgren.prjc -q short.qc
+#$ -pe shmem 4
+#$ -N cluster_sampling_scheme
+#$ -j y
 
-echo "########################################################"
-echo "Slurm Job ID: $SLURM_JOB_ID" 
-echo "Run on host: "`hostname` 
-echo "Operating system: "`uname -s` 
-echo "Username: "`whoami` 
-echo "Started at: "`date` 
-echo "##########################################################"
+echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as user ${USER}
+
+##########################################################################################
 
 echo "passing covariates..."
 covars=${covars//|/,}

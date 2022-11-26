@@ -45,7 +45,7 @@ dir.create(resdir)
 # From replication dataset
 model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/fit_objects_", 
                             PHENO, "_", ANCESTRY, "_", SEX_STRATA, ".rds"))
-model_dat$resid_var <- 0.001 # from plots
+model_dat$resid_var <- 0.01 # from plots
 saveRDS(model_dat,
         paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/fit_objects_", 
                PHENO, "_", ANCESTRY, "_", SEX_STRATA, ".rds"))
