@@ -5,26 +5,41 @@ library(tidyverse)
 
 # Read data ----
 
-PHENOTYPES <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/code_lists/qcd_traits_available.txt",
-                     sep = "\t", header = F, stringsAsFactors = F)$V1
-REMOVE_PHENOS <- c("BMI", "WC", "Weight", "WHR", 
-                   "FAI", "Progesterone", "Prolactin")
-PHENOTYPES <- PHENOTYPES[!PHENOTYPES %in% REMOVE_PHENOS]
-
+PHENOTYPES <- c("BMI", "Weight", "selfrep_wtchg")
+ANCESTRIES <- c("asian", "black", "chinese", "mixed", "other", "white")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 # IDs to put through QC
-sample_ids <- lapply(PHENOTYPES, function (p) {
-  get_ids <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/lmm_models/",
-                            p, "_", sx, "_blups_full_model.txt"), 
-                     sep = "\t", header = T, stringsAsFactors = F)$eid
-    return (res)
+selfrep_wtchg <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/selfrep_wtchg_non_wb.txt",
+                            sep = "\t", header = T, stringsAsFactors = F)
+selfrep_wtchg$eid <- as.character(selfrep_wtchg$eid)
+general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+                             sep = "\t", header = T, stringsAsFactors = F)
+general_covars$eid <- as.character(general_covars$eid)
+selfrep_wtchg <- left_join(selfrep_wtchg, general_covars,
+                           by = "eid")
+
+# lmm slopes and soft clustering (both have the same sets of IDs)
+ids_to_qc <- lapply(PHENOTYPES, function (p) {
+  per_anc <- lapply(ANCESTRIES, function (anc) {
+    get_ids <- lapply(SEX_STRATA, function (sx) {
+      if (p == "selfrep_wtchg") {
+        res <- selfrep_wtchg %>% filter(ancestry == anc)
+        if (sx != "sex_comb") res <- res %>% filter(sex == sx)
+      } else {
+        res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/lmm_models/",
+                                 p, "_", anc, "_", sx, "_all_blups.txt"), 
+                          sep = "\t", header = T, stringsAsFactors = F)
+      }
+      return (res$eid)
+    })
+    names(get_ids) <- SEX_STRATA
+    return (get_ids)
   })
-  names(get_ids) <- SEX_STRATA
-  return (get_ids)
+  names(per_anc) <- ANCESTRIES
+  return (per_anc)
 })
-names(sample_ids) <- PHENOTYPES
+names(ids_to_qc) <- PHENOTYPES
 
 # QC file from UKBB
 qc <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/QC/ukb_sqc_v2.txt", header = T, 
@@ -46,25 +61,31 @@ colnames(pheno)[1] <- "eid"
 # Prepare data for genotyping QC ----
 
 for_gen_QC <- lapply(PHENOTYPES, function (p) {
-  keep_ids <- main_longit_dat[[p]] %>% 
-    filter(!eid %in% gp_ids) %>%
-    select(eid)
-  # Get QC file info for these ids
-  df <- qc[qc$eid %in% keep_ids, c("eid", "Submitted.Gender", "Inferred.Gender",
-                                   "het.missing.outliers", "excess.relatives",
-                                   "in.Phasing.Input.chr1_22", 
-                                   "in.white.British.ancestry.subset",
-                                   "putative.sex.chromosome.aneuploidy",
-                                   "sample.qc.missing.rate",
-                                   "in.kinship.table",
-                                   "excluded.from.kinship.inference",
-                                   "genotyping.array")]
-  # Merge phenotype file info 
-  # (f.22001.0.0: genotyped and recommended exclusion)
-  # (f.54.0.0: UKB assessment centre)
-  df <- merge(df, pheno[, c("eid", "f.22001.0.0", "f.54.0.0")], by = "eid")
-  colnames(df)[which(colnames(df) == "f.54.0.0")] <- "UKB_assmt_centre"
-  return (df)
+  per_anc <- lapply(ANCESTRIES, function (anc) {
+    per_sex <- lapply(SEX_STRATA, function (sx) {
+      # Get QC file info for these ids
+      df <- qc[qc$eid %in% ids_to_qc[[p]][[anc]][[sx]], 
+               c("eid", "Submitted.Gender", "Inferred.Gender",
+                 "het.missing.outliers", "excess.relatives",
+                 "in.Phasing.Input.chr1_22", 
+                 "in.white.British.ancestry.subset",
+                 "putative.sex.chromosome.aneuploidy",
+                 "sample.qc.missing.rate",
+                 "in.kinship.table",
+                 "excluded.from.kinship.inference",
+                 "genotyping.array")]
+      # Merge phenotype file info 
+      # (f.22001.0.0: genotyped and recommended exclusion)
+      # (f.54.0.0: UKB assessment centre)
+      df <- merge(df, pheno[, c("eid", "f.22001.0.0", "f.54.0.0")], by = "eid")
+      colnames(df)[which(colnames(df) == "f.54.0.0")] <- "UKB_assmt_centre"
+      return (df)
+    })
+    names(per_sex) <- SEX_STRATA
+    return (per_sex)
+  })
+  names(per_anc) <- ANCESTRIES
+  return (per_anc)
 })
 names(for_gen_QC) <- PHENOTYPES
 
@@ -119,23 +140,6 @@ qc_sex_mismatch <- function(data, qc_log_file) {
   
   return(cleaned)	
 }	
-
-## Ancestry ----
-
-keep_white_british_ancestry <- function (data, qc_log_file) {
-  
-  cleaned <- subset(data, data$in.white.British.ancestry.subset == 1)
-  
-  sink(qc_log_file, append = T)
-  cat(paste("**FILTER** EXCLUDED, Not in white British ancestry subset: ",
-            length(which(data$in.white.British.ancestry.subset != 1)), "\n",
-            "REMAINING: ",
-            nrow(cleaned), "\n", sep = ""))
-  sink()
-  
-  return (cleaned)
-  
-}
 
 ## Genotyping ----
 
@@ -280,45 +284,55 @@ ukb_recommended_excl <- function (data, qc_log_file) {
 # Perform genotyping QC ----
 
 qcd_ids <- lapply(PHENOTYPES, function (p) {
-  # Stratum data
-  data <- for_gen_QC[[p]]
-  qc_log_file <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/sample_qc/log_",
-                        p, ".txt")
-  
-  # Print sample characteristics before QC
-  sink(qc_log_file, append = T)
-  cat(paste("TOTAL SAMPLE SIZE: ", nrow(data), "\n", sep = ""))
-  cat(paste("   GENOTYPED ", length(which(!is.na(data$f.22001.0.0))), "\n", sep = ""))
-  sink()
-  
-  # Remove individuals that have not been genotyped
-  cleaned <- subset(data, !is.na(data$f.22001.0.0))
-  
-  # Apply QC functions
-  cleaned <- remove_withdrawn_ids(cleaned, qc_log_file)
-  cleaned <- remove_negative_ids(cleaned, qc_log_file)
-  cleaned <- qc_sex_mismatch(cleaned, qc_log_file)
-  cleaned <- keep_white_british_ancestry(cleaned, qc_log_file)
-  cleaned <- qc_het_miss(cleaned, qc_log_file)
-  cleaned <- qc_excess_related(cleaned, qc_log_file)
-  cleaned <- qc_related(cleaned, qc_log_file)
-  cleaned <- qc_kinship_table(cleaned, qc_log_file)
-  cleaned <- ukb_recommended_excl(cleaned, qc_log_file)
-  
-  return (cleaned)
+  per_anc <- lapply(ANCESTRIES, function (anc) {
+    per_sex <- lapply(SEX_STRATA, function (sx) {
+      # Stratum data
+      data <- for_gen_QC[[p]][[anc]][[sx]]
+      qc_log_file <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/sample_qc/log_",
+                            p, "_", anc, "_", sx, ".txt")
+      
+      # Print sample characteristics before QC
+      sink(qc_log_file, append = T)
+      cat(paste("TOTAL SAMPLE SIZE: ", nrow(data), "\n", sep = ""))
+      cat(paste("   GENOTYPED ", length(which(!is.na(data$f.22001.0.0))), "\n", sep = ""))
+      sink()
+      
+      # Remove individuals that have not been genotyped
+      cleaned <- subset(data, !is.na(data$f.22001.0.0))
+      
+      # Apply QC functions
+      cleaned <- remove_withdrawn_ids(cleaned, qc_log_file)
+      cleaned <- remove_negative_ids(cleaned, qc_log_file)
+      cleaned <- qc_sex_mismatch(cleaned, qc_log_file)
+      cleaned <- qc_het_miss(cleaned, qc_log_file)
+      cleaned <- qc_excess_related(cleaned, qc_log_file)
+      cleaned <- qc_related(cleaned, qc_log_file)
+      cleaned <- qc_kinship_table(cleaned, qc_log_file)
+      cleaned <- ukb_recommended_excl(cleaned, qc_log_file)
+      
+      return (cleaned)
+    })
+    names(per_sex) <- SEX_STRATA
+    return (per_sex)
+  })
+  names(per_anc) <- ANCESTRIES
+  return (per_anc)
 })
 names(qcd_ids) <- PHENOTYPES
 
 # Create id files for GWAS ----
 
-ids_for_gwas <- lapply(PHENOTYPES, function (p) {
-  to_write <- qcd_ids[[p]] %>% 
-    select(eid, genotyping.array)
-  
-  write.table(to_write, 
-              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/sample_qc/", 
-                     p, "_ids_passed_qc.txt"), 
-              sep = "\t", row.names = F, quote = F)
-  return ()
+lapply(PHENOTYPES, function (p) {
+  lapply(ANCESTRIES, function (anc) {
+    lapply(SEX_STRATA, function (sx) {
+      to_write <- qcd_ids[[p]][[anc]][[sx]] %>% 
+        select(eid, genotyping.array)
+      
+      write.table(to_write, 
+                  paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/sample_qc/", 
+                         p, "_", anc, "_", sx, "_ids_passed_qc.txt"), 
+                  sep = "\t", row.names = F, quote = F)
+    })
+  })
 })
 
