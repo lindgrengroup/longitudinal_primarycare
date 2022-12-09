@@ -4,13 +4,15 @@
 library(tidyverse)
 library(lubridate)
 
+mainpath <- "" # REDACTED
+
 # Read files ----
 
-qcd_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")
+qcd_dat <- readRDS(paste0(mainpath, "/data/indiv_qcd_data.rds"))
 PHENOTYPES <- names(qcd_dat)
 
 # QC log file
-qc_log <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/qc/covariate_QC.txt"
+qc_log <- paste0(mainpath, "/qc/covariate_QC.txt")
 
 # Design covariate files for each trait ----
 
@@ -46,4 +48,4 @@ QCd_covars <- lapply(PHENOTYPES, function (p) {
 names(QCd_covars) <- PHENOTYPES
 
 # Save
-saveRDS(QCd_covars, "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")
+saveRDS(QCd_covars, psate0(mainpath, "/data/covariates.rds"))

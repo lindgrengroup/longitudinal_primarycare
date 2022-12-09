@@ -4,18 +4,22 @@
 library(tidyverse)
 library(lubridate)
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+ukb_path <- "" # REDACTED
+
 # Log file ----
 
-indiv_qc_log <- "/well/lindgren/UKBIOBANK/samvida/full_primary_care/qc/gp_and_main_longit_filter.txt"
+indiv_qc_log <- paste0(mainpath, "/qc/gp_and_main_longit_filter.txt")
 
 # Read data ----
 
 # WB ancestry ids
-wb_ids <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/eids_white_british.txt",
+wb_ids <- read.table(paste0(gen_resources_path, "/eids_white_british.txt"),
                      sep = "\t", header = F, stringsAsFactors = F)$V1
 
 # UK Biobank main phenotype file
-pheno <- read.table("/well/lindgren/UKBIOBANK/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv",
+pheno <- read.table(paste0(ukb_path, "/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv"),
                     header = T, sep = ",", na.string = c("NA", "", "."), 
                     stringsAsFactors = F)
 colnames(pheno) <- gsub("X", "f.", colnames(pheno))
@@ -24,7 +28,7 @@ colnames(pheno)[1] <- "eid"
 pheno <- subset(pheno, pheno$eid %in% wb_ids)
 
 # Biomarkers file from UKBB
-biomarkers <- read.table("/well/lindgren/UKBIOBANK/DATA/Biomarker_data/ukb27722.csv",
+biomarkers <- read.table(paste0(ukb_path, "/DATA/Biomarker_data/ukb27722.csv"),
                          header = T, sep = ",", na.string = c("NA", "", "."), 
                          stringsAsFactors = F)
 colnames(biomarkers) <- gsub("X", "f.", colnames(biomarkers))
@@ -33,11 +37,11 @@ colnames(biomarkers)[1] <- "eid"
 biomarkers <- subset(biomarkers, biomarkers$eid %in% wb_ids)
 
 # Biomarker data from primary care
-gp_dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data_passed_popn_QC.rds")
+gp_dat <- readRDS(paste0(mainpath, "/data_passed_popn_QC.rds"))
 PHENOTYPES <- names(gp_dat)
 
 # Main phenotype or biomarker file field codes
-field_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/full_primary_care/code_lists/main_phenotypes/ukb_main_biomarker_codelist.txt",
+field_codes <- read.table(paste0(mainpath, "/code_lists/main_phenotypes/ukb_main_biomarker_codelist.txt"),
                           sep = "\t", header = T, stringsAsFactors = F)
 MAIN_PHENOS <- field_codes$biomarker[field_codes$file == "Main"]
 BIOM_PHENOS <- field_codes$biomarker[field_codes$file == "Biomarkers"]
@@ -228,5 +232,5 @@ filtered <- lapply(PHENOTYPES, function (p) {
 names(filtered) <- PHENOTYPES
 
 saveRDS(filtered, 
-        "/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/gp_main_data_passed_longit_filter.rds")
+        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/gp_main_data_passed_longit_filter.rds")
 

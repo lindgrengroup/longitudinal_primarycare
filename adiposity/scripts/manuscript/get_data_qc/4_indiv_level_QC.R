@@ -4,14 +4,16 @@
 library(tidyverse)
 library(lubridate)
 
+mainpath <- "" #REDACTED
+
 # Read data ----
 
 # Cleaned phenotypes from full primary care and UKB data 
-dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/gp_main_data_passed_longit_filter.rds")
+dat <- readRDS(paste0(mainpath, "/data/gp_main_data_passed_longit_filter.rds"))
 PHENOTYPES <- names(dat)
 
 # Start QC log file
-qc_log <- "/well/lindgren/UKBIOBANK/samvida/full_primary_care/qc/corrected_indiv_qc.txt"
+qc_log <- paste0(mainpath, "/qc/corrected_indiv_qc.txt")
 
 # Filter for longitudinal data ----
 
@@ -134,4 +136,4 @@ lapply(PHENOTYPES, function (p) {
 })
 
 saveRDS(indiv_cleaned, 
-        "/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/corrected_indiv_qcd_data.rds")
+        paste0(mainpath, "/data/corrected_indiv_qcd_data.rds"))
