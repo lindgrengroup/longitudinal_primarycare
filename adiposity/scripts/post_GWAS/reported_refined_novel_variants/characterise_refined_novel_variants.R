@@ -8,12 +8,12 @@ library(biomaRt)
 args <- commandArgs(trailingOnly = T)
 STRATA <- args[1]
 
-filepath_main <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/", 
-                        STRATA, "/classify_lmm_intercept_variants/")
+filepath_main <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                        STRATA, "/classify_b0_variants/")
 
 # Read files ----
 
-bm <- useMart(biomart = "ENSEMBL_MART_SNP", 
+bm <- useMart(biomart = "ENSEMBL_MART_SNP",
               host = "grch37.ensembl.org", path = "/biomart/martservice",
               dataset = "hsapiens_snp")
 
@@ -55,8 +55,8 @@ gwas_cat_snps <- gwas_cat_snps %>%
          POS0 = as.numeric(POS0), POS1 = as.numeric(POS1),
          SNP = as.character(SNP))
 
-gp_snps <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
-                             STRATA, "/finemapping/", STRATA, "_lmm_intercepts_final.lead_snps.txt"),
+gp_snps <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/",
+                             STRATA, "/finemapping/", STRATA, "_b0_final.lead_snps.txt"),
                       sep = "\t", header = T, stringsAsFactors = F)
 gp_snps <- gp_snps[, 1:3]
 colnames(gp_snps) <- c("SNP", "CHR", "POS")
@@ -259,7 +259,7 @@ if (!is.na(potential_novel)) {
   classified_novel <- rbindlist(iterate_maybe_novel, fill = T)
   classified_novel <- classified_novel %>%
     filter(status != "reported")
-}
+} else classified_novel <- NULL
 
 # Classify potentially refined SNPs as "refined" or "reported" ----
 
@@ -283,25 +283,25 @@ if (!is.na(potential_refined)) {
   classified_refined <- rbindlist(iterate_maybe_refined) 
   classified_refined <- classified_refined %>%
     filter(status != "reported")
-}
+} else classified_refined <- NULL
 
 # Add information from biomart to novel/refined SNPs and their buddies ----
 
 getMAFGeneConsequenceForSNP <- function (to_annot) {
-  res <- getBM(attributes = c("refsnp_id", "chr_name", "chrom_start", 
-                              "minor_allele_freq", 
+  res <- getBM(attributes = c("refsnp_id", "chr_name", "chrom_start",
+                              "minor_allele_freq",
                               "ensembl_gene_name", "consequence_type_tv"),
                filters = "snp_filter",
                values = to_annot$snpid,
                mart = bm)
   # Collapse multiple gene names and consequence types with ";"
   res <- res %>% group_by(refsnp_id) %>%
-    mutate(ensembl_gene_name = paste0(unique(ensembl_gene_name), 
+    mutate(ensembl_gene_name = paste0(unique(ensembl_gene_name),
                                       collapse = "; "),
-           consequence_type_tv = paste0(unique(consequence_type_tv), 
+           consequence_type_tv = paste0(unique(consequence_type_tv),
                                         collapse = "; ")) %>%
     distinct()
-  
+
   return (res)
 }
 
@@ -309,6 +309,10 @@ getMAFGeneConsequenceForSNP <- function (to_annot) {
 
 dat_to_check <- bind_rows(classified_novel,
                           classified_refined)
+
+write.table(dat_to_check, paste0(filepath_main,
+                             "to_annotate_results_refined_novel_snps.txt"),
+            sep = "\t", row.names = F, quote = F)
 
 to_annot_og <- data.frame(snpid = dat_to_check$SNP_og,
                           chr = dat_to_check$CHR_og,
@@ -336,7 +340,7 @@ annotated_full <- left_join(annotated_full, annot_buddy,
                             by = c("SNP_buddy" = "refsnp_id")) %>%
   rename(MAF_buddy = minor_allele_freq,
          GENE_buddy = ensembl_gene_name,
-         CONSEQUENCE_buddy = consequence_type_tv) 
+         CONSEQUENCE_buddy = consequence_type_tv)
 # If original data was missing chrom and pos, replace
 annotated_full <- annotated_full %>%
   mutate(CHR_buddy = ifelse(is.na(CHR_buddy), chr_name, CHR_buddy),
@@ -346,7 +350,7 @@ annotated_full <- annotated_full %>%
          CHRPOS_buddy = paste0(CHR_buddy, ":", POS_buddy))
 
 to_write <- annotated_full %>%
-  dplyr::select(all_of(c("SNP_og", "CHRPOS_og", "MAF_og", "GENE_og", "CONSEQUENCE_og",
+  dplyr::select(any_of(c("SNP_og", "CHRPOS_og", "MAF_og", "GENE_og", "CONSEQUENCE_og",
                          "status", "dist_to_novel", "r2",
                          "SNP_buddy", "CHRPOS_buddy", "MAF_buddy", "GENE_buddy", "CONSEQUENCE_buddy")))
 

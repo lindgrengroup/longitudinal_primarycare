@@ -32,17 +32,17 @@ K <- as.numeric(args$K)
 L <- args$L
 M <- args$M
 
-main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/"
+main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/"
 
 # Read data ----
 
 # Centroids from chosen clustering method
 clust_centroids <- readRDS(paste0(main_filepath, PHENO, "_", SEX_STRATA,  
-                                  "/parameter_selection/medoid_initialisation/K", K, "_L", L, "_M", M, ".rds"))
+                                  "/parameter_selection/K", K, "_L", L, "_M", M, ".rds"))
 clust_centroids <- clust_centroids$cluster_centroids
 
 # Modelling results for distance calculations 
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
 # Covariates to compare between training and validation sets
@@ -53,11 +53,13 @@ general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/ge
   mutate(eid = as.character(eid))
 
 # Assignment of ids to training or validation sets 
-training_ids <- read.table(paste0(main_filepath, PHENO, "_", SEX_STRATA, "/ids_training.txt"),
+training_ids <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+                                  PHENO, "_", SEX_STRATA, "/ids_training.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 training_ids <- data.frame(eid = as.character(training_ids),
                            id_type = "training")
-validation_ids <- read.table(paste0(main_filepath, PHENO, "_", SEX_STRATA, "/ids_validation.txt"),
+validation_ids <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+                                    PHENO, "_", SEX_STRATA, "/ids_training.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 validation_ids <- data.frame(eid = as.character(validation_ids),
                            id_type = "validation")

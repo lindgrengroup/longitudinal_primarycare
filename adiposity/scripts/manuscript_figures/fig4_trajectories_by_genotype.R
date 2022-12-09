@@ -43,7 +43,7 @@ names(var_dosages) <- VARIDS
 
 # Plot results ----
 
-model_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_BMI_sex_comb.rds")
+model_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_BMI_sex_comb.rds")
 
 B <- model_dat$B
 spline_posteriors <- model_dat$spline_posteriors
@@ -144,10 +144,10 @@ lapply(VARIDS, function (v) {
       scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
       theme(legend.position = "none",
             axis.title = element_blank(),
-            axis.text = element_text(size = 8))
+            axis.text = element_text(size = 6))
     
     tiff(filename = paste0(plots_dir, v, "_modelled_BMI_sex_comb.tiff"),
-         height = 4.5, width = 4.5, units = "cm",
+         height = 5, width = 4.25, units = "cm",
          res = 300)
     print(res_plot)
     dev.off()

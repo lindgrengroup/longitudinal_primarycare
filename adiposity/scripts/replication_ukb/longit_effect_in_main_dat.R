@@ -35,14 +35,14 @@ gp_ids <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/
                      sep = "\t", header = F, stringsAsFactors = F)$V1
 gp_ids <- as.character(gp_ids)
 
-vars_to_replicate <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/snps_to_replicate.txt",
+vars_to_replicate <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/lead_snps_to_replicate.txt",
                                 sep = "\t", header = T, stringsAsFactors = F)
 VARIDS <- vars_to_replicate$SNP
 # For variants without rsids, build variant name
 rename_vars <- grep("^chr", VARIDS)
 VARIDS[rename_vars] <- paste0(vars_to_replicate$SNP[rename_vars], "_",
-                              vars_to_replicate$allele1[rename_vars], "_", 
-                              vars_to_replicate$allele2[rename_vars])
+                              vars_to_replicate$Tested_Allele[rename_vars], "_", 
+                              vars_to_replicate$Other_Allele[rename_vars])
 VARIDS <- gsub("^chr", "", VARIDS)
 
 # Genotypes / dosages at variants of interest
@@ -64,7 +64,8 @@ general_covars$eid <- as.character(general_covars$eid)
 
 MOD_COVARS <- c("sex", "baseline_age", "age_sq", "FUyrs",
                 "year_of_birth", "data_provider", 
-                paste0("PC", 1:21))
+                paste0("PC", 1:21)) # add BMI as covariate for categorical tests
+
 general_covars <- general_covars %>% 
   dplyr::select(any_of(c("eid", MOD_COVARS))) %>%
   mutate(sex = factor(sex), year_of_birth = as.numeric(year_of_birth))
@@ -191,7 +192,7 @@ quantTest <- function (dat, ss) {
 catTest <- function (dat, ss) {
   # Get the correct covariates for adjustment
   covars_include <- c("sex", "age_event", "age_event_sq",
-                      "year_of_birth", "data_provider", 
+                      "year_of_birth", "data_provider", "BMI",
                       paste0("PC", 1:21))
   if (ss != "sex_comb") {
     dat <- dat %>% filter(sex == ss)
@@ -380,7 +381,7 @@ abdo_obesity <- dat %>%
   filter(pheno_tested %in% c("WC", "WCadjBMI", "WHR", "WHRadjBMI")) 
 
 sig_abdo_obesity <- abdo_obesity %>%
-  filter(pval <= 2E-3)
+  filter(pval <= 0.05/4)
 
 # printing to table
 to_write <- bind_rows(selfrep_wtchg, abdo_obesity) %>%
@@ -420,7 +421,7 @@ plot_dat <- abdo_obesity %>%
                                     "WCadjBMI_F", "WC_F")),
          uci = beta + 1.96*se,
          lci = beta - 1.96*se,
-         sig_lty = factor(ifelse(pval < 2E-3, "yes", "no"),
+         sig_lty = factor(ifelse(pval < 0.05/4, "yes", "no"),
                           levels = c("yes", "no")))
 
 MINPLOT <- min(plot_dat$lci)
@@ -465,8 +466,7 @@ lapply(VARIDS, function (v) {
 # Plot concordant effects on BMI and WHRadjBMI (scatter with lines for C.I.s) ----
 
 for_plot <- dat %>%
-  filter(pheno_tested %in% c("WCadjBMI", "WHRadjBMI", "BMI") & sex_strata == "sex_comb"
-         & grepl("^rs", SNP)) %>%
+  filter(pheno_tested %in% c("WCadjBMI", "WHRadjBMI", "BMI") & sex_strata == "sex_comb") %>%
   select(all_of(c("beta", "se", "pval", "pheno_tested", "SNP"))) %>%
   mutate(lci = beta - 1.96*se,
          uci = beta + 1.96*se,
@@ -498,8 +498,10 @@ minplot <- min(c(for_plot$lci_BMI, for_plot$lci_WHRadjBMI))
 maxplot <- max(c(for_plot$uci_BMI, for_plot$uci_WHRadjBMI))
 
 whradjbmi_plot <- ggplot(for_plot, aes(x = beta_BMI, y = beta_WHRadjBMI)) +
-  geom_abline(intercept = 0, slope = 1, linetype = 1, color = "grey",
+  geom_vline(xintercept = 0, linetype = 1, color = "grey",
               size = 0.3) +
+  geom_hline(yintercept = 0, linetype = 1, color = "grey",
+             size = 0.3) +
   geom_pointrange(aes(xmin = lci_BMI, xmax = uci_BMI,
                       linetype = sig_lty_WHRadjBMI, alpha = sig_lty_WHRadjBMI),
                   size = 0.3, fatten = 0.5) +
@@ -527,8 +529,10 @@ minplot <- min(c(for_plot$lci_BMI, for_plot$lci_WCadjBMI))
 maxplot <- max(c(for_plot$uci_BMI, for_plot$uci_WCadjBMI))
 
 wcadjbmi_plot <- ggplot(for_plot, aes(x = beta_BMI, y = beta_WCadjBMI)) +
-  geom_abline(intercept = 0, slope = 1, linetype = 1, color = "grey",
-              size = 0.3) +
+  geom_vline(xintercept = 0, linetype = 1, color = "grey",
+             size = 0.3) +
+  geom_hline(yintercept = 0, linetype = 1, color = "grey",
+             size = 0.3) +
   geom_pointrange(aes(xmin = lci_BMI, xmax = uci_BMI,
                       linetype = sig_lty_WCadjBMI, alpha = sig_lty_WCadjBMI),
                   size = 0.3, fatten = 0.5) +
@@ -551,6 +555,7 @@ tiff("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/M
      res = 300)
 print(wcadjbmi_plot)
 dev.off()
+
 
 # Test sex heterogeneity ----
 

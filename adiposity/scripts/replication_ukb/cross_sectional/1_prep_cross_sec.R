@@ -20,7 +20,7 @@ general_covars$eid <- as.character(general_covars$eid)
 
 SEX_STRATA <- c("F", "M", "sex_comb")
 # Add in data provider as covariate later if there are enough levels
-COVARS <- c("age_event", "age_sq", "year_of_birth", "smoking_status")
+COVARS <- c("age_event", "age_sq", "year_of_birth")
 
 # QC log file
 qc_log <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/qc/cross_sectional_qc.txt"

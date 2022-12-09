@@ -25,10 +25,10 @@ for CHR in {1..22}; do
 	rm tmp_varlist.txt
 	touch tmp_varlist.txt
 	awk -v CHR="$CHR" '{ if ($2==CHR) print $1 }' \
-	lmm_slopes_snps_to_replicate.txt >> tmp_varlist.txt
+	data/b1_snps_to_replicate.txt >> tmp_varlist.txt
 
 	awk -v CHR="$CHR" '{ if ($2==CHR) print $1 }' \
-	clustprobs_snps_to_replicate.txt >> tmp_varlist.txt
+	data/clustprobs_snps_to_replicate.txt >> tmp_varlist.txt
 
 	cat tmp_varlist.txt | sort | uniq > replication_genotypes/chr${CHR}_snps.txt
 	rm tmp_varlist.txt

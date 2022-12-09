@@ -2,166 +2,249 @@
 # Date: 29/09/22
 
 library(tidyverse)
+theme_set(theme_bw())
+
+# colour palette: rose, teal, grey
+custom_three_diverge <- c("#D35C79","#009593", "#666666")
+names(custom_three_diverge) <- c("F", "M", "sex_comb")
+
+# colour palette: six colours for ancestries
+custom_six_diverge <- c("#D35C79", "#D9AB90", "#C7B241", 
+                        "#9FBCA4", "#009593", "#7D7D7D")
+names(custom_six_diverge) <- c("asian", "black", "chinese",
+                               "mixed", "white", "other")
+
+ANC_LEVELS <- c("other", "white", "mixed", "chinese", "black", "asian")
 
 # Read data ----
 
-STRATA <- c("BMI_F", "BMI_M", "BMI_sex_comb",
-            "Weight_F", "Weight_M", "Weight_sex_comb")
-TRAITS <- c("lmm_slopes_adj_int", "k1", "k2", "k3", "k4")
-PTHRESH <- 0.05/10 ## To correct for order of magnitude of loci being tested
+dat <- read.table("all_ancestries_all_phenos.txt", sep = "\t",
+                  header = T, stringsAsFactors = F)
 
-snp_dir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/"
-gwas_res_dir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/longit_replication_GWAS/"
-log_file <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/longit_replication_GWAS/snps_replicated.txt"
+STRATA_LEVELS <- paste0(rep(ANC_LEVELS, each = 3),
+                        "_", rep(c("sex_comb", "M", "F"), times = 6))
+PTHRESH <- 1E-4
 
-discovery_res <- lapply(STRATA, function (st) {
-  res_list <- lapply(TRAITS, function (trt) {
-    # Get file
-    if (trt == "lmm_slopes_adj_int")
-      infile_name <- paste0(snp_dir, "2204_models/GWAS/BOLT_results/",
-                            st, "_", trt, "_gws_sig_hits.txt")
-    else
-      infile_name <- paste0(snp_dir, "highdim_splines/GWAS/BOLT_results/",
-                            st, "_", trt, "_gws_sig_hits.txt")
-    
-    # Read file
-    if (file.size(infile_name) == 0) 
-      res <- NULL
-    else {
-      res <- read.table(infile_name,
-                        sep = "\t", header = T, stringsAsFactors = F)
-      colnames(res) <- c("SNP", "CHR", "POS", 
-                         "Tested_Allele_discovery", "Other_Allele_discovery",
-                         "AF_Tested_discovery", "BETA_discovery", "SE_discovery",
-                         "PVALUE_discovery")
-      res <- res %>%
-        mutate(across(all_of(c("SNP", "Tested_Allele_discovery", "Other_Allele_discovery")),
-                      as.character)) %>%
-        mutate(across(all_of(c("CHR", "POS", 
-                               "AF_Tested_discovery", "BETA_discovery", "SE_discovery",
-                               "PVALUE_discovery")),
-                      as.numeric))
-    }
-    return (res)
-  })
-  names(res_list) <- TRAITS
-  return (res_list)
-})
-names(discovery_res) <- STRATA
+# Self-reported weight change ----
 
-replication_res <- lapply(STRATA, function (st) {
-  res_list <- lapply(TRAITS, function (trt) {
-    res <- read.table(paste0(gwas_res_dir, st, "/", st, "_", trt, ".txt"),
-                      sep = "\t", header = T, stringsAsFactors = F, 
-                      comment.char = "&")
-    colnames(res) <- c("CHR", "POS", "SNP", 
-                       "REF_replication", "ALT_replication", 
-                       "Tested_Allele_replication",
-                       "TEST_replication", "OBS_CT_replication", 
-                       "BETA_replication", "SE_replication",
-                       "T_STAT_replication", "PVALUE_replication")
-    res <- res %>%
-      mutate(across(all_of(c("SNP", 
-                             "REF_replication", "ALT_replication", 
-                             "Tested_Allele_replication",
-                             "TEST_replication")),
-                    as.character)) %>%
-      mutate(across(all_of(c("CHR", "POS", 
-                             "OBS_CT_replication", 
-                             "BETA_replication", "SE_replication",
-                             "T_STAT_replication", "PVALUE_replication")),
-                    as.numeric))
-    return (res)
-  })
-  names(res_list) <- TRAITS
-  return (res_list)
-}) 
-names(replication_res) <- STRATA
+selfrep <- dat %>%
+  filter(pheno_tested == "Weight_change_1yr" & visit_compared == 1) 
 
-# Match results within strata ----
+plot_dat <- selfrep %>%
+  mutate(sex_strata = factor(sex_strata, levels = c("F", "M", "sex_comb")),
+         ancestry = factor(ancestry, levels = ANC_LEVELS),
+         strata = paste0(ancestry, "_", sex_strata),
+         sig_lty = factor(ifelse(pval < PTHRESH, "yes", "no"),
+                          levels = c("yes", "no")))
 
-flipReplicationSNPs <- function (dat) {
-  res <- dat %>% 
-    mutate(flag = Tested_Allele_replication != Tested_Allele_discovery,
-           flip = flag & Tested_Allele_replication == Other_Allele_discovery,
-           MANUAL_CHECK = flag & !flip)
-  
-  if (any(res$MANUAL_CHECK)) stop("Check SNPS to flip")
-  else {
-    res <- res %>%
-      mutate(Tested_Allele_replication = ifelse(flip, Tested_Allele_discovery,
-                                                Other_Allele_discovery),
-             BETA_replication = ifelse(flip, -BETA_replication,
-                                       BETA_replication)) %>%
-      select(all_of(c("CHR", "POS", "SNP",
-                      "Tested_Allele_discovery", "Other_Allele_discovery",
-                      "Tested_Allele_replication",
-                      "BETA_discovery", "BETA_replication",
-                      "PVALUE_discovery", "PVALUE_replication")))
-    return (res)
+plotORs <- function (v) {
+  print(v)
+  sub_dat <- plot_dat %>% 
+    filter(SNP == v & sex_strata == "sex_comb") %>% 
+    select(all_of(c("or", "lci", "uci",
+                    "sex_strata", "ancestry", "strata", "sig_lty")))
+  missing_anc <- ANC_LEVELS[!ANC_LEVELS %in% unique(sub_dat$ancestry)]
+  if (length(missing_anc) > 0) {
+    add_dat <- data.frame(or = NA, lci = NA, uci = NA,
+                          sex_strata = NA, ancestry = missing_anc,
+                          strata = NA, sig_lty = "no")
+    sub_dat <- bind_rows(sub_dat, add_dat)
   }
+   sub_dat <- sub_dat %>%
+    mutate(ancestry = factor(ancestry, levels = ANC_LEVELS))
+  
+  res_plot <- ggplot(sub_dat, aes(x = or, y = ancestry)) +
+    geom_pointrange(aes(xmin = lci, xmax = uci,
+                        color = ancestry,
+                        linetype = sig_lty, alpha = sig_lty),
+                    position = position_dodge(width = 0.7),
+                    size = 0.3) +
+    geom_vline(xintercept = 1, linetype = 2) +
+    scale_color_manual(values = custom_six_diverge, guide = "none") +
+    scale_alpha_manual(values = c(no = 0.7, yes = 1)) +
+    scale_linetype_manual(values = c(no = 2, yes = 1)) +
+    scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
+    theme(legend.position = "none",
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  return (res_plot) 
 }
 
-matched_strata_res <- lapply(STRATA, function (st) {
-  res_list <- lapply(TRAITS, function (trt) {
-    to_rep <- inner_join(discovery_res[[st]][[trt]],
-                         replication_res[[st]][[trt]])
-    matched_res <- flipReplicationSNPs(to_rep)
-    
-    # Match direction and P < PTHRESH
-    matched_res <- matched_res %>%
-      mutate(effect_dirn_match = 
-               (BETA_discovery > 0 & BETA_replication > 0) | (BETA_discovery <= 0 & BETA_replication <= 0),
-             stringent_match = effect_dirn_match & PVALUE_replication < PTHRESH,
-             loose_match = effect_dirn_match & PVALUE_replication < 0.05,
-             strata = paste0(st, "_", trt))
-    
-    sink(log_file, append = T)
-    cat(paste0(st, "_", trt, ": "), "\n")
-    cat("\t", paste0("Replicated ", sum(matched_res$stringent_match), 
-                           " of ", nrow(matched_res), " SNPs at P < ", PTHRESH), "\n")
-    cat("\t", paste0("Replicated ", sum(matched_res$loose_match), 
-                     " of ", nrow(matched_res), " SNPs at P < 0.05"), "\n")
-    sink()
-    
-    matched_res <- matched_res %>%
-      mutate(across(all_of(c("SNP", "Tested_Allele_discovery", "Other_Allele_discovery",
-                             "Tested_Allele_replication",
-                             "strata")),
-                    as.character)) %>%
-      mutate(across(all_of(c("CHR", "POS", 
-                             "BETA_discovery", "BETA_replication", 
-                             "PVALUE_discovery", "PVALUE_replication")),
-                    as.numeric))
-    
-    return (matched_res)
-  })
-  names(res_list) <- TRAITS
-  return (res_list)
+VARIDS <- unique(plot_dat$SNP)
+# Skip rs61955499 because sample sizes are very small
+VARIDS <- VARIDS[VARIDS != "rs61955499"]
+lapply(VARIDS, function (v) {
+  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+              v, "_selfrep.tiff"),
+       height = 4, width = 4, units = "cm",
+       res = 300)
+  print(plotORs(v))
+  dev.off()
 })
-names(matched_strata_res) <- STRATA
+v <- VARIDS[2]
+tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+            "chr6_26076446", "_selfrep.tiff"),
+     height = 4, width = 4, units = "cm",
+     res = 300)
+print(plotORs(v))
+dev.off()
 
-overall_res <- lapply(matched_strata_res, function (df_list) {
-  return (bind_rows(df_list))
+
+# Linear slope ----
+
+b1_dat <- dat %>%
+  filter(term == "b1") 
+
+plot_dat <- b1_dat %>%
+  mutate(lci = beta - 1.96*se,
+         uci = beta + 1.96*se,
+         sex_strata = factor(sex_strata, levels = c("F", "M", "sex_comb")),
+         ancestry = factor(ancestry, levels = ANC_LEVELS),
+         pheno_tested = factor(pheno_tested, levels = c("Weight", "BMI")),
+         strata = factor(paste0(ancestry, "_", pheno_tested),
+                         levels = paste0(rep(ANC_LEVELS, each = 2), "_",
+                                         rep(c("Weight", "BMI"), times = 6))),
+         sig_lty = factor(ifelse(pval < PTHRESH, "yes", "no"),
+                          levels = c("yes", "no")))
+
+plotBetas <- function (v) {
+  print(v)
+  sub_dat <- plot_dat %>% 
+    filter(SNP == v & sex_strata == "sex_comb") %>% 
+    select(all_of(c("beta", "lci", "uci",
+                    "sex_strata", "ancestry", "pheno_tested", 
+                    "strata", "sig_lty")))
+  
+  res_plot <- ggplot(sub_dat, aes(x = beta, y = strata, group = ancestry)) +
+    geom_pointrange(aes(xmin = lci, xmax = uci,
+                        shape = pheno_tested, color = ancestry,
+                        linetype = sig_lty, alpha = sig_lty),
+                    position = position_dodge(width = 0.7),
+                    size = 0.3) +
+    geom_vline(xintercept = 0, linetype = 2) +
+    scale_color_manual(values = custom_six_diverge, guide = "none") +
+    scale_alpha_manual(values = c(no = 0.7, yes = 1)) +
+    scale_linetype_manual(values = c(no = 2, yes = 1)) +
+    scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
+    theme(legend.position = "none",
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  return (res_plot) 
+}
+
+VARIDS <- unique(plot_dat$SNP)
+# Skip rs61955499 because sample sizes are very small
+VARIDS <- VARIDS[VARIDS != "rs61955499"]
+lapply(VARIDS, function (v) {
+  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+              v, "_b1.tiff"),
+       height = 4, width = 4, units = "cm",
+       res = 300)
+  print(plotBetas(v))
+  dev.off()
 })
-overall_res <- bind_rows(overall_res)
+v <- VARIDS[2]
+tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+            "chr6_26076446", "_b1.tiff"),
+     height = 4, width = 4, units = "cm",
+     res = 300)
+print(plotBetas(v))
+dev.off()
 
-# Overall number of unique alleles with stringent matches
-overall_stringency <- overall_res %>%
-  # Get unique SNPs
-  distinct(SNP, stringent_match) %>%
-  # Only get best case, i.e. when there is a match
-  arrange(-stringent_match) %>%
-  group_by(SNP) %>% slice(1)
-sum(overall_stringency$stringent_match)
-mean(overall_stringency$stringent_match)
+# p(k1) ----
 
-# Overall number of unique alleles with loose matches
-overall_lms <- overall_res %>%
-  # Get unique SNPs
-  distinct(SNP, loose_match) %>%
-  # Only get best case, i.e. when there is a match
-  arrange(-loose_match) %>%
-  group_by(SNP) %>% slice(1)
-sum(overall_lms$loose_match)
-mean(overall_lms$loose_match)
+k1_dat <- dat %>%
+  filter(term == "k1") 
+
+plot_dat <- k1_dat %>%
+  mutate(sex_strata = factor(sex_strata, levels = c("F", "M", "sex_comb")),
+         ancestry = factor(ancestry, levels = ANC_LEVELS),
+         pheno_tested = factor(pheno_tested, levels = c("Weight", "BMI")),
+         strata = factor(paste0(ancestry, "_", pheno_tested),
+                         levels = paste0(rep(ANC_LEVELS, each = 2), "_",
+                                         rep(c("Weight", "BMI"), times = 6))),
+         sig_lty = factor(ifelse(pval < PTHRESH, "yes", "no"),
+                          levels = c("yes", "no")))
+
+plotORs <- function (v) {
+  print(v)
+  sub_dat <- plot_dat %>% 
+    filter(SNP == v & sex_strata == "sex_comb") %>% 
+    select(all_of(c("or", "lci", "uci",
+                    "sex_strata", "ancestry", "pheno_tested", 
+                    "strata", "sig_lty")))
+  
+  res_plot <- ggplot(sub_dat, aes(x = or, y = strata, group = ancestry)) +
+    geom_pointrange(aes(xmin = lci, xmax = uci,
+                        shape = pheno_tested, color = ancestry,
+                        linetype = sig_lty, alpha = sig_lty),
+                    position = position_dodge(width = 0.7),
+                    size = 0.3) +
+    geom_vline(xintercept = 1, linetype = 2) +
+    scale_color_manual(values = custom_six_diverge, guide = "none") +
+    scale_alpha_manual(values = c(no = 0.7, yes = 1)) +
+    scale_linetype_manual(values = c(no = 2, yes = 1)) +
+    scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
+    theme(legend.position = "none",
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  return (res_plot) 
+}
+
+VARIDS <- unique(plot_dat$SNP)
+# Skip rs61955499 because sample sizes are very small
+VARIDS <- VARIDS[VARIDS != "rs61955499"]
+lapply(VARIDS, function (v) {
+  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+              v, "_k1.tiff"),
+       height = 4, width = 4, units = "cm",
+       res = 300)
+  print(plotORs(v))
+  dev.off()
+})
+v <- VARIDS[2]
+tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+            "chr6_26076446", "_k1.tiff"),
+     height = 4, width = 4, units = "cm",
+     res = 300)
+print(plotORs(v))
+dev.off()
+
+# Write for tables ----
+
+to_write <- dat %>%
+  filter(visit_compared == 1 | is.na(visit_compared)) %>%
+  filter(is.na(term) | term %in% c("b1", "k1")) %>%
+  mutate(beta_se = paste0(signif(beta, 3), " (", signif(se, 3), ")"),
+         or_ci = paste0(signif(or, 3), " (", signif(lci, 3), " - ", signif(uci, 3), ")"),
+         write_p = signif(pval, 3),
+         strata = factor(paste0(pheno_tested, "_", term),
+                         levels = c(paste0(rep(c("BMI", "Weight"), each = 2), "_",
+                                           rep(c("b1", "k1"), times = 2)),
+                                    "Weight_change_1yr_NA")),
+         SNP = factor(SNP, levels = c("rs9467663", "6:26076446_GA_G",
+                                      "rs11778922", "rs61955499", "rs12953815",
+                                      "rs429358"))) %>%
+  mutate(beta_se = ifelse(strata %in% c("BMI_b1", "Weight_b1"), beta_se, NA)) %>%
+  arrange(SNP, ancestry, strata) %>%
+  select(all_of(c("SNP", "ancestry", "strata", "sex_strata",
+                  "beta_se", "or_ci", "write_p", "sample_size")))
+
+to_write <- to_write %>% 
+  pivot_wider(id_cols = c(SNP, ancestry, strata),
+              names_from = sex_strata,
+              values_from = c(beta_se, or_ci, write_p, sample_size))
+
+to_write <- to_write[, c("SNP", "ancestry", "strata", 
+                         "beta_se_sex_comb", "or_ci_sex_comb", "write_p_sex_comb", "sample_size_sex_comb",
+                         "beta_se_F", "or_ci_F", "write_p_F", "sample_size_F",
+                         "beta_se_M", "or_ci_M", "write_p_M", "sample_size_M")]
+
+write.table(to_write, "all_results_all_phenos_for_tables.txt",
+            sep = "\t", row.names = F, quote = F)

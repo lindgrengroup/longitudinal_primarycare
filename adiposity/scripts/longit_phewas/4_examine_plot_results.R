@@ -6,7 +6,7 @@ theme_set(theme_bw())
 
 # Read data ----
 
-res <- read.table("rs429358_all_results.txt", sep = "\t",
+res <- read.table("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/longit_phewas/rs429358_all_results.txt", sep = "\t",
                   header = T, stringsAsFactors = F)
 
 # colour palette: rose, teal, grey
@@ -25,17 +25,17 @@ PTHRESH <- 0.05/length(PHENO_LEVELS)
 plot_dat <- res %>% filter(discovery_ids_incl) %>%
   mutate(sex_strata = factor(sex_strata, levels = c("F", "M", "sex_comb")),
          phenotype = factor(phenotype, levels = PHENO_LEVELS),
-         strata = paste0(phenotype, "_", sex_strata, levels = STRATA_LEVELS),
+         strata = factor(paste0(phenotype, "_", sex_strata), 
+                         levels = STRATA_LEVELS),
          uci = beta + se,
          lci = beta - se,
          sig_lty = factor(ifelse(pvalue < PTHRESH, "yes", "no"),
                           levels = c("yes", "no")))
 
-MINPLOT <- min(plot_dat$lci)
-MAXPLOT <- max(plot_dat$uci)
-
 plotBetas <- function (dat) {
- 
+  minplot <- min(dat$lci)
+  maxplot <- max(dat$uci)
+  
   res_plot <- ggplot(dat, aes(x = beta, y = strata,
                                   group = phenotype)) +
     geom_pointrange(aes(xmin = lci, xmax = uci,
@@ -46,7 +46,7 @@ plotBetas <- function (dat) {
     geom_vline(xintercept = 0, linetype = 2) +
     scale_color_manual(values = custom_three_diverge, guide = "none") +
     scale_alpha_manual(values = c(no = 0.7, yes = 1)) +
-    scale_x_continuous(limits = c(MINPLOT, MAXPLOT),
+    scale_x_continuous(limits = c(minplot, maxplot),
                        guide = guide_axis(check.overlap = TRUE)) +
     theme(legend.position = "none",
           axis.title = element_blank(),
@@ -55,3 +55,23 @@ plotBetas <- function (dat) {
           axis.ticks.y = element_blank())
   return (res_plot) 
 }
+
+
+# Subset to phenotypes with at least one significant association
+SUB_PHENOS <- c("Cholesterol", "CRP", "Haemoglobinconc", "HDL",
+                "Lymphocytes", "Potassium", "Triglycerides")
+sub_dat <- plot_dat %>% filter(phenotype %in% SUB_PHENOS)
+
+# Order the plot by effect size
+SUB_STRATA_LEVELS <- paste0(rep(c("Triglycerides", "Potassium", "Lymphocytes",
+                                 "Haemoglobinconc", 
+                                 "HDL", "CRP", "Cholesterol"), each = 3), "_",
+                           rep(c("sex_comb", "M", "F"), times = length(SUB_PHENOS)))
+sub_dat <- sub_dat %>%
+  mutate(strata = factor(strata, levels = SUB_STRATA_LEVELS))
+
+tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/longit_phewas/subset_signif_results.tiff"),
+     height = 12, width = 8, units = "cm",
+     res = 300)
+plotBetas(sub_dat)
+dev.off()

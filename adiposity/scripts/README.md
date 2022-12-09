@@ -2,43 +2,6 @@ Scripts in this folder:
 
 ## MAIN ANALYSES
 
-### Cubic splines
-1. **1_apply_time_splines.R** - Build cubic spline mixed effects models for effect of time on trait, allowing for fixed and random intercepts and spline effects of time. Run through models with increasing number of knots in the fixed effects (3-10) and random effects (1 - # fixed effects) to choose model with lowest BIC. Adjust for covariates (baseline age, baseline age-squared, and sex). Both sex-specific and sex-combined analyses. Calculate best linear unbiased predictor (BLUP) for each term as the fixed + random effect for each individual. 
-2. **2_plot_cspline_predictions.R** - Plot model predictions for various subsets of individuals (random, high or low values of baseline trait, baseline age, covariates, etc.) 
-3. **3_cBLUP_PCA_heatmaps.R** - Calculate PCs based on BLUPs from cubic spline models and plot heatmaps of BLUPs as well as PCA scree plots to visualise dimensionality reduction captured by PCs.
-4. **4_*.R** - Try various clustering techniques: Gaussian mixture modelling, bootstrap number of clusters, and k-means clustering - all based on intercept and BLUPs from models.
-5. **5_plot_clustering_results...** - Once clusters have been determined, plot modelled trajectories, observed trajectories, and associations between clusters and various covariates.
-6. **6_remap_clusters.R** - If clusters have to be made to correspond across different strata.
-
-### Cross-sectional (baseline)
-1. **6_baseline_clusters.R** - Cluster the adjusted baseline trait value for each individual, stepping through 1:6 clusters allowing for varying shape, variance, etc. Assign individuals to clusters.
-
-
-## PLOTTING AND DESCRIPTIVE STATISTICS
-
-### Raw data - 
-1. **report_characteristics.R** - Generate tables and figures for various descriptive characteristics of raw data.
-2. **disease_associated_trajectories.R** - For a sample of diseases, plot raw data trajectories in individuals with and without disease.
-### Modelling results - 
-Change these scripts for each set of models, linear, cubic splines, etc.) - 
-1. **plot_BLUP_distributions.R** - Plot randomly selected subset of BLUPs from models to check distributions as well as relationships between BLUPs and model covariates.
-2. **plot_all_model_predictions.R** - Plot individual-level model predictions for randomly selected individuals, those with very few or many repeat measures, at the tails of model BLUPs, etc. for both linear and cubic spline models.
-3. **trajectories_by_covariates/** - Plot adiposity trajectories (modelled by cubic splines) in each group of a covariate (ex. birth cohort, sex, disease chapter, etc.)
-### Clustering results -  
-1. **plot_clustering_results.R** - Once individuals have been assigned to a group/cluster belonging, plot various trajectories, refit models within each cluster, etc. 
-2. **plot_cluster_disease_enrichment.R** - After testing for disease enrichment (see *../phenotype_enrichment/*), plot results in Miami-style plots.
-
-## GWAS
-
-Refer to README in */GWAS/*
-
-## TRAJGWAS
-Scripts to perform trajectory GWAS as outlined in https://github.com/OpenMendel/TrajGWAS.jl (Ko et al. 2022). Returns results for beta (mean), tau (variance), and joint effects of beta and tau for each SNP on trait. 
-1. **1_sample_qc.R** - Prepare data and covariates in long format for TrajGWAS.
-2. **2_fit_null_model.jl** - Use TrajGWAS Julia package to fit mixed model with fixed and random effects (including covariates and random intercept and random time-slope within each individual) but without any SNPs - null model. 
-3. **3_spatest.jl** - Perform GWAS on each chromosome with the saddle point approximation implemented in Julia TrajGWAS pacakge.
-4. **submit_4_plot_results.sh** and **4_plot_gwas_results.R** - Filter SNPs and plot QQ-plots and Manhattan plots.
-
 ## VARIANT SUBSET ASSOCIATIONS
 Scripts to perform genetic associations with only a subset of variants known to associate with a range of obesity-traits (BMI, weight, waist circumference, waist-hip ratio, etc.)
 1. **1_get_gwascat_obesity_associations.R** - Extract SNPs associated with obesity traits in GWAS catalog (downloaded 2021/11/02, build hg38). If missing chr and pos info, add this in. List of obesity traits defined in associated file **gwascat_obesity_traits.txt**. Write associations to bed file to lift over to hg19.

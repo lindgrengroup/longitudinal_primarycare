@@ -6,28 +6,24 @@
 
 submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/4_extract_dosages.sh"
 
-# PARAMETERS <- c("lmm_intercepts", "lmm_slopes_adj_baseline", "cspline_intercepts")
-PARAMETERS <- "Weight_sex_comb_clusters"
-lead_variants <- lapply(PARAMETERS, function (pr) {
-  df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/lead_snps/",
-                          pr, "_ALL_variants.txt"),
-                   sep = "\t", header = T, stringsAsFactors = F)
-  return (df)
-})
-names(lead_variants) <- PARAMETERS
+lead_variants <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/lead_snps_to_replicate.txt",
+                            sep = "\t", header = T, stringsAsFactors = F)
 
-for (pr in PARAMETERS) {
-  df <- lead_variants[[pr]]
-  for (vi in 1:nrow(df)) {
-    job_options <- paste(
-      "-v",
-      paste0(
-        "VARID=\"", df$rsid[vi], "\",",
-        "CHR=\"", df$chromosome[vi], "\""
-      )
-    )
-    job_submission <- paste("qsub", job_options, submission_script)
-    system(job_submission)
-    print(job_submission)
+for (vi in 1:nrow(lead_variants)) {
+  snp <- lead_variants$SNP[vi]
+  if (grepl("^chr", snp)) {
+    snp <- gsub("chr", "", snp)
+    snp <- paste0(snp, "_", lead_variants$Tested_Allele[vi], "_", lead_variants$Other_Allele[vi])
   }
+  
+  job_options <- paste(
+    "-v",
+    paste0(
+      "VARID=\"", snp, "\",",
+      "CHR=\"", lead_variants$CHR[vi], "\""
+    )
+  )
+  job_submission <- paste("qsub", job_options, submission_script)
+  system(job_submission)
+  print(job_submission)
 }

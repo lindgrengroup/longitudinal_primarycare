@@ -27,11 +27,11 @@ args <- parser$parse_args()
 PHENO <- args$pheno
 SEX_STRATA <- args$ss
 
-lmm_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/lmm_models/",
+lmm_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/",
                             PHENO, "_full_model.rds"))[[SEX_STRATA]]
 
 # High-dimensional spline modelling results
-hidim_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+hidim_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                               PHENO, "_", SEX_STRATA, ".rds"))
 B <- hidim_model$B
 spline_posteriors <- hidim_model$spline_posteriors
@@ -52,7 +52,7 @@ general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/ge
 # Define various sets of covariates
 TIME_VAR_COVARS <- c("data_provider")
 TIME_INVAR_COVARS <- c("baseline_age", "age_sq",
-                       "sex", "year_of_birth", "smoking_status")
+                       "sex", "year_of_birth")
 
 # Wrangle data ----
 
@@ -139,8 +139,8 @@ fitHiDimSpline <- function (id_list) {
   return (res_list)
 }
 
-# Convert high-dimensional spline residual back to original value by adding 
-# predicted
+# Convert high-dimensional spline residual back to original value by 
+# un-scaling and adding predicted
 
 residFitToRaw <- function (id_list) {
   # Create new data to predict from 
@@ -150,7 +150,7 @@ residFitToRaw <- function (id_list) {
     select(any_of(c("eid", TIME_VAR_COVARS, TIME_INVAR_COVARS))) %>% 
     distinct(across(all_of(c("eid", TIME_VAR_COVARS))), .keep_all = T) 
   # Get predicted value (to add back to fitted residual, averaging over time-varying covars)
-  new_data$add_back_val <- predict(resid_models$maxmod, 
+  new_data$add_back_val <- predict(resid_models$fullmod, 
                                    newdata = new_data)
   new_data <- new_data %>% 
     group_by(eid) %>%
@@ -158,10 +158,14 @@ residFitToRaw <- function (id_list) {
   
   # Predict new values
   pred_df <- fitHiDimSpline(id_list)
+  # Un-standardise fitted values
+  pred_df$unstd_fit_resid <- 
+    (pred_df$fit_resid * sqrt(resid_models$var_full)) + resid_models$mu_full
+  
   pred_df <- left_join(pred_df, new_data, by = "eid") %>%
     mutate(t_diff_yrs = (t_diff_days - 1) / 365,
-           fit = fit_resid + add_back_val,
-           fit_sd = fit_resid + add_back_val) %>%
+           fit = unstd_fit_resid + add_back_val,
+           fit_sd = unstd_fit_resid + add_back_val) %>%
     select(all_of(c("eid", "t_diff_yrs", "fit", "fit_sd")))
   
   return (pred_df)

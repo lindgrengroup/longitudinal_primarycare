@@ -29,21 +29,26 @@ args <- parser$parse_args()
 PHENO <- args$pheno
 SEX_STRATA <- args$ss
 
+# Define various sets of covariates
+TIME_VAR_COVARS <- c("data_provider")
+TIME_INVAR_COVARS <- c("baseline_age", "age_sq",
+                       "sex", "year_of_birth")
+
 # Centroids from chosen clustering method
-clust_centroids <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/",
+clust_centroids <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/",
                                   PHENO, "_", SEX_STRATA, 
                                   "/parameter_selection/K4_L2_M2.rds"))
 clust_centroids <- clust_centroids$cluster_centroids
 
 # Soft clustering probabilities
-clust_res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+clust_res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
                                       PHENO, "_", SEX_STRATA,
                                "/soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
                                ".txt"),
                         sep = "\t", header = T, stringsAsFactors = F)
 
 # High-dimensional spline modelling results
-hidim_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+hidim_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                               PHENO, "_", SEX_STRATA, ".rds"))
 B <- hidim_model$B
 spline_posteriors <- hidim_model$spline_posteriors
@@ -55,8 +60,32 @@ covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_
 general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
                              sep = "\t", header = T, stringsAsFactors = F)
 
-# Original data
-orig_popn_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")[[PHENO]][[SEX_STRATA]]
+# To recapture raw data from residuals 
+resid_models <- 
+  readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/models_for_refitting.rds")[[PHENO]][[SEX_STRATA]]
+
+raw_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[[PHENO]]
+
+# Wrangle data -----
+
+covars$eid <- as.character(covars$eid)
+general_covars$eid <- as.character(general_covars$eid)
+
+covars <- merge(covars, general_covars, by = "eid")
+
+# Add in covariates to raw GP data
+raw_dat$eid <- as.character(raw_dat$eid)
+add_covs <- covars %>% 
+  select(any_of(c("eid", TIME_VAR_COVARS, TIME_INVAR_COVARS)))
+raw_dat <- merge(raw_dat, add_covs, by = "eid")
+
+# Calculate "t" in years
+raw_dat <- raw_dat %>% group_by(eid) %>%
+  arrange(age_event, .by_group = T) %>%
+  mutate(t_diff_yrs = age_event - baseline_age)
+
+MAX_T_DAYS <- 7500
+raw_dat <- raw_dat %>% filter(t_diff_yrs <= MAX_T_DAYS/365)
 
 # Plot cluster centroids ----
 
@@ -101,141 +130,86 @@ tiff(filename = paste0(plots_dir,
 print(clust_centres_plot)
 dev.off()
 
-# Plot population data for individuals w >75% certainty of cluster ----
-
-getSummDat <- function (cluster = "k1", prob_assign = 0.75,
-                        valtype = "value", timetype = "age_t1") {
-  keep_ids <- as.character(clust_res$eid[which(clust_res[, cluster] >= prob_assign)])
-  
-  if (timetype == "age_t1") {
-    round_yrs = 0.25
-    roll_yrs = 2
-  } else if (timetype == "t_diff") {
-    round_yrs = 100
-    roll_yrs = 1000
-  }
-  
-  dat_summ <- orig_popn_dat %>%
-    filter(eid %in% keep_ids) %>%
-    mutate(time_bin = plyr::round_any(!!as.symbol(timetype), round_yrs, f = round)) %>%
-    group_by(time_bin) %>%
-    summarise(plot_value = mean_se(!!as.symbol(valtype), 1.96)) %>%
-    unnest(plot_value) 
-  
-  # Get rolling average across 10 years
-  dat_summ <- dat_summ %>% 
-    mutate(interval_width = seq_along(time_bin) - 
-             findInterval(time_bin - roll_yrs, time_bin),
-           mean_value_rolled = rollapply(y, interval_width, mean, 
-                                         fill = NA),
-           lci_value_rolled = rollapply(ymin, interval_width, mean, 
-                                        fill = NA),
-           uci_value_rolled = rollapply(ymax, interval_width, mean, 
-                                        fill = NA))
-  to_return <- dat_summ %>%
-    select(all_of(c("time_bin", "mean_value_rolled", 
-                    "lci_value_rolled", "uci_value_rolled")))
-  return (to_return)
-}
-
-plotTrajectories <- function (plot_dat) {
-  popn_traj_plot <- ggplot(plot_dat,
-                           aes(x = time_bin, y = mean_value_rolled, 
-                               color = clust, fill = clust)) +
-    geom_line() +
-    geom_ribbon(aes(ymin = lci_value_rolled, 
-                    ymax = uci_value_rolled), linetype = 0,
-                alpha = 0.2) +
-    scale_color_manual(values = custom_four_diverge, guide = "none") +
-    scale_fill_manual(values = custom_four_diverge, guide = "none") +
-    scale_x_continuous(guide = guide_axis(check.overlap = TRUE),
-                       breaks = scales::pretty_breaks(n = 5)) +
-    scale_y_continuous(guide = guide_axis(check.overlap = TRUE),
-                       breaks = scales::pretty_breaks(n = 5)) +
-    theme(legend.position = "none",
-          axis.title = element_blank(),
-          axis.text = element_text(size = 6))
-  return (popn_traj_plot)
-}
-
-# Apply to adj- and baselined- data
-
-to_plot_adj_baselined <- lapply(CLUSTS, function (clustk) {
-  summ_clust <- getSummDat(cluster = clustk, 
-                           prob_assign = 0.75,
-                           valtype = "value_fulladj", 
-                           timetype = "t_diff") %>%
-    mutate(clust = clustk)
-  
-  return (summ_clust)
-})
-to_plot_adj_baselined <- bind_rows(to_plot_adj_baselined) %>%
-  mutate(clust = factor(clust, 
-                        levels = CLUSTS))
-
-# To convert t_diff to yrs
-to_plot_adj_baselined <- to_plot_adj_baselined %>%
-  mutate(time_bin = as.numeric(time_bin) / 365)
-
-tiff(filename = paste0(plots_dir, 
-                       PHENO, "_", SEX_STRATA, "_popn_clusters.tiff"),
-     height = 3.75, width = 3.75, units = "cm",
-     res = 300)
-print(plotTrajectories(to_plot_adj_baselined))
-dev.off()
-
 # Plot sample trajectories ----
 
-# Assign individuals to a single cluster 
-conf_clusts <- clust_res %>%
-  filter(if_any(starts_with("k"), any_vars(. >= 0.75)))
-
-clust_assts <- conf_clusts %>%
-  select(-eid) %>%
-  mutate(clust = names(.)[max.col(.)]) 
-clust_assts$eid <- conf_clusts$eid
-
-# Count number of individuals in each cluster to make sampling quicker later
-clust_assts <- clust_assts %>% 
-  group_by(clust) %>% 
-  mutate(n_cluster = n())
+ids_per_clust <- lapply(CLUSTS, function (k) {
+  thresh_p <- quantile(clust_res[, k], 0.99)
+  ids_keep <- clust_res %>% 
+    filter(!!as.symbol(k) > thresh_p)
+  return (ids_keep$eid)
+})
+names(ids_per_clust) <- CLUSTS
 
 ## Get random IDs within each cluster
 getRandIDs <- function (n_each = 5) {
   # Return df of id and cluster number
-  sampled_ids <- clust_assts %>% 
-    group_by(clust) %>%
-    sample_n(ifelse(n_cluster < n_each, n_cluster, n_each)) %>%
-    mutate(eid = as.character(eid)) %>%
-    select(eid, clust)
+  sampled_ids <- lapply(CLUSTS, function (k) {
+    ret_ids <- sample(ids_per_clust[[k]], n_each, replace = F)
+    ret_df <- data.frame(eid = ret_ids,
+                         clust = k)
+    return (ret_df)
+  })
+  sampled_ids <- bind_rows(sampled_ids)
   return (sampled_ids)
 }
 
-## Create predicted data for set of ids
-createPredDat <- function (id_list) {
+fitHiDimSpline <- function (id_list) {
   res_list <- lapply(id_list, function (id) {
     pred_value <- B %*% spline_posteriors[[id]]$mu
     sd_pred <- sqrt(diag(B %*% spline_posteriors[[id]]$Sig %*% t(B)) * model_resid_var)
     
     res <- data.frame(eid = id,
-                      t_diff = 1:length(pred_value),
-                      fit_mean = pred_value,
-                      fit_sd = sd_pred)
+                      t_diff_days = 1:length(pred_value),
+                      fit_resid = pred_value,
+                      fit_sd_resid = sd_pred)
+    res <- res %>% filter(t_diff_days <= MAX_T_DAYS)
+    return (res)
   })
   res_list <- bind_rows(res_list)
   return (res_list)
 }
 
+## Create predicted data for set of ids
+residFitToRaw <- function (id_list) {
+  # Create new data to predict from 
+  new_data <- raw_dat %>%
+    filter(eid %in% id_list) %>%
+    # Get covariates 
+    select(any_of(c("eid", TIME_VAR_COVARS, TIME_INVAR_COVARS))) %>% 
+    distinct(across(all_of(c("eid", TIME_VAR_COVARS))), .keep_all = T) 
+  # Get predicted value (to add back to fitted residual, averaging over time-varying covars)
+  new_data$add_back_val <- predict(resid_models$fullmod, 
+                                   newdata = new_data)
+  new_data <- new_data %>% 
+    group_by(eid) %>%
+    summarise(add_back_val = mean(add_back_val, na.rm = T))
+  
+  # Predict new values
+  pred_df <- fitHiDimSpline(id_list)
+  # Un-standardise fitted values
+  pred_df$unstd_fit_resid <- 
+    (pred_df$fit_resid * sqrt(resid_models$var_full)) + resid_models$mu_full
+  pred_df$unstd_loci_resid <- 
+    ((pred_df$fit_resid - 1.96*pred_df$fit_sd_resid) * sqrt(resid_models$var_full)) + resid_models$mu_full
+  pred_df$unstd_upci_resid <- 
+    ((pred_df$fit_resid + 1.96*pred_df$fit_sd_resid) * sqrt(resid_models$var_full)) + resid_models$mu_full
+  
+  
+  pred_df <- left_join(pred_df, new_data, by = "eid") %>%
+    mutate(t_diff_yrs = (t_diff_days - 1) / 365,
+           fit = unstd_fit_resid + add_back_val,
+           fit_loci = unstd_loci_resid + add_back_val,
+           fit_upci = unstd_upci_resid + add_back_val) %>%
+    select(all_of(c("eid", "t_diff_yrs", "fit", "fit_loci", "fit_upci")))
+  
+  return (pred_df)
+}
+
+
 ## Create plots
 plotPreds <- function (id_df) {
-  sample_raw <- orig_popn_dat %>% filter(eid %in% id_df$eid)
-  sample_pred <- createPredDat(id_df$eid)
-  
-  # Make t_diff into yrs
-  sample_raw <- sample_raw %>%
-    mutate(t_diff_yrs = (t_diff - 1)/365)
-  sample_pred <- sample_pred %>%
-    mutate(t_diff_yrs = (t_diff - 1)/365) 
+  sample_raw <- raw_dat %>% filter(eid %in% as.character(id_df$eid))
+  sample_pred <- residFitToRaw(as.character(id_df$eid))
   
   sample_pred$clust <- id_df$clust[match(sample_pred$eid,
                                          id_df$eid)]
@@ -249,13 +223,13 @@ plotPreds <- function (id_df) {
                              levels = id_levels)
   
   res <- ggplot(sample_pred, aes(x = t_diff_yrs)) +
-    facet_wrap(~eid_f, ncol = 4, scales = "free_y") +
+    facet_wrap(~eid_f, ncol = 4, scales = "free") +
     geom_point(data = sample_raw,
-               aes(x = t_diff_yrs, y = value_fulladj), size = 0.5) +
-    geom_line(aes(y = fit_mean,
+               aes(x = t_diff_yrs, y = value), size = 0.5) +
+    geom_line(aes(y = fit,
                   colour = clust)) +
-    geom_ribbon(aes(ymin = fit_mean - 1.96*fit_sd,
-                    ymax = fit_mean + 1.96*fit_sd,
+    geom_ribbon(aes(ymin = fit_loci,
+                    ymax = fit_upci,
                     fill = clust, colour = clust), alpha = 0.1) +
     scale_color_manual(values = custom_four_diverge, guide = "none") +
     scale_fill_manual(values = custom_four_diverge, guide = "none") +

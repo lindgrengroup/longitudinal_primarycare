@@ -7,8 +7,7 @@ library(tidyverse)
 
 PHENOTYPES <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/code_lists/qcd_traits_available.txt",
                          sep = "\t", header = F, stringsAsFactors = F)$V1
-REMOVE_PHENOS <- c("BMI", "WC", "Weight", "WHR", 
-                   "FAI", "Progesterone", "Prolactin")
+REMOVE_PHENOS <- c("BMI", "Weight", "WC", "WHR", "FAI", "Progesterone", "Prolactin")
 PHENOTYPES <- PHENOTYPES[!PHENOTYPES %in% REMOVE_PHENOS]
 SEX_STRATA <- c("F", "M", "sex_comb")
 

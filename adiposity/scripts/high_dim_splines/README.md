@@ -10,7 +10,7 @@ Scripts in this folder:
 
 1. **supp_choose_AR1_parameters.R** - Test various combinations of AR1 hyperparameters, i.e. AR1_RHO, AR1_NOISE_SD, and AR1_INTERCEPT_SD to choose values for (1) above. Plot model fits to observed data for a random sample to check smoothness and regression to mean.
 2. **supp_plot_model_fits.R** - Plot model fits to observed data.
-
+3. **supp_table_training_vs_validation.R** - Generate descriptive characteristics (summary statistics of number of follow-up measures, length of follow-up, sex stratification, etc.) within each cluster in training and validation sets.
 
 ## SUPPLEMENTARY (not in manuscript)
 

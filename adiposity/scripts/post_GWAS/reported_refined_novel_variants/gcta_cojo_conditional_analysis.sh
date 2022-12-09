@@ -17,7 +17,7 @@ echo "passing covariates..."
 covars=${covars//|/,}
 echo ${covars}
 
-cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/${STRATA}/classify_lmm_intercept_variants
+cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/${STRATA}/classify_b0_variants
 
 # Load PLINK module
 module load PLINK/2.00a2.3_x86_64

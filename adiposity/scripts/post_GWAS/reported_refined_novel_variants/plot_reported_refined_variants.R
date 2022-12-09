@@ -19,8 +19,8 @@ known_gwascat_snps <- known_gwascat_snps %>%
 
 # Classification of SNPs as novel or refined
 novel_refined_snps <- lapply(STRATA, function (s) {
-  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/", 
-                           s, "/classify_lmm_intercept_variants/annotated_results_refined_novel_snps.txt"),
+  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                           s, "/classify_b0_variants/annotated_results_refined_novel_snps.txt"),
                     sep = "\t", header = T, stringsAsFactors = F)
   res <- res %>% 
     mutate(strata = s) %>%
@@ -34,19 +34,14 @@ names(novel_refined_snps) <- STRATA
 # For the rest, we can read in just the lead SNP results as these are the ones
 # that we will be classifying as reported/refined/novel
 
-bmi_file <- gzfile("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/BOLT_results/BMI_sex_comb_lmm_intercepts_final.txt.gz",
-                   "rt")
-weight_file <- gzfile("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/BOLT_results/Weight_sex_comb_lmm_intercepts_final.txt.gz",
-                      "rt")
-
-background_gwas_bmi <- read.table(bmi_file,
+background_gwas_bmi <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/BOLT_results/BMI_sex_comb_b0_final.txt",
                                   sep = "\t", header = T, stringsAsFactors = F, 
                                   comment.char = "@")
 background_gwas_bmi <- background_gwas_bmi %>%
   mutate(strata = "BMI_sex_comb") %>%
   select(all_of(c("SNP", "CHR", "POS", "PVALUE", "strata")))
 
-background_gwas_weight <- read.table(weight_file,
+background_gwas_weight <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/BOLT_results/Weight_sex_comb_b0_final.txt",
                                      sep = "\t", header = T, stringsAsFactors = F, 
                                      comment.char = "@")
 background_gwas_weight <- background_gwas_weight %>%
@@ -58,7 +53,7 @@ background_gwas <- bind_rows(background_gwas_bmi,
 
 # Read in lead SNP results for all GWAS and classify as reported, novel, refined
 all_lead_snps <- lapply(STRATA, function (s) {
-  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/lead_snps/", s, "_lmm_intercepts_final.lead_snps.txt"),
+  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/lead_snps/", s, "_b0_final.lead_snps.txt"),
                     sep = "\t", header = T, stringsAsFactors = F)
   res <- res %>% 
     mutate(strata = s) %>%
@@ -133,7 +128,7 @@ manhattan_plot <- ggplot(for_plot,
         panel.grid.major.x = element_blank(), 
         panel.grid.minor.x = element_blank())
 
-ggsave(filename = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/manhattan_novel_refined_reported_intercept_variants.png",
+ggsave(filename = "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/manhattan_novel_refined_reported_intercept_variants.png",
        plot = manhattan_plot,
        device = "png", width = 10, height = 5, units = "in")
 
