@@ -3,20 +3,23 @@
 
 library(tidyverse)
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+
 # Read and subset required data ----
 
 # All quantitative traits
-dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data_passed_primary_care_n_qc.rds")
+dat <- readRDS(paste0(mainpath, "/data_passed_primary_care_n_qc.rds"))
 PHENOTYPES <- names(dat)
 
 # Bariatric surgery codes
-bariatric_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/bariatric_surgery_records.txt",
+bariatric_codes <- read.table(paste0(gen_resources_path, "/bariatric_surgery_records.txt"),
                               sep = "\t", header = T, comment.char = "$",
                               stringsAsFactors = F)
 bariatric_codes$event_dt <- as.Date(bariatric_codes$event_dt, "%Y-%m-%d")
 
 # Implausible values from UKB min/max
-ukb_ranges <- read.table("/well/lindgren/UKBIOBANK/samvida/full_primary_care/qc/ukb_min_max.txt",
+ukb_ranges <- read.table(paste0(mainpath, "/qc/ukb_min_max.txt"),
                          sep = "\t", header = T, 
                          stringsAsFactors = F)
 
@@ -140,7 +143,7 @@ extremeFilter <- function (df, qc_log_file) {
 
 cleaned_dat <- lapply(PHENOTYPES, function (p) {
   
-  log_file_p <- paste0("/well/lindgren/UKBIOBANK/samvida/full_primary_care/qc/popn_qc/log_file_",
+  log_file_p <- paste0(mainpath, "/qc/popn_qc/log_file_",
                        p, ".txt")
   cleaned <- ageFilter(dat[[p]], log_file_p)
   if (p %in% c("BMI", "Weight", "WC", "WHR")) {
@@ -154,4 +157,4 @@ cleaned_dat <- lapply(PHENOTYPES, function (p) {
 })
 names(cleaned_dat) <- PHENOTYPES
 
-saveRDS(cleaned_dat, "/well/lindgren/UKBIOBANK/samvida/full_primary_care/data_passed_popn_QC.rds")
+saveRDS(cleaned_dat, paste0(mainpath, "/data_passed_popn_QC.rds"))

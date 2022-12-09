@@ -1,0 +1,5 @@
+biomarker,terminology,readcode,readterm
+WBC,read2,42H..,Total white cell count
+WBC,read2,42H7.,Total white blood count
+WBC,ctv3,XaIdY,Total white blood count
+WBC,ctv3,42H..,White blood cell count
