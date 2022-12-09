@@ -2,7 +2,7 @@
 
 Code for analyses in article here - 
 
-### Cite as: 
+Cite as: 
 
 ## Structure
 Scripts are organised by directories corresponding to sections in the manuscript.
