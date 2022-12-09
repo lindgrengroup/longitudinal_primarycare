@@ -7,4 +7,4 @@ Scripts in this folder:
 	- implausible values defined as outside +/-10% of the UKBB assessment centre minimum and maximum values
 	- extreme values defined as > 5 SD away from population mean
 
-Code-lists for biomarkers are in the folder *code_lists/*, including a list of biomarkers in **qcd_traits_available.txt**, and their corresponding primary-care read codes (adapted from [Denaxas et al.][https://github.com/spiros/ukb-biomarker-phenotypes]) and UKBB assessment centre codes
+Code-lists for biomarkers are in the folder *code_lists/*, including a list of biomarkers in **qcd_traits_available.txt**, and their corresponding primary-care read codes (adapted from [Denaxas et al.](https://github.com/spiros/ukb-biomarker-phenotypes)) and UKBB assessment centre codes
