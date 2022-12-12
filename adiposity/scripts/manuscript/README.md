@@ -16,4 +16,4 @@ Scripts are organised by directories corresponding to sections in the manuscript
 - *longit_phewas/* - Longitudinal phenome-wide association studies for rs429358
 - *non_wb_ancestry/* - Identification and quality control of longitudinal records from individuals not of white British ancestry, replication of models and genome-wide significant associations in this subset
 - *manuscript_figures/* - Scripts to generate figures and supplementary figures in manuscript
-- *manuscript_tables/* - Scripts to generate tables in manuscript, if not already in other directories
+- *manuscript_tables/* - Scripts to generate tables and supplementary tables in manuscript, if not already in other directories
