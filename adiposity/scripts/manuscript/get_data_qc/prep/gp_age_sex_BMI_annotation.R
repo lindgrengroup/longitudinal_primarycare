@@ -13,20 +13,23 @@ library(foreach)
 library(doParallel) 
 library(dplyr)
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+
 # Read data ----
 
 # Read gp_clinical file
-gp_clinical <- read.table("/well/lindgren/UKBIOBANK/DATA/PHENOTYPE/PRIMARY_CARE/gp_clinical.txt",
+gp_clinical <- read.table(paste0(mainpath, "/PHENOTYPE/PRIMARY_CARE/gp_clinical.txt"),
                           sep = "\t", header = T, comment.char = "$",
                           stringsAsFactors = F)
 
 # Remove individuals who have withdrawn consent
-withdrawn <- read.table("/well/lindgren/UKBIOBANK/DATA/QC/w11867_20200820.csv", 
+withdrawn <- read.table(paste0(mainpath, "/QC/w11867_20200820.csv"), 
                         header = F)
 gp_clinical <- subset(gp_clinical, !gp_clinical$eid %in% withdrawn$V1)
 
 # Main UKBB phenotypes file
-pheno <- read.table("/well/lindgren/UKBIOBANK/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv",
+pheno <- read.table(paste0(mainpath, "/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv"),
                     header = T, sep = ",", na.string = c("NA", "", "."), 
                     stringsAsFactors = F)
 colnames(pheno) <- gsub("X", "f.", colnames(pheno))
@@ -92,8 +95,8 @@ foreach(i = 1:length(d), .packages = c("eeptools")) %dopar% {
   iter <- paste("agecalc_p", i, sep = "")         
   
   # Save (temporary)
-  saveRDS(p, paste("/well/lindgren/UKBIOBANK/samvida/temp_files/", 
-                   iter, ".rds", sep = ""))
+  saveRDS(p, paste0(gen_resources_path, "/temp_files/", 
+                   iter, ".rds"))
   
   # Forget whatever was in memory since we've saved the RDS
   return(1) 
@@ -103,14 +106,14 @@ stopCluster(cl)
 
 # Rebuild full GP clinical file
 
-iterations <- list.files("/well/lindgren/UKBIOBANK/samvida/temp_files")
+iterations <- list.files(paste0(gen_resources_path, "/temp_files"))
 
 pdata <- lapply(iterations, function(i) {
-  readRDS(paste("/well/lindgren/UKBIOBANK/samvida/temp_files/", i, sep = ""))
+  readRDS(paste0(gen_resources_path, "/temp_files/", i))
 })
 
 pdata <- bind_rows(pdata)
 
-write.table(pdata, "/well/lindgren/UKBIOBANK/samvida/GP_clinical_age_annotated.txt",
+write.table(pdata, paste0(gen_resources_path, "/gp_clinical_annotated.txt"),
             sep = "\t", quote = F, row.names = F)
 

@@ -4,14 +4,16 @@
 library(tidyverse)
 library(lubridate)
 
+mainpath <- "" # REDACTED
+
 # Read full primary care data
-gp_clinical <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/gp_clinical_annotated.txt",
+gp_clinical <- read.table(paste0(mainpath, "/gp_clinical_annotated.txt"),
                           sep = "\t", header = T, comment.char = "$")
 gp_clinical$event_dt <- as.Date(gp_clinical$event_dt, "%Y-%m-%d")
 gp_clinical$dob <- as.Date(gp_clinical$dob, "%Y-%m-%d")
 
 # Read bariatric surgery codes
-bariatric_codes <- read.table("/well/lindgren/UKBIOBANK/samvida/general_resources/bariatric_surgery_codes.txt",
+bariatric_codes <- read.table(paste0(mainpath, "/bariatric_surgery_codes.txt"),
                               sep = "\t", header = T, comment.char = "$")
 
 BARCURRENT_CODES <- bariatric_codes$read_code[grepl("^Bariatric", 
@@ -42,5 +44,6 @@ bar_EIDDATES <- bind_rows(bar_current_EIDDATES,
                                   data.frame(eid = bar_hist_EIDS, 
                                              event_dt = NA))
 
-write.table(bar_EIDDATES, "/well/lindgren/UKBIOBANK/samvida/general_resources/bariatric_surgery_records.txt",
+write.table(bar_EIDDATES, 
+            paste0(mainpath, "/bariatric_surgery_records.txt"),
             sep = "\t", row.names = F, quote = F)
