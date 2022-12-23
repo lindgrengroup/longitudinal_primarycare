@@ -9,17 +9,17 @@ set.seed(071222)
 
 # Read data ----
 
+lmm_mods_path <- "" # REDACTED
+
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 df_list <- lapply(SEX_STRATA, function (sx) {
-  bmi_blups <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/BMI_", 
-                                 sx, "_blups_full_model.txt"),
+  bmi_blups <- read.table(paste0(lmm_mods_path, "/BMI_", sx, "_blups_full_model.txt"),
                           sep = "\t", header = T, stringsAsFactors = F)
   bmi_blups$eid <- as.character(bmi_blups$eid)
   colnames(bmi_blups) <- c("eid", "BMI_b0", "BMI_b1")
   
-  weight_blups <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/Weight_", 
-                                    sx, "_blups_full_model.txt"),
+  weight_blups <- read.table(paste0(lmm_mods_path, "/Weight_", sx, "_blups_full_model.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
   weight_blups$eid <- as.character(weight_blups$eid)
   colnames(weight_blups) <- c("eid", "Weight_b0", "Weight_b1")

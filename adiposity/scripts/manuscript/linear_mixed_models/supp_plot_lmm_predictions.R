@@ -9,23 +9,26 @@ set.seed(011121)
 
 # Read files ----
 
-PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt")$V1
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+lmm_mods_path <- "" # REDACTED
+
+PHENOTYPES <- c("BMI", "Weight")
+
 slope_models <- lapply(PHENOTYPES, function (p) {
-  readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_",
-                 p, ".rds"))
+  readRDS(paste0(lmm_mods_path, "/lmm_", p, ".rds"))
 })
 names(slope_models) <- PHENOTYPES
 
 blups <- lapply(PHENOTYPES, function (p) {
-  readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_blups_",
-                 p, ".rds"))
+  readRDS(paste0(lmm_mods_path, "/lmm_blups_", p, ".rds"))
 })
 names(blups) <- PHENOTYPES
 
 SEX_STRATA <- c("F", "M")
 
-dat <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/indiv_qcd_data.rds")[PHENOTYPES]
-covars <- readRDS("/well/lindgren/UKBIOBANK/samvida/full_primary_care/data/covariates.rds")[PHENOTYPES]
+dat <- readRDS(paste0(mainpath, "/indiv_qcd_data.rds"))[PHENOTYPES]
+covars <- readRDS(paste0(mainpath, "/covariates.rds"))[PHENOTYPES]
 
 PCs <- paste0("PC", 1:21)
 COVARS <- c("baseline_age", "age_sq", "data_provider")
@@ -255,7 +258,7 @@ plot_list <- lapply(PHENOTYPES, function (p) {
       return (res_plot)
     })
     
-    pdf(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/plots/lmm_predictions_",
+    pdf(paste0(lmm_mods_path, "/plots/lmm_predictions_",
                p, "_", sx, ".pdf"))
     print(rand_plots)
     print(fu2_plots)

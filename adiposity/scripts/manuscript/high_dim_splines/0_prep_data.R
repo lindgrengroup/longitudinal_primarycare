@@ -5,13 +5,17 @@ library(tidyverse)
 
 # Load data ----
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[PHENOTYPES]
-covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[PHENOTYPES]
+dat <- readRDS(paste0(mainpath, "/indiv_qcd_data.rds"))[PHENOTYPES]
+covars <- readRDS(paste0(mainpath, "/covariates.rds"))[PHENOTYPES]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 

@@ -116,9 +116,9 @@ manhattan_plot <- ggplot(for_plot,
   geom_point(data = for_plot %>% filter(status == "reported"), 
              aes(fill = status, colour = status), shape = 19, size = 1) +
   geom_point(data = for_plot %>% filter(status == "refined"), 
-             aes(fill = status, colour = status), shape = 19, size = 1.5) +
+             aes(fill = status, colour = status), shape = 17, size = 1.5) +
   geom_point(data = for_plot %>% filter(status == "novel"), 
-             aes(fill = status, colour = status), shape = 19, size = 1.5) +
+             aes(fill = status, colour = status), shape = 17, size = 1.5) +
   geom_hline(yintercept = -log10(5e-8), linetype = "dashed") +
   scale_colour_manual(values = col_palette, guide = "none") +
   scale_fill_manual(values = col_palette, guide = "none") +
