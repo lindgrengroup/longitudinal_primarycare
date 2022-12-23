@@ -11,35 +11,32 @@ theme_set(theme_bw())
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
 parser$add_argument("--sex_strata", required = TRUE,
                     help = "Sex strata")
-parser$add_argument("--resid_var", required = TRUE,
-                    help = "Residual variance from modelling")
 args <- parser$parse_args()
 
 PHENO <- args$phenotype
 SEX_STRATA <- args$sex_strata
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/"
+plotdir <- paste0(hidim_mods_path, "/plots/")
+resdir <- paste0(hidim_mods_path, "/results/")
 
 # Load data ----
 
-raw_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")[[PHENO]][[SEX_STRATA]]
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
+raw_dat <- readRDS(paste0(hidim_mods_path, "/data/dat_to_model.rds"))[[PHENO]][[SEX_STRATA]]
+model_dat <- readRDS(paste0(hidim_mods_path, "/results/fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
 B <- model_dat$B
 spline_posteriors <- model_dat$spline_posteriors
-model_resid_var <- as.numeric(args$resid_var)
-
-model_dat$resid_var <- model_resid_var
-saveRDS(model_dat, 
-        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/fit_objects_", 
-               PHENO, "_", SEX_STRATA, ".rds"))
+model_resid_var <- model_dat$resid_var
 
 # Plot fitted values for sample data ----
 

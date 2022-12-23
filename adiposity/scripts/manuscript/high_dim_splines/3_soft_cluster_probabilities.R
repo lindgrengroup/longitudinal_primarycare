@@ -19,6 +19,10 @@ set.seed(RANDOM_SEED)
 
 # Get arguments ----
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
@@ -34,15 +38,14 @@ PHENO <- args$phenotype
 SEX_STRATA <- args$ss
 NBOOTS <- as.numeric(args$nboots)
 
-resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
-                 PHENO, "_", SEX_STRATA)
+resdir <- paste0(hidim_mods_path, "/clustering/", PHENO, "_", SEX_STRATA)
 
 # Load data ----
 
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
+model_dat <- readRDS( paste0(hidim_mods_path, "/results/with_rvar_fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
-clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
+clust_centres <- readRDS(paste0(hidim_mods_path, "/clustering/", 
                                 PHENO, "_", SEX_STRATA, "/parameter_selection/K",
                                 K_chosen, "_L", L_chosen, "_M", M_chosen, ".rds"))
 CLUST_NAMES <- paste0("k", 1:K_chosen)

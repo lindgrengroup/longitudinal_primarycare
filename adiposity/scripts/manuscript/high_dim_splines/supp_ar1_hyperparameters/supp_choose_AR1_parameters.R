@@ -8,17 +8,21 @@ library(tidyverse)
 library(RColorBrewer)
 theme_set(theme_bw())
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/ar1_parameter_selection/"
+plotdir <- paste0(hidim_mods_path, "/ar1_parameter_selection/")
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")
-covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")
+dat <- readRDS(paste0(hidim_mods_path, "/data/dat_to_model_standardised.rds"))
+covars <- readRDS(paste0(mainpath, "/covariates.rds"))
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)

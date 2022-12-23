@@ -12,6 +12,10 @@ library(ggpubr)
 library(RColorBrewer)
 theme_set(theme_bw())
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
@@ -34,9 +38,7 @@ cat(paste0("number clusters: ", K, "\n"))
 cat(paste0("minimum # measurements: ", L, "\n"))
 cat(paste0("K-tile difference at M yrs post-baseline: ", M, "\n"))
 
-main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/ar1_parameter_selection/"
-
-resdir <- paste0(main_filepath, "clustering/")
+resdir <- paste0(hidim_mods_path, "/ar1_parameter_selection/clustering/")
 dir.create(resdir)
 
 custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
@@ -46,10 +48,10 @@ names(usecolpal) <- paste0("k", 1:K)
 # Load data ----
 
 model_dat <- lapply(c(1:3), function (set_i) {
-  res <- readRDS(paste0(main_filepath, "/fit_objects_", PHENO, "_", SEX_STRATA, 
+  res <- readRDS(paste0(hidim_mods_path, "/ar1_parameter_selection/fit_objects_", PHENO, "_", SEX_STRATA, 
                  "_parameter_set_", set_i, ".rds"))
   res$spline_posteriors <- res$spline_posteriors[[set_i]]
-  saveRDS(res, paste0(main_filepath, "/fit_objects_", PHENO, "_", SEX_STRATA, 
+  saveRDS(res, paste0(hidim_mods_path, "/ar1_parameter_selection/fit_objects_", PHENO, "_", SEX_STRATA, 
                       "_parameter_set_", set_i, ".rds"))
   return (res)
 })

@@ -9,10 +9,14 @@ set.seed(071222)
 
 # Read data ----
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 df_list <- lapply(SEX_STRATA, function (sx) {
-  bmi_probs <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/BMI_", 
+  bmi_probs <- read.table(paste0(hidim_mods_path, "/clustering/BMI_", 
                                  sx, "/soft_clustering_probs_BMI_", sx, ".txt"),
                           sep = "\t", header = T, stringsAsFactors = F)
   bmi_probs <- bmi_probs %>%
@@ -22,7 +26,7 @@ df_list <- lapply(SEX_STRATA, function (sx) {
     select(all_of(c("eid", "k1", "k1_k2", "k1_k2_k3")))
   colnames(bmi_probs) <- c("eid", "BMI_k1", "BMI_k1_k2", "BMI_k1_k2_k3")
   
-  weight_probs <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/Weight_", 
+  weight_probs <- read.table(paste0(hidim_mods_path, "/clustering/Weight_", 
                                  sx, "/soft_clustering_probs_Weight_", sx, ".txt"),
                           sep = "\t", header = T, stringsAsFactors = F)
   weight_probs <- weight_probs %>%

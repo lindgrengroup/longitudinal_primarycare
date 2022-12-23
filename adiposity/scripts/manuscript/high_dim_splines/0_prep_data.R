@@ -100,7 +100,7 @@ model_dat <- lapply(PHENOTYPES, function (p) {
 names(model_dat) <- PHENOTYPES
 
 saveRDS(model_dat, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/models_for_refitting.rds")
+        paste0(hidim_mods_path, "/data/models_for_refitting.rds"))
 
 to_write <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
@@ -125,4 +125,4 @@ to_write <- lapply(PHENOTYPES, function (p) {
 names(to_write) <- PHENOTYPES
 
 saveRDS(to_write, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")
+        paste0(hidim_mods_path, "/data/dat_to_model_standardised.rds"))

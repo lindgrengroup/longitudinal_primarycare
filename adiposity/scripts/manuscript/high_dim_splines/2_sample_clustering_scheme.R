@@ -14,8 +14,8 @@
 # PHENOTYPES <- c("BMI", "Weight")
 # SEX_STRATA <- c("F", "M", "sex_comb")
 # 
-# main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/"
-# raw_dat <- readRDS(paste0(main_filepath, "data/dat_to_model.rds"))
+# hidim_mods_path <- "" # REDACTED
+# raw_dat <- readRDS(paste0(main_filepath, "/data/dat_to_model.rds"))
 # 
 # lapply(PHENOTYPES, function (p) {
 #   lapply(SEX_STRATA, function (sx) {
@@ -28,12 +28,12 @@
 #     validation_ids <- ids_to_split[!ids_to_split %in% training_ids]
 #     
 #     write.table(training_ids, 
-#                 paste0(main_filepath, "clustering/",
+#                 paste0(hidim_mods_path, "/clustering/",
 #                        p, "_", sx, "/ids_training.txt"),
 #                 sep = "\t", row.names = F, quote = F, col.names = F)
 #     
 #     write.table(validation_ids, 
-#                 paste0(main_filepath, "clustering/",
+#                 paste0(hidim_mods_path, "/clustering/",
 #                        p, "_", sx, "/ids_validation.txt"),
 #                 sep = "\t", row.names = F, quote = F, col.names = F)
 #   })
@@ -75,7 +75,9 @@ cat(paste0("SEX_STRATA: ", SEX_STRATA, "\n"))
 K <- as.numeric(args$K)
 cat(paste0("number clusters: ", K, "\n"))
 
-main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/"
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
 
 # For sampling scheme
 NSAMPLES <- 5000 # number of individuals to sample each iteration
@@ -90,10 +92,10 @@ if (M != "random") {
 }
 cat(paste0("K-tile difference at M yrs post-baseline: ", M, "\n"))
 
-resdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
+resdir <- paste0(hidim_mods_path, "/clustering/", PHENO, "_", SEX_STRATA, 
                  "/parameter_selection/")
 dir.create(resdir)
-plotdir <- paste0(main_filepath, "clustering/", PHENO, "_", SEX_STRATA, 
+plotdir <- paste0(hidim_mods_path, "/clustering/", PHENO, "_", SEX_STRATA, 
                  "/parameter_selection/plots/")
 dir.create(plotdir)
 
@@ -103,14 +105,14 @@ names(usecolpal) <- paste0("k", 1:K)
 
 # Load data ----
 
-model_dat <- readRDS(paste0(main_filepath, "results/with_rvar_fit_objects_", 
+model_dat <- readRDS(paste0(hidim_mods_path, "/results/with_rvar_fit_objects_", 
                             PHENO, "_", SEX_STRATA, ".rds"))
 
-covars_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
+covars_dat <- readRDS(paste0(mainpath, "/covariates.rds"))[[PHENO]]
 cat(paste0("Number of ids in covariates data: ", nrow(covars_dat), "\n"))
 
 # Only retain 80% of data used for discovery
-training_ids <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/", 
+training_ids <- read.table(paste0(hidim_mods_path, "/clustering/", 
                                   PHENO, "_", SEX_STRATA, "/ids_training.txt"),
                            sep = "\t", header = F, stringsAsFactors = F)$V1
 training_ids <- as.character(training_ids)

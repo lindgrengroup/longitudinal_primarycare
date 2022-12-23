@@ -22,15 +22,19 @@ args <- parser$parse_args()
 PHENO <- args$phenotype
 SEX_STRATA <- args$sex_strata
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/"
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
+plotdir <- paste0(hidim_mods_path, "/plots/")
+resdir <- paste0(hidim_mods_path, "/results/")
 
 dir.create(plotdir)
 dir.create(resdir)
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")[[PHENO]][[SEX_STRATA]]
+dat <- readRDS(paste0(hidim_mods_path, "/data/dat_to_model_standardised.rds"))[[PHENO]][[SEX_STRATA]]
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)

@@ -12,6 +12,10 @@ theme_set(theme_bw())
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
+mainpath <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+hidim_mods_path <- "" # REDACTED
+
 parser <- ArgumentParser()
 parser$add_argument("--phenotype", required = TRUE,
                     help = "Phenotype to model")
@@ -23,15 +27,15 @@ PHENO <- args$phenotype
 SEX_STRATA <- args$sex_strata
 NSAMPLES <- 5000
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/ar1_parameter_selection/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/ar1_parameter_selection/"
+plotdir <- paste0(hidim_mods_path, "/ar1_parameter_selection/")
+resdir <- paste0(hidim_mods_path, "/ar1_parameter_selection/")
 
 dir.create(resdir)
 dir.create(plotdir)
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model_standardised.rds")[[PHENO]][[SEX_STRATA]]
+dat <- readRDS(paste0(hidim_mods_path, "/data/dat_to_model_standardised.rds"))[[PHENO]][[SEX_STRATA]]
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)
