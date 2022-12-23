@@ -5,13 +5,10 @@ library(tidyverse)
 
 # Read data ----
 
-UKB_path <- "" # REDACTED
-lmm_mods_path <- "" # REDACTED
-genetic_dat_path <- "" # REDACTED
-
-PHENOTYPES <- c("BMI", "Weight")
+PHENOTYPES <- read.table("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/pheno_names.txt")$V1
 ids <- lapply(PHENOTYPES, function (p) {
-  readRDS(paste0(lmm_mods_path, "/results/lmm_blups_", p, ".rds"))
+  readRDS(paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/results/lmm_blups_",
+                 p, ".rds"))
 })
 names(ids) <- PHENOTYPES
 
@@ -30,17 +27,17 @@ sample_ids <- lapply(PHENOTYPES, function (p) {
 names(sample_ids) <- PHENOTYPES
 
 # QC file from UKBB
-qc <- read.table(paste0(UKB_path, "/QC/ukb_sqc_v2.txt", header = T), 
+qc <- read.table("/well/lindgren/UKBIOBANK/DATA/QC/ukb_sqc_v2.txt", header = T, 
                  na.string = c("NA", "", "."), stringsAsFactors = F)
 
 # fam file corresponding to the QC file provided by UKBB
-fam <- read.table(paste0(UKB_path, "/SAMPLE_FAM/ukb11867_cal_chr1_v2_s488363.fam"), 
+fam <- read.table("/well/lindgren/UKBIOBANK/DATA/SAMPLE_FAM/ukb11867_cal_chr1_v2_s488363.fam", 
                   header = F)
 # Add IDs to QC file
 qc$eid <- fam[, 1]
 
 # Phenotype file from UKBB
-pheno <- read.table(paste0(UKB_path, "/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv"),
+pheno <- read.table("/well/lindgren/UKBIOBANK/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv",
                     header = T, sep = ",", na.string = c("NA", "", "."), 
                     stringsAsFactors = F)
 colnames(pheno) <- gsub("X", "f.", colnames(pheno))
@@ -289,7 +286,7 @@ qcd_slopes <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
     # Stratum data
     data <- for_gen_QC[[p]][[sx]]
-    qc_log_file <- paste0(genetic_dat_path, "/log_files/",
+    qc_log_file <- paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/log_files/",
                           p, "_", sx, ".txt")
     
     # Print sample characteristics before QC
@@ -329,7 +326,7 @@ ids_for_gwas <- lapply(PHENOTYPES, function (p) {
              paste0("PC", 1:NPCs))
     
     write.table(to_write, 
-                paste0(genetic_dat_path, "/sample_qc/", 
+                paste0("/well/lindgren/UKBIOBANK/samvida/adiposity/gp_only/GWAS/sample_qc/", 
                        p, "_", sx, "_ids_passed_qc.txt"), 
                 sep = "\t", row.names = F, quote = F)
     return ()

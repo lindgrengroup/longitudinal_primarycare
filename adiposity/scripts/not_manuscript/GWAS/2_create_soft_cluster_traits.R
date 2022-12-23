@@ -5,13 +5,7 @@ library(tidyverse)
 
 # Read data ----
 
-UKB_path <- "" # REDACTED
-mainpath <- "" # REDACTED
-gen_resources_path <- "" # REDACTED
-hidim_mods_path <- "" # REDACTED
-genetic_dat_path <- "" # REDACTED
-
-result_prefix <- paste0(genetic_dat_path, "/traits_for_GWAS/")
+result_prefix <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/traits_for_GWAS/"
 
 # Clustering results 
 PHENOTYPES <- c("BMI", "Weight")
@@ -19,7 +13,7 @@ SEX_STRATA <- c("F", "M", "sex_comb")
 
 cluster_results <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0(hidim_mods_path, "/clustering/",
+    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/",
                              p, "_", sx, "/soft_clustering_probs_", p, "_", sx, ".txt"),
                       sep = "\t", header = T, stringsAsFactors = F)
     res$eid <- as.character(res$eid)
@@ -33,7 +27,7 @@ names(cluster_results) <- PHENOTYPES
 # IDs that passed sample QC
 ids_passed_qc <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0(genetic_dat_path, "/sample_qc/", 
+    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/sample_qc/", 
                              p, "_", sx, "_ids_passed_qc.txt"),
                       sep = "\t", header = T)
     res$IID <- as.character(res$IID)
@@ -46,11 +40,11 @@ names(ids_passed_qc) <- PHENOTYPES
 
 # Covariates
 covars <- lapply(PHENOTYPES, function (p) {
-  readRDS(paste0(mainpath, "/covariates.rds"))[[p]]
+  readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[p]]
 })
 names(covars) <- PHENOTYPES
 
-general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
+general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -119,7 +113,7 @@ lapply(PHENOTYPES, function (p) {
     df <- left_join(df, 
                     covars[[p]][, c("IID", "FID", ADD_COVARS_LIST)], by = c("IID", "FID"))
     write.table(df, 
-                paste0(genetic_dat_path, "/sample_qc/", 
+                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/sample_qc/", 
                        p, "_", sx, "_covariates.txt"),
                 sep = "\t", row.names = F, quote = F)
   })

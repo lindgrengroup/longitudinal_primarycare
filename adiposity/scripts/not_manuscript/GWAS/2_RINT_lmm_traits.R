@@ -5,19 +5,17 @@ library(tidyverse)
 
 # Read data ----
 
-UKB_path <- "" # REDACTED
-mainpath <- "" # REDACTED
-gen_resources_path <- "" # REDACTED
-lmm_mods_path <- "" # REDACTED
-genetic_dat_path <- "" # REDACTED
-
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
+
+resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/traits_for_gwas/"
+dir.create(resdir)
 
 # BLUP files
 blups <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0(lmm_mods_path, p, "_", sx, "_blups_full_model.txt"),
+    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/", 
+                            p, "_", sx, "_blups_full_model.txt"),
                      sep = "\t", header = T, stringsAsFactors = F)
     colnames(df) <- c("eid", "b0", "b1")
     return (df)
@@ -30,7 +28,7 @@ names(blups) <- PHENOTYPES
 # IDs that passed sample QC
 ids_passed_qc <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    read.table(paste0(genetic_dat_path, "/sample_qc/", 
+    read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/gp_only/GWAS/sample_qc/", 
                       p, "_", sx, "_ids_passed_qc.txt"),
                sep = "\t", header = T)
   })
@@ -39,13 +37,9 @@ ids_passed_qc <- lapply(PHENOTYPES, function (p) {
 })
 names(ids_passed_qc) <- PHENOTYPES
 
-# Covariates
-covars <- lapply(PHENOTYPES, function (p) {
-  readRDS(paste0(mainpath, "/covariates.rds"))[[p]]
-})
-names(covars) <- PHENOTYPES
-
-general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
+# Covariates files (trait-specific) 
+covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[PHENOTYPES]
+general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -104,7 +98,7 @@ lapply(PHENOTYPES, function (p) {
       
       # Write results to table
       write.table(res,
-                  paste0(genetic_dat_path, "/traits_for_gwas/", p, "_", sx, "_", blup_term, ".txt"),
+                  paste0(resdir, p, "_", sx, "_", blup_term, ".txt"),
                   sep = "\t", row.names = F, quote = F)
     })
   })

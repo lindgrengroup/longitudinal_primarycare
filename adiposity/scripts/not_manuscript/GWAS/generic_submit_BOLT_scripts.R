@@ -5,20 +5,18 @@
 # R wrapper to submit BOLT jobs
 # Need to loop over all of the strata and parameter types in each strata
 
-scripts_path <- "" # REDACTED
-
 STRATA_NAMES <- c("BMI_F", "BMI_M", "BMI_sex_comb", 
                   "Weight_F", "Weight_M", "Weight_sex_comb")
 PARAMETERS <- c("b0", "b1")
 
 # GWAS submission script
-# submission_script <- paste0(scripts_path, "/BOLT_helpers/1_perform_GWAS_BOLT.sh")
+# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/BOLT_helpers/1_perform_GWAS_BOLT.sh"
 # Filtering submission script
-# submission_script <- paste0(scripts_path, "/BOLT_helpers/2_perform_BOLT_filtering.sh")
+# submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/BOLT_helpers/2_perform_BOLT_filtering.sh"
 # Fine-mapping submission script
-# submission script <- paste0(scripts_path, "/BOLT_helpers/3_perform_finemapping_BOLT.sh")
+# submission script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/BOLT_helpers/3_perform_finemapping_BOLT.sh"
 
-submission_script <- paste0(scripts_path, "/BOLT_helpers/1_perform_GWAS_BOLT.sh")
+submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/BOLT_helpers/1_perform_GWAS_BOLT.sh"
 
 for (s in STRATA_NAMES) {
   for (pr in PARAMETERS) {
