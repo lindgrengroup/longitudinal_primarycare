@@ -4,6 +4,9 @@
 library(tidyverse)
 theme_set(theme_bw())
 
+infile_path <- "" # REDACTED
+plot_dir <- "" # REDACTED
+
 # colour palette for clusters
 custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
 names(custom_four_diverge) <- c("k1", "k1_k2", "k1_k2_k3")
@@ -24,7 +27,7 @@ lead_snps_sumstats <- lapply(PHENOTYPES, function (pheno) {
   res_list <- lapply(SEX_STRATA, function (sx) {
     res <- lapply(CLUSTK, function (k) {
       
-      fname <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/post_GWAS/lead_snps/",
+      fname <- paste0(infile_path, "/highdim_splines/standardised_outcomes/GWAS/post_GWAS/lead_snps/",
                       pheno, "_", sx, "_", k, "_all_leadsnp_assocns.txt")
       if (file.exists(fname)) {
         df <- read.table(fname,
@@ -50,12 +53,12 @@ lead_snps_sumstats <- lapply(PHENOTYPES, function (pheno) {
 lead_snps_sumstats <- bind_rows(lead_snps_sumstats)
 
 write.table(lead_snps_sumstats,
-            "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/post_GWAS/lead_snps/all_strata_all_leadsnps_sumstats.txt", 
+            paste0(infile_path, "/highdim_splines/standardised_outcomes/GWAS/post_GWAS/lead_snps/all_strata_all_leadsnps_sumstats.txt"), 
             sep = "\t", quote = F, row.names = F)
 
 # Plot results ----
 
-lead_snps_sumstats <- read.table("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/highdim_splines/standardised_outcomes/GWAS/lead_snps/all_strata_all_leadsnps_sumstats.txt",
+lead_snps_sumstats <- read.table(paste0(infile_path, "/highdim_splines/standardised_outcomes/GWAS/post_GWAS/lead_snps/all_strata_all_leadsnps_sumstats.txt"),
                                  sep = "\t", header = T, stringsAsFactors = F)
 
 VARIDS <- unique(lead_snps_sumstats$SNP)
@@ -108,7 +111,7 @@ plotORs <- function (pheno, v) {
 
 lapply(PHENOTYPES, function (pheno) {
   lapply(VARIDS, function (v) {
-    tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/change_snp_effects/", pheno, "_all_clust_", v, ".tiff"),
+    tiff(paste0(plot_dir, "/change_snp_effects/", pheno, "_all_clust_", v, ".tiff"),
          height = 5, width = 5, units = "cm",
          res = 300)
     print(plotORs(pheno, v))
@@ -139,11 +142,9 @@ res_plot <- ggplot(plot_bmi_weight_k1, aes(x = OR, y = strata)) +
         axis.text.x = element_text(size = 6),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank())
-tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/change_snp_effects/rs429358_k1.tiff"),
+tiff(paste0(plot_dir, "/change_snp_effects/rs429358_k1.tiff"),
      height = 5, width = 5, units = "cm",
      res = 300)
 res_plot
 dev.off()
-
-
 

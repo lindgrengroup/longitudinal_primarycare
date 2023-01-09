@@ -10,7 +10,9 @@ theme_set(theme_bw())
 
 set.seed(011121)
 
-plots_dir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/manuscript/figures/"
+infile_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+plots_dir <- "" # REDACTED
 
 # For two colours (rose and navy):
 custom_two_diverge <- c("#D35C79", "#005580")
@@ -27,11 +29,11 @@ args <- parser$parse_args()
 PHENO <- args$pheno
 SEX_STRATA <- args$ss
 
-lmm_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/lmm_models/",
+lmm_model <- readRDS(paste0(infile_path, "/lmm_models/",
                             PHENO, "_full_model.rds"))[[SEX_STRATA]]
 
 # High-dimensional spline modelling results
-hidim_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
+hidim_model <- readRDS(paste0(infile_path, "/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                               PHENO, "_", SEX_STRATA, ".rds"))
 B <- hidim_model$B
 spline_posteriors <- hidim_model$spline_posteriors
@@ -39,14 +41,14 @@ model_resid_var <- hidim_model$resid_var
 
 # To recapture raw data from residuals 
 resid_models <- 
-  readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/models_for_refitting.rds")[[PHENO]][[SEX_STRATA]]
+  readRDS(psate0(infile_path, "/highdim_splines/data/models_for_refitting.rds"))[[PHENO]][[SEX_STRATA]]
 
-raw_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[[PHENO]]
+raw_dat <- readRDS(paste0(infile_path, "/data/indiv_qcd_data.rds"))[[PHENO]]
 
 # Covariates
-covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
+covars <- readRDS(paste0(infile_path, "/data/covariates.rds"))[[PHENO]]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 
 # Define various sets of covariates

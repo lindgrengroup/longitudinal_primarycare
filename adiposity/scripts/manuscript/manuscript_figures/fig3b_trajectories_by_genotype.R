@@ -5,7 +5,8 @@ library(splines)
 library(tidyverse)
 theme_set(theme_bw())
 
-plots_dir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/manuscript/figures/"
+infile_path <- "" # REDACTED
+plots_dir <- "" # REDACTED
 
 # For 3 colours that are sequential gray:
 custom_grey_sequential <- c("#242424", "#7D7D7D", "#AEAEAE")
@@ -16,7 +17,7 @@ VARIDS <- c("rs429358", "rs8047587")
 
 # Genotypes / dosages at variants of interst
 var_dosages <- lapply(VARIDS, function (varid) {
-  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/sample_variant_counts/",
+  res <- read.table(paste0(infile_path, "/sample_variant_counts/",
                            varid, "_dosages.txt"),
                     sep = " ", header = T, stringsAsFactors = F)
   # Remove first row, which contains info on type of column and columns 
@@ -43,7 +44,7 @@ names(var_dosages) <- VARIDS
 
 # Plot results ----
 
-model_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_BMI_sex_comb.rds")
+model_dat <- readRDS(paste0(infile_path, "/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_BMI_sex_comb.rds"))
 
 B <- model_dat$B
 spline_posteriors <- model_dat$spline_posteriors
@@ -131,25 +132,24 @@ getPlotDatGenotypes <- function (id_class) {
 ## Apply ----
 
 lapply(VARIDS, function (v) {
-    plot_dat <- getPlotDatGenotypes(var_dosages[[v]])
-    
-    res_plot <- ggplot(plot_dat, aes(x = t_diff_yrs, 
-                                     y = pred_mean_value,
-                                     col = genotype, fill = genotype)) +
-      geom_line() +
-      geom_ribbon(aes(ymin = pred_loci_value, ymax = pred_upci_value),
-                  alpha = 0.25, linetype = 0) +
-      scale_color_manual(values = custom_grey_sequential, guide = "none") +
-      scale_fill_manual(values = custom_grey_sequential, guide = "none") +
-      scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
-      theme(legend.position = "none",
-            axis.title = element_blank(),
-            axis.text = element_text(size = 6))
-    
-    tiff(filename = paste0(plots_dir, v, "_modelled_BMI_sex_comb.tiff"),
-         height = 5, width = 4.25, units = "cm",
-         res = 300)
-    print(res_plot)
-    dev.off()
+  plot_dat <- getPlotDatGenotypes(var_dosages[[v]])
+  
+  res_plot <- ggplot(plot_dat, aes(x = t_diff_yrs, 
+                                   y = pred_mean_value,
+                                   col = genotype, fill = genotype)) +
+    geom_line() +
+    geom_ribbon(aes(ymin = pred_loci_value, ymax = pred_upci_value),
+                alpha = 0.25, linetype = 0) +
+    scale_color_manual(values = custom_grey_sequential, guide = "none") +
+    scale_fill_manual(values = custom_grey_sequential, guide = "none") +
+    scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) +
+    theme(legend.position = "none",
+          axis.title = element_blank(),
+          axis.text = element_text(size = 6))
+  
+  tiff(filename = paste0(plots_dir, v, "_modelled_BMI_sex_comb.tiff"),
+       height = 5, width = 4.25, units = "cm",
+       res = 300)
+  print(res_plot)
+  dev.off()
 })
-

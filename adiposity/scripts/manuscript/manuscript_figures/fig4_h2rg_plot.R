@@ -10,6 +10,8 @@ names(custom_three_diverge) <- c("F", "M", "sex_comb")
 
 # Read data ----
 
+plot_dir <- "" # REDACTED
+
 dat <- read.table("heritability_rg.txt", sep = "\t", header = T,
                   stringsAsFactors = F)
 
@@ -41,7 +43,7 @@ h2_plot <- ggplot(h2_dat, aes(x = beta_h2, y = strata)) +
         strip.background = element_rect(size = 0.7),
         strip.text.x = element_text(size = 8))
 
-tiff("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/h2rg/heritability.tiff",
+tiff(paste0(plot_dir, "/h2rg/heritability.tiff"),
      height = 10, width = 5, units = "cm",
      res = 300)
 print(h2_plot)
@@ -80,7 +82,7 @@ rg_plot <- ggplot(rg_dat, aes(x = beta_rg, y = strata)) +
         strip.text.x = element_text(size = 8))
 
 
-tiff("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/h2rg/rg.tiff",
+tiff(paste0(plot_dir, "/h2rg/rg.tiff"),
      height = 10, width = 5, units = "cm",
      res = 300)
 print(rg_plot)

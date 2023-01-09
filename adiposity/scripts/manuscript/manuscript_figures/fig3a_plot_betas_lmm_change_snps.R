@@ -8,48 +8,12 @@ theme_set(theme_bw())
 custom_three_diverge <- c("#D35C79","#009593", "#666666")
 names(custom_three_diverge) <- c("F", "M", "sex_comb")
 
-# resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/change_snps/"
-# 
-# # Read data ----
-# 
-# PHENOTYPES <- c("BMI", "Weight")
-# SEX_STRATA <- c("F", "M", "sex_comb")
-# 
-# change_snps_sumstats <- lapply(PHENOTYPES, function (p) {
-#   res <- lapply(SEX_STRATA, function (sx) {
-#     df_intercepts <- read.table(paste0(resdir, p, "_", sx, "_intercepts.txt"),
-#                             sep = "\t", header = F, stringsAsFactors = F)
-#     colnames(df_intercepts) <- c("SNP", "CHR", "POS", 
-#                                 "Tested_Allele", "Other_Allele",
-#                                 "AF_Tested", "BETA", "SE", "PVALUE")
-#     df_intercepts$term <- "intercept"
-#     
-#     df_slopes <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/change_snps/",
-#                                       p, "_", sx, "_slopes.txt"),
-#                                sep = "\t", header = F, stringsAsFactors = F)
-#     colnames(df_slopes) <- c("SNP", "CHR", "POS", 
-#                                 "Tested_Allele", "Other_Allele",
-#                                 "AF_Tested", "BETA", "SE", "PVALUE")
-#     df_slopes$term <- "slope"
-#     
-#     df <- bind_rows(df_intercepts, df_slopes) %>%
-#       mutate(phenotype = p,
-#              sex_strata = sx,
-#              strata = paste0(p, "_", sx))
-#     return (df)
-#   })
-#   res <- bind_rows(res)
-#   return (res)
-# })
-# change_snps_sumstats <- bind_rows(change_snps_sumstats)
-# 
-# write.table(change_snps_sumstats,
-#             paste0(resdir, "all_strata_sumstats.txt"), sep = "\t",
-#             quote = F, row.names = F)
+infile_path <- "" # REDACTED
+plot_dir <- "" # REDACTED
 
 # Plot results ----
 
-change_snps_sumstats <- read.table("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/2211_models/rs429358_all_lmm_terms.txt",
+change_snps_sumstats <- read.table(psate0(infile_path, "/rs429358_all_lmm_terms.txt"),
                                    sep = "\t", header = T, stringsAsFactors = F)
 
 # Flip effect allele
@@ -94,7 +58,7 @@ plotBetas <- function (v) {
   return (res_plot) 
 }
 
-tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/change_snp_effects/rs429358.tiff"),
+tiff(paste0(plot_dir, "/figures/change_snp_effects/rs429358.tiff"),
      height = 5, width = 5, units = "cm",
      res = 300)
 print(plotBetas("rs429358"))

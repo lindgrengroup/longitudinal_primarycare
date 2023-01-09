@@ -10,7 +10,9 @@ theme_set(theme_bw())
 
 set.seed(011121)
 
-plots_dir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/manuscript/figures/"
+infile_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+plots_dir <- "" # REDACTED
 
 CLUSTS <- paste0("k", 1:4)
 
@@ -35,36 +37,36 @@ TIME_INVAR_COVARS <- c("baseline_age", "age_sq",
                        "sex", "year_of_birth")
 
 # Centroids from chosen clustering method
-clust_centroids <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/",
+clust_centroids <- readRDS(paste0(infile_path, "/highdim_splines/standardised_outcomes/clustering/",
                                   PHENO, "_", SEX_STRATA, 
                                   "/parameter_selection/K4_L2_M2.rds"))
 clust_centroids <- clust_centroids$cluster_centroids
 
 # Soft clustering probabilities
-clust_res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
+clust_res <- read.table(paste0(infile_path, "/highdim_splines/standardised_outcomes/clustering/", 
                                       PHENO, "_", SEX_STRATA,
                                "/soft_clustering_probs_", PHENO, "_", SEX_STRATA, 
                                ".txt"),
                         sep = "\t", header = T, stringsAsFactors = F)
 
 # High-dimensional spline modelling results
-hidim_model <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
+hidim_model <- readRDS(paste0(infile_path, "/highdim_splines/standardised_outcomes/results/with_rvar_fit_objects_", 
                               PHENO, "_", SEX_STRATA, ".rds"))
 B <- hidim_model$B
 spline_posteriors <- hidim_model$spline_posteriors
 model_resid_var <- hidim_model$resid_var
 
 # Covariates
-covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[[PHENO]]
+covars <- readRDS(paste0(infile_path, "/data/covariates.rds"))[[PHENO]]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 
 # To recapture raw data from residuals 
 resid_models <- 
-  readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/models_for_refitting.rds")[[PHENO]][[SEX_STRATA]]
+  readRDS(paste0(infile_path, "/highdim_splines/data/models_for_refitting.rds"))[[PHENO]][[SEX_STRATA]]
 
-raw_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[[PHENO]]
+raw_dat <- readRDS(paste0(infile_path, "/data/indiv_qcd_data.rds"))[[PHENO]]
 
 # Wrangle data -----
 
