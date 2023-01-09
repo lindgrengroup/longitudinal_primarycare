@@ -5,15 +5,19 @@ library(tidyverse)
 
 # Read data ----
 
+data_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 PHENOTYPES <- c("BMI", "Weight")
 
 # Main data
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/main_data_without_gp_cross_sec.rds")[PHENOTYPES]
+dat <- readRDS(paste0(data_path, "/main_data_without_gp_cross_sec.rds"))[PHENOTYPES]
 
 # GP data used for intercept-GWAS
-gp_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[PHENOTYPES]
+gp_dat <- readRDS(paste0(data_path, "/indiv_qcd_data.rds"))[PHENOTYPES]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, comment.char = "$",
                              stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
@@ -23,7 +27,7 @@ SEX_STRATA <- c("F", "M", "sex_comb")
 COVARS <- c("age_event", "age_sq", "year_of_birth")
 
 # QC log file
-qc_log <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/qc/cross_sectional_qc.txt"
+qc_log <- paste0(outfile_path, "/qc/cross_sectional_qc.txt")
 
 # Wrangle data ----
 
@@ -107,7 +111,7 @@ cross_sec_dat <- lapply(PHENOTYPES, function (p) {
                            adj_trait = sub_df$rinted_value)
     # Write results to table
     write.table(to_write,
-                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/GWAS/traits_for_gwas/", 
+                paste0(outfile_path, "/GWAS/traits_for_gwas/", 
                        p, "_", sx, "_cross_sectional.txt"),
                 sep = "\t", row.names = F, quote = F)
     
@@ -119,4 +123,4 @@ cross_sec_dat <- lapply(PHENOTYPES, function (p) {
 names(cross_sec_dat) <- PHENOTYPES
 
 saveRDS(cross_sec_dat, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/split_sex_cross_sec.rds")
+        paste0(outfile_path, "/data/split_sex_cross_sec.rds"))
