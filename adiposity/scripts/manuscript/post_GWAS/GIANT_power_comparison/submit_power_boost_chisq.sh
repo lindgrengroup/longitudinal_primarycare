@@ -17,7 +17,7 @@ echo "passing covariates..."
 covars=${covars//|/,}
 echo ${covars}
 
-cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/${STRATA_NAME}
+cd ${STRATA_NAME}
 
 # Extract SNPs with chisquare > 30 from GP GWAS file
 awk -F '[[:space:]]+' 'NR>1 { if (($7/$8)^2 > 30) print $1 }' ${GP_FILENAME} \
@@ -40,7 +40,7 @@ awk -F '[[:space:]]+' 'NR==FNR{a[$0]; next} FNR==1 || $3 in a' \
 sig_snps.txt - > tmp_giant_meta.txt
 
 module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
-Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/8_calculate_power_boost.R \
+Rscript scripts/calculate_power_boost_chisq.R \
 --strata=${STRATA_NAME} \
 --sample_size_gp=${GP_N} 
 

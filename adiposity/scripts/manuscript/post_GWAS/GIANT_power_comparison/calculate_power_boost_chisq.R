@@ -16,18 +16,17 @@ args <- parser$parse_args()
 
 STRATA <- args$strata
 
-power_log <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
-                    STRATA, "/power_boost_log.txt")
-power_plot <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
-                     STRATA, "/power_boost_plot.tiff")
-power_res <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
-                    STRATA, "/power_boost_snp_comparisons.txt")
+postgwas_path <- "" # REDACTED
+sumstats_path <- "" # REDACTED
+giant_sumstats_path <- "" # REDACTED
 
-gp_dat <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
-                            STRATA, "/tmp_gp_gwas.txt"), 
+power_log <- paste0(postgwas_path, "/", STRATA, "/power_boost_log.txt")
+power_plot <- paste0(postgwas_path, "/", STRATA, "/power_boost_plot.tiff")
+power_res <- paste0(postgwas_path, "/", STRATA, "/power_boost_snp_comparisons.txt")
+
+gp_dat <- read.table(paste0(sumstats_path, "/", STRATA, "/tmp_gp_gwas.txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)
-giant_dat <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
-                            STRATA, "/tmp_giant_meta.txt"), 
+giant_dat <- read.table(paste0(giant_sumstats_path, "/", STRATA, "/tmp_giant_meta.txt"), 
                      sep = " ", header = T, stringsAsFactors = F)
 
 # Calculate chi-square statistics and merge files -----
