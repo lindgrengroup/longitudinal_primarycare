@@ -7,6 +7,10 @@ theme_set(theme_bw())
 
 # Read files ----
 
+infile_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 # Parse in phenotype arguments
 PHENO <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
@@ -16,9 +20,9 @@ MOD_COVARS <- c("baseline_age", "age_sq")
 # Add data provider as covariate if there is more than one data provider
 ADD_COVARS <- c("year_of_birth")
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/non_wb_gp_main_data_passed_longit_filter.rds")[PHENO]
+dat <- readRDS(paste0(infile_path, "/non_wb_gp_main_data_passed_longit_filter.rds"))[PHENO]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -90,7 +94,7 @@ full_models <- lapply(PHENO, function (p) {
 names(full_models) <- PHENO
 # Save models
 saveRDS(full_models, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/lmm_models/full_models.rds")
+        paste0(outfile_path, "/lmm_models/full_models.rds"))
 
 # Save coefficient values (fixef + ranef) for individuals ----
 
@@ -124,7 +128,7 @@ lapply(PHENO, function (p) {
     lapply(SEX_STRATA, function (sx) {
       all_blups <- getBLUPS(full_models[[p]][[anc]][[sx]])
       write.table(all_blups, 
-                  paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/lmm_models/",
+                  paste0(outfile_path, "/lmm_models/",
                          p, "_", anc, "_", sx, "_all_blups.txt"),
                   sep = "\t", row.names = F, col.names = T, quote = F)
     })

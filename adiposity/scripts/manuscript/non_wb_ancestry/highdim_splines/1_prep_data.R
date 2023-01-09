@@ -5,12 +5,16 @@ library(tidyverse)
 
 # Load data ----
 
+infile_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/non_wb_gp_main_data_passed_longit_filter.rds")[PHENOTYPES]
+dat <- readRDS(paste0(infile_path, "/non_wb_gp_main_data_passed_longit_filter.rds"))[PHENOTYPES]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -85,7 +89,7 @@ model_dat <- lapply(PHENOTYPES, function (p) {
 names(model_dat) <- PHENOTYPES
 
 saveRDS(model_dat, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/data/models_for_refitting.rds")
+        paste0(outfile_path, "/models_for_refitting.rds"))
 
 to_write <- lapply(PHENOTYPES, function (p) {
   per_anc <- lapply(ANCESTRIES, function (anc) {
@@ -113,4 +117,4 @@ to_write <- lapply(PHENOTYPES, function (p) {
 names(to_write) <- PHENOTYPES
 
 saveRDS(to_write, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/data/dat_to_model.rds")
+        paste0(outfile_path, "/dat_to_model.rds"))

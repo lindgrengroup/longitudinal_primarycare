@@ -11,15 +11,16 @@ theme_set(theme_bw())
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/"
+infile_path <- "" # REDACTED
+plotdir <- "" # REDACTED
+resdir <- "" # REDACTED
 
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/data/dat_to_model.rds")
+dat <- readRDS(paste0(infile_path, "/dat_to_model.rds"))
 ANCESTRIES <- names(dat[[1]])
 
 NDF_SPLINE <- 100 # DF of spline

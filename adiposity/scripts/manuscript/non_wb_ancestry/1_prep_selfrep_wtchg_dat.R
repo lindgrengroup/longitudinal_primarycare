@@ -6,8 +6,12 @@ library(lubridate)
 
 # Read data ----
 
+ukb_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 # UK Biobank main phenotype file
-pheno <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv",
+pheno <- read.table(paste0(ukb_path, "/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv"),
                     header = T, sep = ",", na.string = c("NA", "", "."), 
                     stringsAsFactors = F)
 colnames(pheno) <- gsub("X", "f.", colnames(pheno))
@@ -15,7 +19,7 @@ colnames(pheno)[1] <- "eid"
 pheno$eid <- as.character(pheno$eid)
 
 # Subset to non-WB ancestry IDs
-wb_ids <- as.character(read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/eids_white_british.txt",
+wb_ids <- as.character(read.table(paste0(gen_resources_path, "/eids_white_british.txt"),
                      header = F, sep = "\t", stringsAsFactors = F)$V1)
 
 WTCHG_CODES <- colnames(pheno)[grep("f.2306.*", colnames(pheno))]
@@ -87,6 +91,6 @@ cleaned_res <- cleaned_res %>%
                                 ifelse(selfrep_wtchg == 2, "Gain",
                                        ifelse(selfrep_wtchg == 3, "Loss", "Unknown"))))
 write.table(cleaned_res, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/selfrep_wtchg_non_wb.txt",
+        paste0(outfile_path, "/selfrep_wtchg_non_wb.txt"),
         sep = "\t", row.names = F, quote = F)
 

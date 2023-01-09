@@ -19,18 +19,21 @@ MAIN_COVARS <- c("baseline_age", "age_sq", "FUyrs", "FU_n",
                  "year_of_birth") # add sex and UKB assessment centre if needed
 GEN_COVARS <- paste0("PC", 1:21) # add genotyping array if needed
 
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/results/"
+infile_path <- "" # REDACTED
+gpdat_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+resdir <- "" # REDACTED
 
 # Read data ----
 
-selfrep_wtchg <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/selfrep_wtchg_non_wb.txt",
+selfrep_wtchg <- read.table(paste0(infile_path, "/selfrep_wtchg_non_wb.txt"),
                             sep = "\t", header = T, stringsAsFactors = F)
 selfrep_wtchg$eid <- as.character(selfrep_wtchg$eid)
 
 blups <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(ANCESTRIES, function (anc) {
     res <- lapply(SEX_STRATA, function (sx) {
-      df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/lmm_models/",
+      df <- read.table(paste0(infile_path, "/lmm_models/",
                               p, "_", anc, "_", sx, "_all_blups.txt"), 
                        sep = "\t", header = T, stringsAsFactors = F)
       df$eid <- as.character(df$eid)
@@ -47,7 +50,7 @@ names(blups) <- PHENOTYPES
 clustprobs <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(ANCESTRIES, function (anc) {
     res <- lapply(SEX_STRATA, function (sx) {
-      df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/softclust_probs/soft_clustering_probs_",
+      df <- read.table(paste0(infile_path, "/highdim_splines/softclust_probs/soft_clustering_probs_",
                               p, "_", anc, "_", sx, ".txt"), 
                        sep = "\t", header = T, stringsAsFactors = F)
       df <- df %>% mutate(eid = as.character(eid),
@@ -63,7 +66,7 @@ clustprobs <- lapply(PHENOTYPES, function (p) {
 })
 names(clustprobs) <- PHENOTYPES
 
-vars_to_replicate <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/lead_snps_to_replicate.txt",
+vars_to_replicate <- read.table(paste0(gpdat_path, "/data/lead_snps_to_replicate.txt"),
                                 sep = "\t", header = T, stringsAsFactors = F)
 VARIDS <- vars_to_replicate$SNP
 # For variants without rsids, build variant name
@@ -75,7 +78,7 @@ VARIDS <- gsub("^chr", "", VARIDS)
 
 # Genotypes / dosages at variants of interest
 var_dosages <- lapply(VARIDS, function (varid) {
-  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/sample_variant_counts/",
+  res <- read.table(paste0(gpdat_path, "/sample_variant_counts/",
                            varid, "_dosages.txt"),
                     sep = " ", header = T, stringsAsFactors = F)
   # Remove first row, which contains info on type of column and columns 
@@ -87,9 +90,9 @@ var_dosages <- lapply(VARIDS, function (varid) {
 names(var_dosages) <- VARIDS
 
 # Raw data (original) to calculate covariates
-raw_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/non_wb_gp_main_data_passed_longit_filter.rds")[PHENOTYPES]
+raw_dat <- readRDS(paste0(gpdat_path, "/data/non_wb_gp_main_data_passed_longit_filter.rds"))[PHENOTYPES]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 general_covars <- general_covars %>%
@@ -102,7 +105,7 @@ general_covars <- general_covars %>%
 ids_passed_qc <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(ANCESTRIES, function (anc) {
     res <- lapply(SEX_STRATA, function (sx) {
-      df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/sample_qc/", 
+      df <- read.table(paste0(infile_path, "/sample_qc/", 
                               p, "_", anc, "_", sx, "_ids_passed_qc.txt"),
                        sep = "\t", header = T)
       df$eid <- as.character(df$eid)
@@ -118,7 +121,7 @@ names(ids_passed_qc) <- PHENOTYPES
 
 selfrep_ids_passed_qc <- lapply(ANCESTRIES, function (anc) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/sample_qc/selfrep_wtchg_", 
+    df <- read.table(paste0(infile_path, "/sample_qc/selfrep_wtchg_", 
                             anc, "_", sx, "_ids_passed_qc.txt"),
                      sep = "\t", header = T)
     df$eid <- as.character(df$eid)

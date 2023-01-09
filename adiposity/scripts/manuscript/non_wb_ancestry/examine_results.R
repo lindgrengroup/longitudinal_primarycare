@@ -4,6 +4,8 @@
 library(tidyverse)
 theme_set(theme_bw())
 
+outfile_path <- "" # REDACTED
+
 # colour palette: rose, teal, grey
 custom_three_diverge <- c("#D35C79","#009593", "#666666")
 names(custom_three_diverge) <- c("F", "M", "sex_comb")
@@ -76,7 +78,7 @@ VARIDS <- unique(plot_dat$SNP)
 # Skip rs61955499 because sample sizes are very small
 VARIDS <- VARIDS[VARIDS != "rs61955499"]
 lapply(VARIDS, function (v) {
-  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+  tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
               v, "_selfrep.tiff"),
        height = 4, width = 4, units = "cm",
        res = 300)
@@ -84,7 +86,7 @@ lapply(VARIDS, function (v) {
   dev.off()
 })
 v <- VARIDS[2]
-tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
             "chr6_26076446", "_selfrep.tiff"),
      height = 4, width = 4, units = "cm",
      res = 300)
@@ -140,7 +142,7 @@ VARIDS <- unique(plot_dat$SNP)
 # Skip rs61955499 because sample sizes are very small
 VARIDS <- VARIDS[VARIDS != "rs61955499"]
 lapply(VARIDS, function (v) {
-  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+  tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
               v, "_b1.tiff"),
        height = 4, width = 4, units = "cm",
        res = 300)
@@ -148,7 +150,7 @@ lapply(VARIDS, function (v) {
   dev.off()
 })
 v <- VARIDS[2]
-tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
             "chr6_26076446", "_b1.tiff"),
      height = 4, width = 4, units = "cm",
      res = 300)
@@ -201,7 +203,7 @@ VARIDS <- unique(plot_dat$SNP)
 # Skip rs61955499 because sample sizes are very small
 VARIDS <- VARIDS[VARIDS != "rs61955499"]
 lapply(VARIDS, function (v) {
-  tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+  tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
               v, "_k1.tiff"),
        height = 4, width = 4, units = "cm",
        res = 300)
@@ -209,7 +211,7 @@ lapply(VARIDS, function (v) {
   dev.off()
 })
 v <- VARIDS[2]
-tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/non_wb_ancestry/",
+tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
             "chr6_26076446", "_k1.tiff"),
      height = 4, width = 4, units = "cm",
      res = 300)

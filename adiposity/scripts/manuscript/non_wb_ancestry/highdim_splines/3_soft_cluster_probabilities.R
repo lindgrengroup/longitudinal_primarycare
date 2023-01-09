@@ -37,21 +37,23 @@ ANCESTRY <- args$ancestry
 SEX_STRATA <- args$sex_strata
 NBOOTS <- as.numeric(args$nboots)
 
-resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/softclust_probs/")
+infile_path <- "" # REDACTED
+gpdat_path <- "" # REDACTED
+resdir <- "" # REDACTED
 dir.create(resdir)
 
 # Load data ----
 
 # From replication dataset
-model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/fit_objects_", 
+model_dat <- readRDS(paste0(infile_path, "/fit_objects_", 
                             PHENO, "_", ANCESTRY, "_", SEX_STRATA, ".rds"))
 model_dat$resid_var <- 0.01 # from plots
 saveRDS(model_dat,
-        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/non_wb_ancestry/highdim_splines/fit_objects_", 
+        paste0(infile_path, "/fit_objects_", 
                PHENO, "_", ANCESTRY, "_", SEX_STRATA, ".rds"))
 
 # From discovery dataset
-clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
+clust_centres <- readRDS(paste0(gpdat_path, "/standardised_outcomes/clustering/", 
                                 PHENO, "_", SEX_STRATA, "/parameter_selection/K",
                                 K_chosen, "_L", L_chosen, "_M", M_chosen, ".rds"))
 CLUST_NAMES <- paste0("k", 1:K_chosen)
