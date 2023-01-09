@@ -34,8 +34,8 @@ PHENO <- args$phenotype
 SEX_STRATA <- args$sex_strata
 NBOOTS <- as.numeric(args$nboots)
 
-resdir <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/", 
-                 PHENO, "_", SEX_STRATA, "/")
+infile_path <- "" # REDACTED
+resdir <- "" # REDACTED
 dir.create(resdir)
 
 # Load data ----
@@ -45,11 +45,11 @@ model_dat <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adi
                             PHENO, "_", SEX_STRATA, ".rds"))
 model_dat$resid_var <- 0.001 # from plots
 saveRDS(model_dat,
-        paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/fit_objects_", 
+        paste0(infile_path, "/highdim_splines_clustering/fit_objects_", 
                PHENO, "_", SEX_STRATA, ".rds"))
 
 # From discovery dataset
-clust_centres <- readRDS(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/clustering/", 
+clust_centres <- readRDS(paste0(infile_path, "/highdim_splines/standardised_outcomes/clustering/", 
                                 PHENO, "_", SEX_STRATA, "/parameter_selection/K",
                                 K_chosen, "_L", L_chosen, "_M", M_chosen, ".rds"))
 CLUST_NAMES <- paste0("k", 1:K_chosen)

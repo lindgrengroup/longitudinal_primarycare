@@ -11,15 +11,16 @@ theme_set(theme_bw())
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/"
+infile_path <- "" # REDACTED
+plotdir <- "" # REDACTED
+resdir <- "" # REDACTED
 
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/data/dat_to_model.rds")
+dat <- readRDS(paste0(infile_path, "/highdim_splines_clustering/data/dat_to_model.rds"))
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)
@@ -173,15 +174,16 @@ theme_set(theme_bw())
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/"
+infile_path <- "" # REDACTED
+plotdir <- "" # REDACTED
+resdir <- "" # REDACTED
 
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/data/dat_to_model.rds")
+dat <- readRDS(paste0(infile_path, "/highdim_splines_clustering/data/dat_to_model.rds"))
 
 model_fits <- lapply(PHENOTYPES, function (p) {
   per_sex <- lapply(SEX_STRATA, function (sx) {

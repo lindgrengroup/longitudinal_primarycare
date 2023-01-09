@@ -22,7 +22,7 @@ echo ${covars}
 
 module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 
-Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/scripts/3_soft_cluster_probabilities.R \
+Rscript scripts/3_soft_cluster_probabilities.R \
 --phenotype=${phenotype} \
 --sex_strata=${ss} \
 --nboots=100

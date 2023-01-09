@@ -5,20 +5,25 @@ library(tidyverse)
 
 # Load data ----
 
+infile_path <- "" # REDACTED
+gpdat_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/main_data_adipo_change.rds")[PHENOTYPES]
+dat <- readRDS(paste0(infile_path, "/main_data_adipo_change.rds"))[PHENOTYPES]
 
 discovery_indivs <- lapply(PHENOTYPES, function (p) {
-  res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/traits_for_GWAS/lmm_traits_", 
+  res <- read.table(paste0(gpdat_path, "/GWAS/traits_for_GWAS/lmm_traits_", 
                            p, "_sex_comb.txt"), 
                     sep = "\t", header = T, stringsAsFactors = F)$IID
   return (res)
 })
 names(discovery_indivs) <- PHENOTYPES
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -89,7 +94,7 @@ model_dat <- lapply(PHENOTYPES, function (p) {
 names(model_dat) <- PHENOTYPES
 
 saveRDS(model_dat, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/data/models_for_refitting.rds")
+        paste0(outfile_path, "/highdim_splines_clustering/data/models_for_refitting.rds"))
 
 to_write <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
@@ -113,4 +118,4 @@ to_write <- lapply(PHENOTYPES, function (p) {
 names(to_write) <- PHENOTYPES
 
 saveRDS(to_write, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/data/dat_to_model.rds")
+        paste0(outfile_path, "/highdim_splines_clustering/data/dat_to_model.rds"))
