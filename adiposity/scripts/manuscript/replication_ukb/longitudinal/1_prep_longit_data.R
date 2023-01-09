@@ -6,8 +6,11 @@ library(lubridate)
 
 # Read data ----
 
+ukb_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 # UK Biobank main phenotype file
-pheno <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv",
+pheno <- read.table(paste0(ukb_path, "/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv"),
                     header = T, sep = ",", na.string = c("NA", "", "."), 
                     stringsAsFactors = F)
 colnames(pheno) <- gsub("X", "f.", colnames(pheno))
@@ -177,5 +180,5 @@ filtered <- lapply(c(PHENOTYPES, "WCadjBMI", "WHRadjBMI"), function (p) {
 names(filtered) <- c(PHENOTYPES, "WCadjBMI", "WHRadjBMI")
 
 saveRDS(filtered, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/main_data_adipo_change.rds")
+        paste0(outfile_path, "/main_data_adipo_change.rds"))
 

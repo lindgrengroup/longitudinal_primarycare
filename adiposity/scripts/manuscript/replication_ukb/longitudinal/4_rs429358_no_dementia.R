@@ -18,11 +18,13 @@ MAIN_COVARS <- c("baseline_age", "age_sq", "FUyrs", "FU_n",
                  "year_of_birth") # add sex and UKB assessment centre if needed
 GEN_COVARS <- paste0("PC", 1:21) # add genotyping array if needed
 
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/"
+infile_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+resdir <- "" # REDACTED
 
 for_linreg_dat <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/traits_for_GWAS/",
+    df <- read.table(paste0(infile_path, "/traits_for_GWAS/",
                             p, "_", sx, ".txt"), 
                      sep = "\t", header = T, stringsAsFactors = F, 
                      comment.char = "$")
@@ -35,9 +37,9 @@ for_linreg_dat <- lapply(PHENOTYPES, function (p) {
 })
 names(for_linreg_dat) <- PHENOTYPES
 
-selfrep_wtchg <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/main_data_adipo_change.rds")[["Weight_change_1yr"]]
+selfrep_wtchg <- readRDS(paste0(infile_path, "/main_data_adipo_change.rds"))[["Weight_change_1yr"]]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 general_covars <- general_covars %>%
@@ -46,7 +48,7 @@ general_covars <- general_covars %>%
   mutate(sex = factor(sex),
          UKB_assmt_centre = factor(UKB_assmt_centre))
 
-apoe_dosage <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/sample_variant_counts/rs429358_dosages.txt",
+apoe_dosage <- read.table(paste0(infile_path, "/sample_variant_counts/rs429358_dosages.txt"),
                           sep = " ", header = T, stringsAsFactors = F)
 # Remove first row, which contains info on type of column and columns 
 # 2, 3, 4 (ID repeat, missingness, sex)
@@ -54,11 +56,11 @@ apoe_dosage <- apoe_dosage[-1, c(1, 5)]
 colnames(apoe_dosage) <- c("eid", "dosage")
 
 # IDs with AD or dementia
-ids_with_dementia <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/eids_with_dementia.txt",
+ids_with_dementia <- read.table(paste0(gen_resources_path, "/eids_with_dementia.txt"),
                                 sep = "\t", header = F, stringsAsFactors = F)$V1
 
 # IDs passed QC for weight-change
-selfrep_wtchg_ids_passed_qc <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/adipo_change/sample_qc/Weight_change_1yr_ids_passed_qc.txt",
+selfrep_wtchg_ids_passed_qc <- read.table(paste0(infile_path, "/sample_qc/Weight_change_1yr_ids_passed_qc.txt"),
                                           sep = "\t", header = T, stringsAsFactors = F)
 selfrep_wtchg_ids_passed_qc <- selfrep_wtchg_ids_passed_qc %>%
   mutate(eid = as.character(eid),

@@ -15,8 +15,9 @@ echo "##########################################################"
 
 module load PLINK/2.00a2.3_x86_64
 
+FILEPATH="" # REDACTED 
+
 for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
-	cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/longit_replication_GWAS
 	mkdir ${STRATA}
 	mkdir tmp_${STRATA}
 
@@ -29,8 +30,8 @@ for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
 
 				# For lmm slopes
 				plink2 \
-				--pfile /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/chr${CHR} \
-				--pheno /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/traits_for_GWAS/${STRATA}.txt \
+				--pfile ${FILEPATH}/chr${CHR} \
+				--pheno ${FILEPATH}/traits_for_GWAS/${STRATA}.txt \
 				--pheno-name b1 \
 				--covar-name genotyping.array,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21 \
 				--sex --covar-variance-standardize --vif 1000 --max-corr 1 \
@@ -40,8 +41,8 @@ for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
 
 				# For cluster probabilities
 				plink2 \
-				--pfile /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/chr${CHR} \
-				--pheno /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/traits_for_GWAS/${STRATA}.txt \
+				--pfile ${FILEPATH}/chr${CHR} \
+				--pheno ${FILEPATH}/traits_for_GWAS/${STRATA}.txt \
 				--pheno-name k1,k1_k2,k1_k2_k3 \
 				--covar-name baseline_trait,baseline_age,age_sq,FU_n,FUyrs,year_of_birth,UKB_assmt_centre,genotyping.array,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21 \
 				--sex --covar-variance-standardize --vif 1000 --max-corr 1 \
@@ -51,8 +52,8 @@ for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
 			else
 				# Do not include sex flag as covariate
 				plink2 \
-				--pfile /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/chr${CHR} \
-				--pheno /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/traits_for_GWAS/${STRATA}.txt \
+				--pfile ${FILEPATH}/chr${CHR} \
+				--pheno ${FILEPATH}/traits_for_GWAS/${STRATA}.txt \
 				--pheno-name b1 \
 				--covar-name genotyping.array,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21 \
 				--covar-variance-standardize --vif 1000 --max-corr 1 \
@@ -62,8 +63,8 @@ for STRATA in BMI_F BMI_M BMI_sex_comb Weight_F Weight_M Weight_sex_comb; do
 
 				# For cluster probabilities
 				plink2 \
-				--pfile /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/chr${CHR} \
-				--pheno /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/traits_for_GWAS/${STRATA}.txt \
+				--pfile ${FILEPATH}/chr${CHR} \
+				--pheno ${FILEPATH}/traits_for_GWAS/${STRATA}.txt \
 				--pheno-name k1,k1_k2,k1_k2_k3 \
 				--covar-name baseline_trait,baseline_age,age_sq,FU_n,FUyrs,year_of_birth,UKB_assmt_centre,genotyping.array,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,PC11,PC12,PC13,PC14,PC15,PC16,PC17,PC18,PC19,PC20,PC21 \
 				--covar-variance-standardize --vif 1000 --max-corr 1 \

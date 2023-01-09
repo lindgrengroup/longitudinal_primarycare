@@ -5,6 +5,11 @@ library(tidyverse)
 
 # Read data ----
 
+infile_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+maindat_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
@@ -13,7 +18,7 @@ ADJ_COVARS <- c("baseline_age", "age_sq", "year_of_birth", "FU_n", "FUyrs",
 
 blups <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/lmm_models/",
+    df <- read.table(paste0(infile_path, "/lmm_models/",
                             p, "_", sx, "_all_blups.txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)
     df$eid <- as.character(df$eid)
@@ -26,7 +31,7 @@ names(blups) <- PHENOTYPES
 
 clustprobs <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/highdim_splines_clustering/", 
+    df <- read.table(paste0(infile_path, "/highdim_splines_clustering/", 
                             p, "_", sx, "/soft_clustering_probs_", p, "_", sx, ".txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)
     df <- df %>% mutate(eid = as.character(eid),
@@ -40,17 +45,17 @@ clustprobs <- lapply(PHENOTYPES, function (p) {
 names(clustprobs) <- PHENOTYPES
 
 # Raw data (original) to calculate covariates
-raw_dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/main_data_adipo_change.rds")[PHENOTYPES]
+raw_dat <- readRDS(paste0(maindat_path, "/main_data_adipo_change.rds"))[PHENOTYPES]
 
 # Covariates
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
 # IDs that passed sample QC
 ids_passed_qc <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/sample_qc/", 
+    df <- read.table(paste0(infile_path, "/sample_qc/", 
                             p, "_", sx, "_ids_passed_qc.txt"),
                      sep = "\t", header = T)
     df$IID <- as.character(df$IID)
@@ -137,7 +142,7 @@ lapply(PHENOTYPES, function (p) {
     # Change colname to start with "#" for PLINK
     colnames(to_write)[1] <- "#FID"
     write.table(to_write,
-                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/traits_for_GWAS/",
+                paste0(outfile_path, "/traits_for_GWAS/",
                        p, "_", sx, ".txt"),
                 sep = "\t", quote = F, row.names = F)
   })

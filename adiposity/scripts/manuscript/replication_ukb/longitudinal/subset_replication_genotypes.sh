@@ -19,7 +19,7 @@ echo "##########################################################"
 
 module load PLINK/2.00a2.3_x86_64
 
-cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp
+UKB_PATH="" # REDACTED
 
 for CHR in {1..22}; do
 	rm tmp_varlist.txt
@@ -37,8 +37,8 @@ for CHR in {1..22}; do
 	if [ -s replication_genotypes/chr${CHR}_snps.txt ]; then
         plink2 \
 		--extract replication_genotypes/chr${CHR}_snps.txt \
-		--bgen /well/lindgren-ukbb/projects/ukbb-11867/DATA/IMPUTATION/ukb_imp_chr${CHR}_v3.bgen ref-first \
-		--sample /well/lindgren-ukbb/projects/ukbb-11867/DATA/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
+		--bgen ${UKB_PATH}/IMPUTATION/ukb_imp_chr${CHR}_v3.bgen ref-first \
+		--sample ${UKB_PATH}/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
 		--threads 3 \
 		--memory 15000 \
 		--make-pgen \

@@ -5,6 +5,10 @@ library(tidyverse)
 
 # Read data ----
 
+infile_path <- "" # REDACTED
+ukb_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 NPCs <- 21
@@ -12,8 +16,7 @@ NPCs <- 21
 # IDs to put through QC
 sample_ids <- lapply(PHENOTYPES, function (p) {
   get_ids <- lapply(SEX_STRATA, function (sx) {
-    res <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/lmm_models/",
-                            p, "_", sx, "_blups_full_model.txt"), 
+    res <- read.table(paste0(infile_path, "lmm_models/", p, "_", sx, "_blups_full_model.txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)$eid
     return (res)
   })
@@ -23,17 +26,17 @@ sample_ids <- lapply(PHENOTYPES, function (p) {
 names(sample_ids) <- PHENOTYPES
 
 # QC file from UKBB
-qc <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/QC/ukb_sqc_v2.txt", header = T, 
+qc <- read.table(paste0(ukb_path, "/QC/ukb_sqc_v2.txt"), header = T, 
                  na.string = c("NA", "", "."), stringsAsFactors = F)
 
 # fam file corresponding to the QC file provided by UKBB
-fam <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/SAMPLE_FAM/ukb11867_cal_chr1_v2_s488363.fam", 
+fam <- read.table(paste0(ukb_path, "/SAMPLE_FAM/ukb11867_cal_chr1_v2_s488363.fam"), 
                   header = F)
 # Add IDs to QC file
 qc$eid <- fam[, 1]
 
 # Phenotype file from UKBB
-pheno <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv",
+pheno <- read.table(paste0(ukb_path, "/PHENOTYPE/PHENOTYPE_MAIN/ukb10844.csv"),
                     header = T, sep = ",", na.string = c("NA", "", "."), 
                     stringsAsFactors = F)
 colnames(pheno) <- gsub("X", "f.", colnames(pheno))
@@ -74,7 +77,7 @@ names(for_gen_QC) <- PHENOTYPES
 remove_withdrawn_ids <- function (data, qc_log_file) {
   
   # Path to UKBB provided list of individuals that have withdrawn consent
-  withdrawn <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/QC/w11867_20220525.csv", 
+  withdrawn <- read.table(paste0(ukb_path, "/QC/w11867_20220525.csv"), 
                           header = F)
   cleaned <- subset(data, !(data$eid %in% withdrawn$V1))
   
@@ -203,7 +206,7 @@ qc_excess_related <- function(data, qc_log_file) {
 qc_related <- function(data, qc_log_file) {
   
   # Pathway to UKBB list of related individuals
-  related <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/DATA/QC/ukb1186_rel_s488366.dat",
+  related <- read.table(paste0(ukb_path, "/QC/ukb1186_rel_s488366.dat"),
                         header = T)
   
   # For each pair of related individuals
@@ -282,7 +285,7 @@ qcd_slopes <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
     # Stratum data
     data <- for_gen_QC[[p]][[sx]]
-    qc_log_file <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/sample_qc/log_",
+    qc_log_file <- paste0(outfile_path, "/sample_qc/log_",
                           p, "_", sx, ".txt")
     
     # Print sample characteristics before QC
@@ -322,7 +325,7 @@ ids_for_gwas <- lapply(PHENOTYPES, function (p) {
              paste0("PC", 1:NPCs))
     
     write.table(to_write, 
-                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/replication_genotypes/sample_qc/", 
+                paste0(outfile_path, "/sample_qc/", 
                        p, "_", sx, "_ids_passed_qc.txt"), 
                 sep = "\t", row.names = F, quote = F)
     return ()
