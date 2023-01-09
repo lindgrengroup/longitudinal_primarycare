@@ -9,3 +9,5 @@ Scripts in *reported_refined_novel_variants/*: Scripts to classify lists of vari
 Scripts in *GIANT_power_comparison/*: Scripts to assess ratio of chi-squared statistics from in-house BMI intercept GWAS to published [GIANT 2019 meta-analysis of BMI](https://academic.oup.com/hmg/article/28/1/166/5098227), to calculate effective sample size boost from repeat measurements.  Calculation performed in **calculate_power_boost_chisq.R**, summary statistics formatted and job submitted in **submit_power_boost.sh**, via batch submission script **batch_submit_power_boost.R**.
 
 Scripts in *LDSC_r2_hg/*: Scripts to calculate SNP-based heritability and genetic correlation between: obesity-intercept and obesity-change traits, as well as between BMI and weight for the different change phenotypes. Munge sumstats into the correct format, and use SNPs in the pan-UKBB LD panel (EUR) for 1 million HapMap variants.
+
+Scripts in *extract_dosages/*: Scripts to extract genotype dosages at variants of interest (lead SNPs) using QCTOOLS.
