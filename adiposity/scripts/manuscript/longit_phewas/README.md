@@ -7,4 +7,4 @@ Scripts in *longitudinal/*: Scripts to replicate obesity-change linear slope and
 1. **1_prep_longit_data.R** - Get UK Biobank assessment centre values of BMI, weight, waist circumference (WC), and waist-hip-ratio (WHR), as well as self-reported weight change. Format for calculation of linear slope change and spline-based cluster membership (for BMI and weight).
 2. **2_GWAS_sample_QC.R** - As described in *../../GWAS/*.
 3. **3_genetic_assocn_linreg.R** - Test for the effect of rs429358 genotype, as calculated in *../post_GWAS/extract_dosages/*, on covariate-adjusted and appropriately transformed quantitative trait value slope BLUPs. 
-3. **4_examine_plot_results.R** - Forest plots for effects.
+4. **4_examine_plot_results.R** - Forest plots for effects.
