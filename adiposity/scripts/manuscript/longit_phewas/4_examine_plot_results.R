@@ -6,7 +6,11 @@ theme_set(theme_bw())
 
 # Read data ----
 
-res <- read.table("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/longit_phewas/rs429358_all_results.txt", sep = "\t",
+infile_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
+res <- read.table(paste0(infile_path, "/longit_phewas/rs429358_all_results.txt"), 
+                  sep = "\t",
                   header = T, stringsAsFactors = F)
 
 # colour palette: rose, teal, grey
@@ -70,7 +74,7 @@ SUB_STRATA_LEVELS <- paste0(rep(c("Triglycerides", "Potassium", "Lymphocytes",
 sub_dat <- sub_dat %>%
   mutate(strata = factor(strata, levels = SUB_STRATA_LEVELS))
 
-tiff(paste0("C:/Users/samvida/Documents/Lindgren Group/Adiposity_Primary_Care/Reports/Manuscript/figures/longit_phewas/subset_signif_results.tiff"),
+tiff(paste0(outfile_path, "/longit_phewas/subset_signif_results.tiff"),
      height = 12, width = 8, units = "cm",
      res = 300)
 plotBetas(sub_dat)

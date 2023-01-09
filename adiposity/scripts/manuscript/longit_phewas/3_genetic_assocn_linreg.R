@@ -5,7 +5,12 @@ library(tidyverse)
 
 # Read data ----
 
-PHENOTYPES <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/code_lists/qcd_traits_available.txt",
+infile_path <- "" # REDACTED
+gpdat_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
+PHENOTYPES <- read.table(paste0(infile_path, "/code_lists/qcd_traits_available.txt"),
                          sep = "\t", header = F, stringsAsFactors = F)$V1
 REMOVE_PHENOS <- c("BMI", "Weight", "WC", "WHR", "FAI", "Progesterone", "Prolactin")
 PHENOTYPES <- PHENOTYPES[!PHENOTYPES %in% REMOVE_PHENOS]
@@ -13,7 +18,7 @@ SEX_STRATA <- c("F", "M", "sex_comb")
 
 blups <- lapply(PHENOTYPES, function (p) {
   res <- lapply(SEX_STRATA, function (sx) {
-    df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/lmm_models/",
+    df <- read.table(paste0(infile_path, "/longit_phewas/lmm_models/",
                             p, "_", sx, "_blups_full_model.txt"), 
                      sep = "\t", header = T, stringsAsFactors = F)
     df$eid <- as.character(df$eid)
@@ -27,7 +32,7 @@ names(blups) <- PHENOTYPES
 
 # IDs that passed genotyping QC
 ids_passed_geno_qc <- lapply(PHENOTYPES, function (p) {
-  df <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/sample_qc/", 
+  df <- read.table(paste0(infile_path, "/longit_phewas/sample_qc/", 
                           p, "_ids_passed_qc.txt"), sep = "\t", header = T, stringsAsFactors = F)
   df$eid <- as.character(df$eid)
   return (df)
@@ -35,21 +40,21 @@ ids_passed_geno_qc <- lapply(PHENOTYPES, function (p) {
 names(ids_passed_geno_qc) <- PHENOTYPES
 
 # IDs in discovery GWAS
-gp_ids <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/data/all_ids_in_discovery_gp_ukb_dat.txt",
+gp_ids <- read.table(paste0(gpdat_path, "/data/all_ids_in_discovery_gp_ukb_dat.txt"),
                      sep = "\t", header = F, stringsAsFactors = F)$V1
 gp_ids <- as.character(gp_ids)
 
 # Genotypes / dosages at rs429358
-apoe_dosages <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/sample_variant_counts/rs429358_dosages.txt",
+apoe_dosages <- read.table(paste0(gpdat_path, "/sample_variant_counts/rs429358_dosages.txt"),
                            sep = " ", header = T, stringsAsFactors = F)
 # Remove first row, which contains info on type of column and columns 
 # 2, 3, 4 (ID repeat, missingness, sex)
 apoe_dosages <- apoe_dosages[-1, c(1, 5)]
 colnames(apoe_dosages) <- c("eid", "dosage")
 
-covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[PHENOTYPES]
+covars <- readRDS(psate0(gpdat_path, "/data/covariates.rds"))[PHENOTYPES]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -144,6 +149,6 @@ names(all_res) <- PHENOTYPES
 all_res <- bind_rows(all_res)
 
 write.table(all_res,
-            "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/rs429358_all_results.txt",
+            paste0(outfile_path, "/longit_phewas/rs429358_all_results.txt"),
             sep = "\t", quote = F, row.names = F)
 

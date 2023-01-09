@@ -7,12 +7,14 @@ theme_set(theme_bw())
 
 # Read data ----
 
-PHENOS <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/code_lists/qcd_traits_available.txt",
+infile_path <- "" # REDACTED
+gen_resources_path <- "" # REDACTED
+outfile_path <- "" # REDACTED
+
+PHENOS <- read.table(paste0(infile_path, "/code_lists/qcd_traits_available.txt"),
                      sep = "\t", header = F, stringsAsFactors = F)$V1
 # Remvoe adiposity phenotypes
-# and hormones that were only included for separate projects
-REMOVE_PHENOS <- c("BMI", "WC", "Weight", "WHR", 
-                   "FAI", "Progesterone", "Prolactin")
+REMOVE_PHENOS <- c("BMI", "WC", "Weight", "WHR")
 
 PHENOS <- PHENOS[!PHENOS %in% REMOVE_PHENOS]
 SEX_STRATA <- c("F", "M", "sex_comb")
@@ -21,10 +23,10 @@ MOD_COVARS <- c("baseline_age", "age_sq")
 # Add data provider as covariate if there is more than one data provider
 ADD_COVARS <- c("year_of_birth")
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[PHENOS]
-covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[PHENOS]
+dat <- readRDS(paste0(infile_path, "/data/indiv_qcd_data.rds"))[PHENOS]
+covars <- readRDS(paste0(infile_path, "/data/covariates.rds"))[PHENOS]
 
-general_covars <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/general_resources/220504_QCd_demographic_covariates.txt",
+general_covars <- read.table(paste0(gen_resources_path, "/220504_QCd_demographic_covariates.txt"),
                              sep = "\t", header = T, stringsAsFactors = F)
 general_covars$eid <- as.character(general_covars$eid)
 
@@ -113,7 +115,7 @@ lapply(PHENOS, function (p) {
   lapply(SEX_STRATA, function (sx) {
     full_blups <- getBLUPS(full_models[[p]][[sx]])
     write.table(full_blups, 
-                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/longit_phewas/lmm_models/",
+                paste0(outfile_path, "/longit_phewas/lmm_models/",
                        p, "_", sx, "_blups_full_model.txt"),
                 sep = "\t", row.names = F, col.names = T, quote = F)
   })
