@@ -7,8 +7,8 @@
 #$ -P lindgren.prjc -q short.qc
 #$ -pe shmem 1
 #$ -N classify_reported_novel_variants
-#$ -o post_GWAS/
-#$ -e post_GWAS/
+#$ -o /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/
+#$ -e /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/
 #$ -j y
 
 echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as user ${USER}
@@ -20,6 +20,8 @@ module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 echo "passing covariates..."
 covars=${covars//|/,}
 echo ${covars}
+
+cd /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS
 
 mkdir post_GWAS/${STRATA_NAME}/classify_b0_variants
 mkdir post_GWAS/${STRATA_NAME}/classify_b0_variants/reported_variants
@@ -39,7 +41,7 @@ awk -v n_gp="$N_GP" 'BEGIN{FS=OFS="\t"} {print $1, $4, $5, $6, $7, $8, $9, n_gp}
 
 # Create list of reported SNPs within +/- 500kb of every unreported, significant SNP
 # and run GCTA-COJO for conditional analysis by looping over all variants
-Rscript scripts/classify_reported_novel_variants.R \
+Rscript /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/classify_reported_novel_variants.R \
 --strata=${STRATA_NAME}
 
 echo "###########################################################"

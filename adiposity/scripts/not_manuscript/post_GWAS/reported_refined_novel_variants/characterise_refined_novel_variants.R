@@ -8,9 +8,8 @@ library(biomaRt)
 args <- commandArgs(trailingOnly = T)
 STRATA <- args[1]
 
-filepath_main <- "" # REDACTED
-gen_resources_path <- "" # REDACTED
-sumstats_path <- "" # REDACTED
+filepath_main <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                        STRATA, "/classify_b0_variants/")
 
 # Read files ----
 
@@ -47,7 +46,7 @@ if (file.exists(refined_filename)) {
   
 } else potential_refined <- NA
 
-gwas_cat_snps <- read.table(paste0(gen_resources_path, "/GWASCatalog/gwascat_obesity_associations_hg19.bed"),
+gwas_cat_snps <- read.table("/well/lindgren/samvida/Resources/GWASCatalog/gwascat_obesity_associations_hg19.bed",
                             sep = "\t", header = F, quote = "")
 colnames(gwas_cat_snps) <- c("CHR", "POS0", "POS1", "SNP")
 
@@ -56,8 +55,8 @@ gwas_cat_snps <- gwas_cat_snps %>%
          POS0 = as.numeric(POS0), POS1 = as.numeric(POS1),
          SNP = as.character(SNP))
 
-gp_snps <- read.table(paste0(sumstats_path, STRATA, "/finemapping/", 
-                             STRATA, "_b0_final.lead_snps.txt"),
+gp_snps <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/",
+                             STRATA, "/finemapping/", STRATA, "_b0_final.lead_snps.txt"),
                       sep = "\t", header = T, stringsAsFactors = F)
 gp_snps <- gp_snps[, 1:3]
 colnames(gp_snps) <- c("SNP", "CHR", "POS")

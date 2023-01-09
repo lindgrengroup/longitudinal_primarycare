@@ -3,11 +3,7 @@
 
 library(tidyverse)
 
-general_resources_path <- "" # REDACTED
-gwas_path <- "" # REDACTED
-scripts_path <- "" # REDACTED
-
-gwas_cat_snps <- read.table(paste0(general_resources_path, "/GWASCatalog/gwascat_obesity_associations_hg19.bed"),
+gwas_cat_snps <- read.table("/well/lindgren/samvida/Resources/GWASCatalog/gwascat_obesity_associations_hg19.bed",
                             sep = "\t", header = F, quote = "")
 colnames(gwas_cat_snps) <- c("CHR", "POS0", "POS1", "SNP")
 
@@ -15,17 +11,18 @@ STRATA_ALL <- c("BMI_F", "BMI_M", "BMI_sex_comb",
                 "Weight_F", "Weight_M", "Weight_sex_comb")
 
 for (STRATA in STRATA_ALL) {
-  report_log <- paste0(gwas_path, "/post_GWAS/", STRATA, 
-                       "/classify_b0_variants/log.txt")
+  report_log <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                       STRATA, "/classify_b0_variants/log.txt")
   
   # TO RUN FOR ALL GENOME-WIDE SIGNIFICANT SNPS
-  # gp_snps <- read.table(paste0(gwas_path, "/post_GWAS/", STRATA, "/lmm_intercepts_sig_snps.txt"),
+  # gp_snps <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2204_models/GWAS/post_GWAS/",
+  #                              STRATA, "/lmm_intercepts_sig_snps.txt"),
   #                       sep = " ", header = F, stringsAsFactors = F)
   # colnames(gp_snps) <- c("SNP", "CHR", "POS")
   
   # TO RUN FOR ONLY FINE-MAPPED SNPS
-  gp_snps <- read.table(paste0(gwas_path, "/post_GWAS/", STRATA, 
-                               "/finemapping/", STRATA, "_b0_final.lead_snps.txt"),
+  gp_snps <- read.table(paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/",
+                               STRATA, "/finemapping/", STRATA, "_b0_final.lead_snps.txt"),
                         sep = "\t", header = T, stringsAsFactors = F)
   gp_snps <- gp_snps[, 1:3]
   colnames(gp_snps) <- c("SNP", "CHR", "POS")
@@ -55,13 +52,13 @@ for (STRATA in STRATA_ALL) {
   reported_snps <- gp_snps$SNP[remove_snps]
   
   write.table(reported_snps,
-              paste0(gwas_path, "/post_GWAS/", STRATA, 
-                     "/classify_b0_variants/reported_snp_list.txt"),
+              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                     STRATA, "/classify_b0_variants/reported_snp_list.txt"),
               sep = "\t", row.names = F, col.names = F, quote = F)
   
   write.table(unreported_snps, 
-              paste0(gwas_path, "/post_GWAS/", STRATA, 
-                     "/classify_b0_variants/unreported_snp_list.txt"),
+              paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                     STRATA, "/classify_b0_variants/unreported_snp_list.txt"),
               sep = "\t", row.names = F, quote = F)
   
   # Calculate list of conditional SNPs to assess per variant and submit GCTA-COJO ----
@@ -83,13 +80,13 @@ for (STRATA in STRATA_ALL) {
     to_write <- unique(c(unreported_snps$SNP[i], to_write))
     
     write.table(to_write,
-                paste0(gwas_path, "/post_GWAS/", STRATA, 
-                       "/classify_b0_variants/reported_variants/",
+                paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                       STRATA, "/classify_b0_variants/reported_variants/",
                        unreported_snps$SNP[i], "_published.txt"),
                 sep = "\t", row.names = F, col.names = F, quote = F)
   }
   
-  submission_script <- paste0(scripts_path, "gcta_cojo_conditional_analysis.sh")
+  submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/gcta_cojo_conditional_analysis.sh"
   
   # Submit GCTA-COJO jobs per chromosome
   for (chr in 1:22) {
@@ -97,8 +94,8 @@ for (STRATA in STRATA_ALL) {
     
     if (nrow(subset_chr_unreported) > 0) {
       write.table(subset_chr_unreported$SNP,
-                  paste0(gwas_path, "/post_GWAS/", STRATA, 
-                         "/classify_b0_variants/tmp_variant_list_chr", 
+                  paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/2211_models/GWAS/post_GWAS/", 
+                         STRATA, "/classify_b0_variants/tmp_variant_list_chr", 
                          chr, ".txt"),
                   sep = "\t", row.names = F, col.names = F, quote = F)
       job_options <- paste(
