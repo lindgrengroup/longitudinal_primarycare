@@ -4,9 +4,9 @@
 # R wrapper to submit qctool jobs
 # Loop over all lead variants in each parameter (across all strata)
 
-submission_script <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/scripts/4_extract_dosages.sh"
+submission_script <- "scripts/extract_dosages.sh"
 
-lead_variants <- read.table("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/ukb_no_gp/data/lead_snps_to_replicate.txt",
+lead_variants <- read.table("lead_snps_to_replicate.txt",
                             sep = "\t", header = T, stringsAsFactors = F)
 
 for (vi in 1:nrow(lead_variants)) {
