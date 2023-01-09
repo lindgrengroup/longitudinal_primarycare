@@ -14,16 +14,4 @@ Calculate adiposity-change phenotypes (linear slope and posterior probability of
 **subset_replication_genotypes.sh** - Extract the list of SNPs associated with obesity-change trait in discovery analyses and genotypes/dosages at these SNPs for all individuals. 
 
 3. **3_GWAS_trait_curation.R** - Gather the adiposity-change traits calculated above and adjust for confounders and RINT or transform posterior probability of cluster memberships. 
-4. **4_variant_association_analysis.sh** - Since we are only testing the association of a subset of individuals with a subset of variants, use PLINK to perform association analysis, adjusting for appropriate covariates. Also run **4_rs429358_no_dementia.R**, which tests for the association of this single SNP with all adiposity change phenotypes, including self-reported weight change, after excluding individuals with dementia (as calculated in *../../get_data_QC/*)
-
-
-
-
-- **gcta_cojo_conditional_analysis.sh** - For a given list of SNPs (containing a SNP of interest and all obesity-associated SNPs within 500kb), create LD matrix based on individuals of White British ancestry to perform conditional analysis with GCTA-COJO. All collinear SNPs are added to the "reported" SNP list; if the SNP of interest remains as an independent association, it may be refined or novel -- calculate conditional effect of all independent SNPs in the region.
-- **characterise_refined_novel_variants.R** - From the conditional effects calculated above, classify SNPs as reported, refined, or novel based on the "significantly stronger effect" and "conditionally independent" criteria using t-tests. Access "buddy" SNPs for each refined and novel SNP, i.e. most highly correlated or nearest obesity-associated variant.
-
-Scripts in *GIANT_power_comparison/*: Scripts to assess ratio of chi-squared statistics from in-house BMI intercept GWAS to published [GIANT 2019 meta-analysis of BMI](https://academic.oup.com/hmg/article/28/1/166/5098227), to calculate effective sample size boost from repeat measurements.  Calculation performed in **calculate_power_boost_chisq.R**, summary statistics formatted and job submitted in **submit_power_boost.sh**, via batch submission script **batch_submit_power_boost.R**.
-
-Scripts in *LDSC_r2_hg/*: Scripts to calculate SNP-based heritability and genetic correlation between: obesity-intercept and obesity-change traits, as well as between BMI and weight for the different change phenotypes. Munge sumstats into the correct format, and use SNPs in the pan-UKBB LD panel (EUR) for 1 million HapMap variants.
-
-Scripts in *extract_dosages/*: Scripts to extract genotype dosages at variants of interest (lead SNPs) using QCTOOLS.
+4. **4_variant_association_analysis.sh** - Since we are only testing the association of a subset of individuals with a subset of variants, use PLINK to perform association analysis, adjusting for appropriate covariates. Also run **longit_effect_main_dat.R**, which tests for the effect of genotypes of interest on self-reported weight change, and **4_rs429358_no_dementia.R**, which tests for the association of this single SNP with all adiposity change phenotypes, including self-reported weight change, after excluding individuals with dementia (as calculated in *../../get_data_qc/*)
