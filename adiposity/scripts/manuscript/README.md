@@ -1,4 +1,4 @@
-# The common genetic architecture of adult obesity change
+# The genetic architecture of changes in adiposity during adulthood
 
 Code for analyses in pre-printed article here - 
 
