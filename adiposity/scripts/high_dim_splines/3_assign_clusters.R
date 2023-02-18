@@ -88,24 +88,59 @@ set.seed(RANDOM_SEED)
 custom_four_diverge <- c("#D35C79", "#D9AB90", "#9FBCA4", "#009593")
 names(custom_four_diverge) <- c("1", "2", "3", "4")
 
-parser <- ArgumentParser()
-parser$add_argument("--phenotype", required = TRUE,
-                    help = "Phenotype to model")
-parser$add_argument("--sex_strata", required = TRUE,
-                    help = "Sex strata")
-parser$add_argument("--K", required = TRUE,
-                    help = "Chosen number of clusters")
-parser$add_argument("--L", required = TRUE,
-                    help = "Chosen minimum L")
-parser$add_argument("--M", required = TRUE,
-                    help = "Chosen initialisation strategy")
-args <- parser$parse_args()
+# parser <- ArgumentParser()
+# parser$add_argument("--phenotype", required = TRUE,
+#                     help = "Phenotype to model")
+# parser$add_argument("--sex_strata", required = TRUE,
+#                     help = "Sex strata")
+# parser$add_argument("--K", required = TRUE,
+#                     help = "Chosen number of clusters")
+# parser$add_argument("--L", required = TRUE,
+#                     help = "Chosen minimum L")
+# parser$add_argument("--M", required = TRUE,
+#                     help = "Chosen initialisation strategy")
+# args <- parser$parse_args()
+# 
+# PHENO <- args$phenotype
+# SEX_STRATA <- args$sex_strata
+# K <- as.numeric(args$K)
+# L <- args$L
+# M <- args$M
 
-PHENO <- args$phenotype
-SEX_STRATA <- args$sex_strata
-K <- as.numeric(args$K)
-L <- args$L
-M <- args$M
+args_test_presence <- commandArgs(trailingOnly = TRUE)
+if (length(args_test_presence) > 0) {
+  parser <- ArgumentParser()
+  parser$add_argument("--phenotype", required = TRUE,
+                      help = "Phenotype to model")
+  parser$add_argument("--ss", required = TRUE,
+                      help = "Sex strata")
+  parser$add_argument("--K", required = TRUE,
+                      default = 5,
+                      help = "Number of clusters")
+  parser$add_argument("--L", required = TRUE,
+                      default = 2, 
+                      help = "Only sample from individuals with at least L measurements")
+  parser$add_argument("--M", required = TRUE,
+                      default = 1,
+                      help = "Initialise clusters with diff. at M years post-baseline")
+  args <- parser$parse_args()
+  PHENO <- args$phenotype
+  SEX_STRATA <- args$ss
+  K <- as.numeric(args$K)
+  L <- as.numeric(args$L) # only sample from individuals with at least L measurements
+  M <- args$M
+  if (M != "random") {
+    M <- as.numeric(args$M) # initialise clusters with n-tile diff. at M years post-baseline
+  }
+} else {
+  PHENO <- c("BMI", "Weight", "WHR", "WC")[1]
+  SEX_STRATA <- c("F", "M", "sex_comb")[3]
+  K <- 5
+  L <- 2
+  M <- 1
+}
+
+
 
 main_filepath <- paste0("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/clustering/",
                         PHENO, "_", SEX_STRATA, "/")

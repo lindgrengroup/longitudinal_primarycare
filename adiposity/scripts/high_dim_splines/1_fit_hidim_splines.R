@@ -12,22 +12,30 @@ theme_set(theme_bw())
 RANDOM_SEED <- 160522
 set.seed(RANDOM_SEED)
 
-parser <- ArgumentParser()
-parser$add_argument("--phenotype", required = TRUE,
-                    help = "Phenotype to model")
-parser$add_argument("--sex_strata", required = TRUE,
-                    help = "Sex strata")
-args <- parser$parse_args()
+args_test_presence <- commandArgs(trailingOnly = TRUE)
+if (length(args_test_presence) > 0) {
+  parser <- ArgumentParser()
+  parser$add_argument("--phenotype", required = TRUE,
+                      help = "Phenotype to model")
+  parser$add_argument("--sex_strata", required = TRUE,
+                      help = "Sex strata")
+  args <- parser$parse_args()
+  
+  PHENO <- args$phenotype
+  SEX_STRATA <- args$sex_strata
+} else {
+  PHENO <- c("BMI", "Weight", "WHR", "WC")[1]
+  SEX_STRATA <- c("F", "M", "sex_comb")[3]
+}
+plotdir <- file.path(adiposity_root, "highdim_splines/plots/")
+resdir <- file.path(adiposity_root, "highdim_splines/results/")
+dir.create(plotdir, showWarnings = FALSE)
+dir.create(resdir, showWarnings = FALSE)
 
-PHENO <- args$phenotype
-SEX_STRATA <- args$sex_strata
-
-plotdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/plots/"
-resdir <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/results/"
 
 # Load data ----
 
-dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")[[PHENO]][[SEX_STRATA]]
+dat <- readRDS(file.path(adiposity_root, "highdim_splines/data/dat_to_model.rds"))[[PHENO]][[SEX_STRATA]]
 
 NDF_SPLINE <- 100 # DF of spline
 MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)
@@ -51,7 +59,7 @@ MAX_N_DAYS <- 7500 # Number of days post baseline to be included (~20 years)
 # fulladj_plot <- ggplot(plot_dat, aes(x = t_diff, y = value_fulladj)) +
 #   facet_wrap(~eid, nrow = 5, ncol = 5, scales = "free") +
 #   geom_point() +
-#   labs(x = "Days from first measurement", y = "Confounder-adj value")
+#   labs(x This= "Days from first measurement", y = "Confounder-adj value")
 # 
 # pdf(paste0(plotdir, "sample_obs_", PHENO, "_", SEX_STRATA, ".pdf"), onefile = T)
 # print(rawdat_plot)
@@ -117,8 +125,8 @@ str(precision_smooth)
 
 model_dat <- split(dat, f = dat$eid)
 ALL_IDS <- names(model_dat)
-
-spline_posteriors <- lapply(model_dat, function (id_df) {
+str(model_dat)
+spline_posteriors <- lapply(model_dat[1:10], function (id_df) {
   y <- id_df$value_fulladj
   X <- matrix(0, nrow = length(diff_day_unique), ncol = nrow(id_df))
   for (j in 1:nrow(id_df)) {
@@ -130,6 +138,22 @@ spline_posteriors <- lapply(model_dat, function (id_df) {
                                                precision_smooth = precision_smooth)
   return (res)
 })
+
+# ###### TO BE REMOVED ###########
+# for (i in 1:20) {
+#   print(summary(model_dat[[i]]$value_fulladj))
+# }
+# str(model_dat[[1]])
+# sapply(model_dat[1:100], function(x) x$value_fulladj[1])
+# 
+# str(spline_posteriors[[1]])
+# sapply(spline_posteriors[1:10], function(x) x$mu[1])
+# 
+# 
+# lapply(spline_posteriors[1:10], function(x) x$mu)
+# 
+# ##########################
+
 
 # Extract values of interest ----
 

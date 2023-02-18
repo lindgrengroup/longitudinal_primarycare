@@ -8,6 +8,16 @@ library(tidyverse)
 PHENOTYPES <- c("BMI", "Weight")
 SEX_STRATA <- c("F", "M", "sex_comb")
 
+
+if (Sys.info()["user"] == "qgj547") { #George
+  adiposity_root <- "/well/lindgren-ukbb/projects/ukbb-11867/georgenicholson/github_repos/longitudinal_primarycare/adiposity"
+} else { # Samvida
+  adiposity_root <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity"
+}
+output_dir <- file.path(adiposity_root, "highdim_splines/data")
+
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
 dat <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/indiv_qcd_data.rds")[PHENOTYPES]
 covars <- readRDS("/well/lindgren-ukbb/projects/ukbb-11867/samvida/full_primary_care/data/covariates.rds")[PHENOTYPES]
 
@@ -86,7 +96,7 @@ model_dat <- lapply(PHENOTYPES, function (p) {
 names(model_dat) <- PHENOTYPES
 
 saveRDS(model_dat, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/models_for_refitting.rds")
+        file = file.path(output_dir, "models_for_refitting.rds"))
 
 to_write <- lapply(PHENOTYPES, function (p) {
   res_list <- lapply(SEX_STRATA, function (sx) {
@@ -110,4 +120,4 @@ to_write <- lapply(PHENOTYPES, function (p) {
 names(to_write) <- PHENOTYPES
 
 saveRDS(to_write, 
-        "/well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/data/dat_to_model.rds")
+        file = file.path(output_dir, "dat_to_model.rds"))
