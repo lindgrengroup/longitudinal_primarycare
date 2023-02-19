@@ -32,8 +32,8 @@ obj <- function(par) {
   log_dens <- 0
   for (j in subj_opt) {
     # TODO: switch below to all_traj[[j]]$mu_log and all_traj[[j]]$Sig_log
-    log_dens <- log_dens + mvtnorm::dmvnorm(x = all_traj[[j]]$mu[inds_use], mean = glob_mn[inds_use], 
-                                            sigma = (all_traj[[j]]$Sig + Sig_eps)[inds_use, inds_use], log = TRUE)
+    log_dens <- log_dens + mvtnorm::dmvnorm(x = all_traj[[j]]$mu_log[inds_use], mean = glob_mn[inds_use], 
+                                            sigma = (all_traj[[j]]$Sig_log + Sig_eps)[inds_use, inds_use], log = TRUE)
   }
   return(-log_dens)
 }
