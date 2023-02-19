@@ -1,12 +1,11 @@
 source("scripts/00_load_data.R")
 TASK_ID <- 1
-N_TASKS <- 1000
 joint_dist_mat <- matrix(0, N_Y_BIN, N_Y_BIN)
 joint_dist_mat_multi_list <- list()
 for (j in 1:control$N_GRAD_CLASSES) {
   joint_dist_mat_multi_list[[j]] <- rep(list(joint_dist_mat), N_AGE_BIN)
 }
-for (TASK_ID in 1:N_TASKS) {
+for (TASK_ID in 1:control$NTASKS_01) {
   joint_dist_mat_multi_list_curr <- readRDS(file = paste0("output/joint_dist_mat/joint_dist_mat_multi_list_task_", TASK_ID, ".RDS"))
   for (j in 1:control$N_GRAD_CLASSES) {
     for (age_bin_curr in 1:N_AGE_BIN) {

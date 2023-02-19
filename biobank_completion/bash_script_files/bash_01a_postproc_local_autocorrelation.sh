@@ -12,11 +12,11 @@
 # Number of slots
 #$ -pe shmem 1
 # How many tasks in array (first id)-(last id):(step size)
-#$ -t 1-1000:1
+#$ -t 1-1:1
 # Number of tasks eligible for concurrent execution
-#$ -tc 1000
+#$ -tc 1
 # Name of the array job
-#$ -N bash_01_learn_local_autocorrelation.sh
+#$ -N bash_01a_postproc_local_autocorrelation.sh
 # Instead of separate output and error log files, send the error output to the regular output log file
 #$ -j y
 # Where to put output/error files
@@ -34,8 +34,7 @@ echo "##########################################################"
 
 module load R-bundle-Bioconductor/3.14-foss-2021b-R-4.1.2
 
-Rscript scripts/01_learn_local_autocorrelation.R --task_id $SGE_TASK_ID --n_tasks $SGE_TASK_LAST 
-
+Rscript scripts/01a_postproc_local_autocorrelation.R --task_id $SGE_TASK_ID --n_tasks $SGE_TASK_LAST 
 
 echo "###########################################################"
 echo "Finished at: "`date`
