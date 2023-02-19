@@ -19,7 +19,7 @@ if (length(args_test_presence) > 0) {
 }
 
 all_traj <- readRDS(file = "output/all_traj.RDS")
-glob_mn <- Reduce(f = '+', x = lapply(all_traj, function(x) x$mu)) / length(all_traj)
+glob_mn <- Reduce(f = '+', x = lapply(all_traj, function(x) x$mu_log)) / length(all_traj)
 
 set.seed(TASK_ID)
 subj_opt <- sample(names(all_traj), size = control$N_SUBJ_PER_OPTIM)

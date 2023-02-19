@@ -26,6 +26,7 @@ for (TASK_ID in 1:control$NTASKS_03) {
 }
 
 par_use <- colMeans(exp(par_mat))
+round(par_use, 2)
 Sig_eps <- Sig_eps_fn(len = par_use[1], sig_GP = par_use[2], sig_RI = par_use[3], sig_resid = par_use[4])
 subj_split <- subj_split_fn(all_subj, N_TASKS = N_TASKS)  
 subj_do <- subj_split[[TASK_ID]]
