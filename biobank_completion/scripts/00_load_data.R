@@ -75,7 +75,7 @@ if (control$do_plots) {
 # bin_centre_in <- quantile(dat$value, probs = bin_centre_quantiles)
 
 ##############################################################################
-# Generate synthetic genetic data
+# Load genetic data
 ##############################################################################
 N_LOCI <- 100
 snp_names <- paste0("SNP_", 1:N_LOCI)
@@ -87,5 +87,42 @@ for (j in 1:N_LOCI) {
 }
 sex_data <- as.numeric(runif(n = n_subj, min = 0, max = 1) < .5)
 
-meta <- data.frame(subj_id = all_subj, sex = sex_data)
-meta <- cbind(meta, genetic_data)
+
+force_genetic_data_reload <- FALSE
+if (!file.exists("output/meta.RDS") | force_genetic_data_reload) {
+  library(bigsnpr)
+  main_filepath <- "/well/lindgren-ukbb/projects/ukbb-11867/samvida/biobank_completion/BMI/variant_selection/bed_files"
+  dir.create("output/genetic_temp_files", showWarnings = FALSE)
+  gmat <- NULL
+  for (chrnum in 1:22) {
+    try({
+      bfile <- paste0(main_filepath, "/chr", chrnum, ".bed")
+      back_file <- file.path("output/genetic_temp_files/", paste0("backing_file_chr_", chrnum))
+      if (file.exists(paste0(back_file, ".bk"))) {
+        file.remove(paste0(back_file, ".bk"))
+      }
+      gen_bkfile <- snp_readBed(bfile, backingfile = back_file)
+      gen_dat <- snp_attach(gen_bkfile)
+      genotype_mat <- gen_dat$genotypes
+      subj_names <- gen_dat$fam$sample.ID
+      snp_names <- gen_dat$map$marker.ID
+      add <- genotype_mat[1:length(subj_names), 1:length(snp_names)]
+      rownames(add) <- subj_names
+      colnames(add) <- snp_names
+      gmat <- cbind(gmat, add)
+    })
+  }
+  sex_data_in <- gen_dat$fam$sex
+  names(sex_data_in) <- gen_dat$fam$sample.ID
+  genetic_data <- gmat[match(all_subj, rownames(gmat)), ]
+  sex_data <- sex_data_in[match(all_subj, names(sex_data_in))] - 1
+  meta <- data.frame(subj_id = all_subj, sex = sex_data)
+  meta <- cbind(meta, genetic_data)
+  saveRDS(meta, file = "output/meta.RDS")
+} else {
+  meta <- readRDS(file = "output/meta.RDS")
+}
+
+
+# all_BMI_lead_snps_genotypes.bed
+

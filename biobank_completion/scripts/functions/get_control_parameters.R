@@ -69,7 +69,7 @@ get_control_parameters <- function() {
   ##############################################################################
   control$NTASKS_04 <- 1000
   control$NTASKS_04a <- 50
-  
+  control$N_LOCI <- 113
   return(control)
   
 }

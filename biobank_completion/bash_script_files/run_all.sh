@@ -7,4 +7,5 @@ qsub -cwd -hold_jid bash_02_fit_HMM.sh bash_script_files/bash_02a_combine_HMM_ou
 qsub -cwd -hold_jid bash_02a_combine_HMM_outputs.sh bash_script_files/bash_03_optimize_var_param.sh
 qsub -cwd -hold_jid bash_03_optimize_var_param.sh bash_script_files/bash_04_genetic_assoc.sh
 qsub -cwd -hold_jid bash_04_genetic_assoc.sh bash_script_files/bash_04a_begin_to_combine_outputs.sh
+qsub -cwd -hold_jid bash_04a_begin_to_combine_outputs.sh bash_script_files/bash_04b_complete_combine.sh
 
