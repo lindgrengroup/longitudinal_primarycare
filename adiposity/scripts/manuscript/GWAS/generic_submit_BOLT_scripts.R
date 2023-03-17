@@ -12,6 +12,7 @@ STRATA_NAMES <- c("BMI_F", "BMI_M", "BMI_sex_comb",
 PARAMETERS <- c("b0", "b1")
 # PARAMETERS <- "b1_no_FU_adjustment"
 # PARAMETERS <- "b1_unadj_b0"
+# PARAMETERS <- "average_trait"
 # CLUSTERS <- c("k1", "k1_k2", "k1_k2_k3")
 
 # GWAS submission script
