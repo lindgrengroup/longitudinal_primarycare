@@ -3,17 +3,19 @@
 # Author: Samvida S. Venkatesh
 # Date: 24/08/22
 
-#$ -cwd
-#$ -P lindgren.prjc -q long.qc
-#$ -pe shmem 8
-#$ -N soft_clust_BOLT_GWAS
-#$ -o BOLT_logs
-#$ -e BOLT_logs
-#$ -j y
+#SBATCH -A lindgren.prj
+#SBATCH -p long
+#SBATCH -c 8
+#SBATCH -J softclust_BOLT_GWAS_no_baseline_adj
+#SBATCH -o BOLT_logs/softclust_BOLT_GWAS-%j.out
 
-echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as user ${USER}
-
-##########################################################################################
+echo "########################################################"
+echo "Slurm Job ID: $SLURM_JOB_ID" 
+echo "Run on host: "`hostname` 
+echo "Operating system: "`uname -s` 
+echo "Username: "`whoami` 
+echo "Started at: "`date` 
+echo "##########################################################"
 
 echo "passing covariates..."
 covars=${covars//|/,}
@@ -47,8 +49,8 @@ mkdir BOLT_results/${STRATA}
 --lmm \
 --numThreads=8 \
 --statsFile=BOLT_results/${STRATA}_${CLUST}_assoc_cal.stats.gz \
---bgenFile=${UKB_PATH}/DATA/IMPUTATION/ukb_imp_chr{1:22}_v3.bgen \
---sampleFile=${UKB_PATH}/DATA/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
+--bgenFile=${UKB_PATH}/IMPUTATION/ukb_imp_chr{1:22}_v3.bgen \
+--sampleFile=${UKB_PATH}/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
 --statsFileBgenSnps=BOLT_results/${STRATA}_${CLUST}_assoc_imp.stats.gz \
 --verboseStats
 

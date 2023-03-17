@@ -7,7 +7,7 @@
 #SBATCH -p long
 #SBATCH -c 8
 #SBATCH -J softclust_BOLT_GWAS_no_baseline_adj
-#SBATCH -o /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/highdim_splines/standardised_outcomes/GWAS/BOLT_logs/softclust_BOLT_GWAS_no_baseline_adj-%j.out
+#SBATCH -o BOLT_logs/softclust_BOLT_GWAS_no_baseline_adj-%j.out
 
 echo "########################################################"
 echo "Slurm Job ID: $SLURM_JOB_ID" 
@@ -48,8 +48,8 @@ mkdir BOLT_results/${STRATA}
 --lmm \
 --numThreads=8 \
 --statsFile=BOLT_results/${STRATA}_${CLUST}_no_baseline_adjustment_assoc_cal.stats.gz \
---bgenFile=${UKB_PATH}/DATA/IMPUTATION/ukb_imp_chr{1:22}_v3.bgen \
---sampleFile=${UKB_PATH}/DATA/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
+--bgenFile=${UKB_PATH}/IMPUTATION/ukb_imp_chr{1:22}_v3.bgen \
+--sampleFile=${UKB_PATH}/SAMPLE_FAM/ukb11867_imp_chr1_v3_s487395.sample \
 --statsFileBgenSnps=BOLT_results/${STRATA}_${CLUST}_no_baseline_adjustment_assoc_imp.stats.gz \
 --verboseStats
 
