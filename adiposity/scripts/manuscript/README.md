@@ -16,3 +16,6 @@ Scripts are organised by directories corresponding to sections in the manuscript
 - *longit_phewas/* - Longitudinal phenome-wide association studies for rs429358
 - *non_wb_ancestry/* - Identification and quality control of longitudinal records from individuals not of white British ancestry, replication of models and genome-wide significant associations in this subset
 - *manuscript_figures/* - Scripts to generate figures and supplementary figures in manuscript, if not already in other directories
+
+## To address review, the following directories were added
+- *sensitivity_compare_intercept_average/* - To assess the difference between the LMM intercept and average BMI

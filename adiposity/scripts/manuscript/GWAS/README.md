@@ -12,3 +12,10 @@ Scripts in *./BOLT_helpers/*:
 1. **1_perform_GWAS_BOLT.sh** - Take in arguments passed by BOLT submission script (for strata and parameter) to perform GWAS under the linear mixed model framework in BOLT, using imputed genotypes from UK Biobank. 
 2. **2_perform_BOLT_filtering.sh** - Shell script to (1) Perform initial filtering by MAF > 1%, HWE p-value > 1E-6, INFO > 0.8, missingness < 5%, and bi-allelic SNPs, and (2) execute the filtering wrapper script **2_BOLT_filtering_wrapper.R**. Output: filtered gzipped GWAS results in a format suitable for FUMA, and plot QQ plots and Manhattan plots.
 3. **3_perform_finemapping_BOLT.sh** - Calls Duncan's finemapping pipeline (using the FINEMAP software) to identify putative causal SNPs from GWAS summary statistics. 
+
+To address review, the following scripts were added:
+
+1. **2_RINT_lmm_traits_no_baseline_adjustment.R** - Same as **2_RINT_lmm_traits.R**, but b0 (intercept from LMM) is removed from covariates. 
+2. **2_RINT_lmm_traits_no_FU_adjustment.R** - Same as **2_RINT_lmm_traits.R**, but number of follow-up measurements and length of follow-up are removed from covariates. 
+3. **softprob_linear_regression_GWAS_no_baseline_adjustment.sh** - Same as **softprob_linear_regression_GWAS.sh**, but baseline trait is removed as a covariate for GWAS. 
+4. **softprob_linear_regression_GWAS_no_FU_adjustment.sh** - Same as **softprob_linear_regression_GWAS.sh**, but number of follow-up measurements and length of follow-up are removed from covariates. 
