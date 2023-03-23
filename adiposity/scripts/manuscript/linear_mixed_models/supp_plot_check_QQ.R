@@ -40,22 +40,28 @@ lapply(PHENOTYPES, function (p) {
     for_resid_plot <- data.frame(resid = resid(slope_models[[p]][[sx]]))
     qq_resid <- ggplot(for_resid_plot, aes(sample = resid)) +
       stat_qq(size = 0.3) +
-      stat_qq_line()
+      stat_qq_line(fullrange = T, line.p = c(0.025, 0.975)) +
+      theme(axis.text = element_text(size = 8),
+            axis.title = element_blank())
     ggsave(paste0(lmm_mods_path, "/plots/qq_residuals_", p, "_", sx, "_full_model.png"),
-           qq_resid, height = 7, width = 7, units = "in")
+           qq_resid, height = 2, width = 2, units = "in")
     
     # QQ-plot for BLUPs
     qq_blup_b0 <- ggplot(blups[[p]][[sx]], aes(sample = b0)) +
       stat_qq(size = 0.3) +
-      stat_qq_line()
+      stat_qq_line(fullrange = T, line.p = c(0.025, 0.975)) +
+      theme(axis.text = element_text(size = 8),
+            axis.title = element_blank())
     ggsave(paste0(lmm_mods_path, "/plots/qq_b0_BLUP_", p, "_", sx, "_full_model.png"),
-           qq_blup_b0, height = 7, width = 7, units = "in")
+           qq_blup_b0, height = 2, width = 2, units = "in")
     
     qq_blup_b1 <- ggplot(blups[[p]][[sx]], aes(sample = b1)) +
       stat_qq(size = 0.3) +
-      stat_qq_line()
+      stat_qq_line(fullrange = T, line.p = c(0.025, 0.975)) +
+      theme(axis.text = element_text(size = 8),
+            axis.title = element_blank())
     ggsave(paste0(lmm_mods_path, "/plots/qq_b1_BLUP_", p, "_", sx, "_full_model.png"),
-           qq_blup_b1, height = 7, width = 7, units = "in")
+           qq_blup_b1, height = 2, width = 2, units = "in")
     
   })
 })

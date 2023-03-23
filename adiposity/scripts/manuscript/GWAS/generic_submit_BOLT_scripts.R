@@ -25,7 +25,7 @@ PARAMETERS <- c("b0", "b1")
 # submission_script <- paste0(scripts_path, "/BOLT_helpers/2_perform_BOLT_filtering.sh")
 
 # Fine-mapping submission script
-# submission script <- paste0(scripts_path, "/BOLT_helpers/3_perform_finemapping_BOLT.sh")
+# submission_script <- paste0(scripts_path, "/BOLT_helpers/3_perform_finemapping_BOLT.sh")
 
 submission_script <- paste0(scripts_path, "/BOLT_helpers/1_perform_GWAS_BOLT.sh")
 

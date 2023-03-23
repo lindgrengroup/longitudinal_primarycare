@@ -5,11 +5,11 @@
 
 # Pan-UKBB LD panel (EUR) for 1 million HapMap variants
 
-#$ -cwd
-#$ -P lindgren.prjc -q short.qc
-#$ -pe shmem 2
-#$ -N hrg_b0_vs_change
-#$ -j y
+#SBATCH -A lindgren.prj
+#SBATCH -p short
+#SBATCH -c 3
+#SBATCH -J calculate_rg
+#SBATCH -o /well/lindgren-ukbb/projects/ukbb-11867/samvida/adiposity/-%j.out
 
 echo `date`: Executing task ${SGE_TASK_ID} of job ${JOB_ID} on `hostname` as user ${USER}
 
