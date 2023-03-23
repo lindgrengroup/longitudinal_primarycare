@@ -7,4 +7,5 @@ Scripts in this folder:
 ## SUPPLEMENTARY
 
 1. **supp_plot_lmm_predictions.R** - Plot model fits to observed data; separate these by covariate values to check for any systematic biases in modelling.
-2. **supp_plot_BMI_vs_weight.R** - Calculate correlations between BLUPS from modelling of BMI and weight in each strata.
+2. **supp_plot_check_QQ.R** - Plot QQ-plots of LMM residuals and BLUPs to check normality assumptions.
+3. **supp_plot_BMI_vs_weight.R** - Calculate correlations between BLUPS from modelling of BMI and weight in each strata.
