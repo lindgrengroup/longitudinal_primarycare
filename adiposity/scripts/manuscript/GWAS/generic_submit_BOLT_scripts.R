@@ -14,6 +14,8 @@ PARAMETERS <- c("b0", "b1")
 # PARAMETERS <- "b1_unadj_b0"
 # PARAMETERS <- "average_trait"
 # CLUSTERS <- c("k1", "k1_k2", "k1_k2_k3")
+# CLUSTERS <- c("k1_no_FU_adjustment", "k1_k2_no_FU_adjustment", "k1_k2_k3_no_FU_adjustment")
+# CLUSTERS <- c("k1_no_baseline_adjustment", "k1_k2_no_baseline_adjustment", "k1_k2_k3_no_baseline_adjustment")
 
 # GWAS submission script
 # submission_script <- paste0(scripts_path, "/BOLT_helpers/1_perform_GWAS_BOLT.sh")
@@ -50,7 +52,7 @@ for (s in STRATA_NAMES) {
       "--export=",
       paste0(
         "STRATA=\"", s, "\",",
-        "CLUST=\"", k, "\""
+        "PARAMETER=\"", k, "\""
       )
     )
     job_submission <- paste("sbatch", job_options, submission_script)
