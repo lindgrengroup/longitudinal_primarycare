@@ -80,18 +80,16 @@ all_lead_snps <- bind_rows(all_lead_snps)
 
 # Colour palette
 # light grey, light blue, navy, teal green, amber, rose
-col_palette <- c("#A4A4A4", "#A6E8F5", 
-                 "#005580", 
-                 "#009593", "#C7B241", "#D35C79")
+col_palette <- c("#A4A4A4", "#A6E8F5","#005580", "#009593", "#C7B241", "#D35C79")
 names(col_palette) <- c("odd_nonsig", "even_nonsig", 
                         "sig", 
                         "reported", "refined", "novel")
 
 background_gwas <- background_gwas %>%
   mutate(status = ifelse(SNP %in% known_gwascat_snps$SNP & PVALUE < 5e-8, "reported",
-                               ifelse(CHR %% 2 == 0 & PVALUE >= 5e-8, "even_nonsig",
-                                      ifelse(CHR %% 2 != 0 & PVALUE >= 5e-8, "odd_nonsig",
-                                                    ifelse(PVALUE < 5e-8, "sig", NA)))))
+                         ifelse(CHR %% 2 == 0 & PVALUE >= 5e-8, "even_nonsig",
+                                ifelse(CHR %% 2 != 0 & PVALUE >= 5e-8, "odd_nonsig",
+                                       ifelse(PVALUE < 5e-8, "sig", NA)))))
 
 plot_dat <- bind_rows(background_gwas, all_lead_snps)
 plot_dat$status <- as.factor(plot_dat$status)
@@ -116,13 +114,13 @@ manhattan_plot <- ggplot(for_plot,
                          aes(x = POS_bp, y = -log10(PVALUE)),
                          fill = status, colour = status) +
   geom_point(data = for_plot %>% filter(!status %in% c("novel", "refined", "reported")),
-             aes(fill = status, colour = status), shape = 19, size = 1) +
+             aes(fill = status, colour = status), shape = 19, size = 1, alpha = 0.5) +
   geom_point(data = for_plot %>% filter(status == "reported"), 
-             aes(fill = status, colour = status), shape = 19, size = 1) +
+             aes(fill = status, colour = status), shape = 19, size = 1, alpha = 0.5) +
   geom_point(data = for_plot %>% filter(status == "refined"), 
-             aes(fill = status, colour = status), shape = 17, size = 1.5) +
+             aes(fill = status, colour = status), shape = 17, size = 3) +
   geom_point(data = for_plot %>% filter(status == "novel"), 
-             aes(fill = status, colour = status), shape = 17, size = 1.5) +
+             aes(fill = status, colour = status), shape = 17, size = 3) +
   geom_hline(yintercept = -log10(5e-8), linetype = "dashed") +
   scale_colour_manual(values = col_palette, guide = "none") +
   scale_fill_manual(values = col_palette, guide = "none") +
@@ -136,3 +134,55 @@ ggsave(filename = paste0(plot_dir, "/manhattan_novel_refined_reported_intercept_
        plot = manhattan_plot,
        device = "png", width = 10, height = 5, units = "in")
 
+# Add another plot with just the refined and novel variants ----
+
+# Colour palette
+# light grey, light blue, navy, teal green, amber, rose
+col_palette <- c("#A4A4A4", "#A6E8F5","#C7B241", "#D35C79")
+names(col_palette) <- c("odd", "even", "refined", "novel")
+
+background_gwas <- background_gwas %>%
+  mutate(status = ifelse(CHR %% 2 == 0, "even", 
+                         ifelse(CHR %% 2 != 0, "odd", NA)))
+
+plot_dat <- bind_rows(background_gwas, all_lead_snps)
+plot_dat <- plot_dat %>% filter(status %in% c("odd", "even", "refined", "novel"))
+plot_dat$status <- as.factor(plot_dat$status)
+
+# Format data to plot
+for_plot <- plot_dat %>% 
+  # get chromosome length
+  group_by(CHR) %>% summarise(chr_len = max(POS)) %>%
+  # get chromosome position
+  mutate(tot = cumsum(as.numeric(chr_len)) - as.numeric(chr_len)) %>% select(-chr_len) %>%
+  # add to original results dataset
+  left_join(plot_dat, ., by = c("CHR" = "CHR")) %>%
+  # add cumulative position of each SNP
+  arrange(CHR, POS) %>% mutate(POS_bp = POS + tot) 
+
+# Axis should just show chromosome number
+axisdf <- for_plot %>% group_by(CHR) %>% 
+  summarise(centre = (max(POS_bp) + min(POS_bp)) / 2)
+
+# Plot
+manhattan_plot <- ggplot(for_plot, 
+                         aes(x = POS_bp, y = -log10(PVALUE)),
+                         fill = status, colour = status) +
+  geom_point(data = for_plot %>% filter(!status %in% c("refined", "reported")),
+             aes(fill = status, colour = status), shape = 19, size = 1, alpha = 0.5) +
+  geom_point(data = for_plot %>% filter(status == "refined"), 
+             aes(fill = status, colour = status), shape = 17, size = 3) +
+  geom_point(data = for_plot %>% filter(status == "novel"), 
+             aes(fill = status, colour = status), shape = 17, size = 3) +
+  geom_hline(yintercept = -log10(5e-8), linetype = "dashed") +
+  scale_colour_manual(values = col_palette, guide = "none") +
+  scale_fill_manual(values = col_palette, guide = "none") +
+  scale_x_continuous(label = axisdf$CHR, breaks = axisdf$centre) +
+  scale_y_continuous(limits = c(0, NA)) +
+  theme(panel.border = element_blank(),
+        panel.grid.major.x = element_blank(), 
+        panel.grid.minor.x = element_blank())
+
+ggsave(filename = paste0(plot_dir, "/manhattan_only_novel_refined_intercept_variants.png"),
+       plot = manhattan_plot,
+       device = "png", width = 10, height = 5, units = "in")

@@ -42,10 +42,11 @@ plot_dat <- selfrep %>%
 plotORs <- function (v) {
   print(v)
   sub_dat <- plot_dat %>% 
-    filter(SNP == v & sex_strata == "sex_comb") %>% 
+    filter(SNP == v & sex_strata == "sex_comb" & !is.na(sig_lty)) %>% 
     select(all_of(c("or", "lci", "uci",
                     "sex_strata", "ancestry", "strata", "sig_lty")))
   missing_anc <- ANC_LEVELS[!ANC_LEVELS %in% unique(sub_dat$ancestry)]
+
   if (length(missing_anc) > 0) {
     add_dat <- data.frame(or = NA, lci = NA, uci = NA,
                           sex_strata = NA, ancestry = missing_anc,
@@ -75,12 +76,12 @@ plotORs <- function (v) {
 }
 
 VARIDS <- unique(plot_dat$SNP)
-# Skip rs61955499 because sample sizes are very small
-VARIDS <- VARIDS[VARIDS != "rs61955499"]
+# Skip rs61955499 because standard erorrs are very small
+# VARIDS <- VARIDS[VARIDS != "rs61955499"]
 lapply(VARIDS, function (v) {
   tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
               v, "_selfrep.tiff"),
-       height = 4, width = 4, units = "cm",
+       height = 3, width = 4, units = "cm",
        res = 300)
   print(plotORs(v))
   dev.off()
@@ -88,11 +89,10 @@ lapply(VARIDS, function (v) {
 v <- VARIDS[2]
 tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
             "chr6_26076446", "_selfrep.tiff"),
-     height = 4, width = 4, units = "cm",
+     height = 3, width = 4, units = "cm",
      res = 300)
 print(plotORs(v))
 dev.off()
-
 
 # Linear slope ----
 
@@ -114,10 +114,25 @@ plot_dat <- b1_dat %>%
 plotBetas <- function (v) {
   print(v)
   sub_dat <- plot_dat %>% 
-    filter(SNP == v & sex_strata == "sex_comb") %>% 
+    filter(SNP == v & sex_strata == "sex_comb" & !is.na(sig_lty)) %>% 
     select(all_of(c("beta", "lci", "uci",
                     "sex_strata", "ancestry", "pheno_tested", 
                     "strata", "sig_lty")))
+  
+  missing_anc <- ANC_LEVELS[!ANC_LEVELS %in% unique(sub_dat$ancestry)]
+  
+  if (length(missing_anc) > 0) {
+    add_dat <- data.frame(or = NA, lci = NA, uci = NA,
+                          sex_strata = NA, 
+                          ancestry = rep(missing_anc, each = 2),
+                          pheno_tested = rep(c("BMI", "Weight"), times = length(missing_anc)),
+                          strata = NA, sig_lty = "no")
+    add_dat$strata <- paste0(add_dat$ancestry, "_", add_dat$pheno_tested)
+    sub_dat <- bind_rows(sub_dat, add_dat)
+  }
+  sub_dat <- sub_dat %>%
+    mutate(strata = factor(strata, levels = paste0(rep(ANC_LEVELS, each = 2), "_",
+                                                   rep(c("Weight", "BMI"), times = 6))))
   
   res_plot <- ggplot(sub_dat, aes(x = beta, y = strata, group = ancestry)) +
     geom_pointrange(aes(xmin = lci, xmax = uci,
@@ -140,11 +155,11 @@ plotBetas <- function (v) {
 
 VARIDS <- unique(plot_dat$SNP)
 # Skip rs61955499 because sample sizes are very small
-VARIDS <- VARIDS[VARIDS != "rs61955499"]
+# VARIDS <- VARIDS[VARIDS != "rs61955499"]
 lapply(VARIDS, function (v) {
   tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
               v, "_b1.tiff"),
-       height = 4, width = 4, units = "cm",
+       height = 3, width = 4, units = "cm",
        res = 300)
   print(plotBetas(v))
   dev.off()
@@ -152,7 +167,7 @@ lapply(VARIDS, function (v) {
 v <- VARIDS[2]
 tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
             "chr6_26076446", "_b1.tiff"),
-     height = 4, width = 4, units = "cm",
+     height = 3, width = 4, units = "cm",
      res = 300)
 print(plotBetas(v))
 dev.off()
@@ -175,10 +190,26 @@ plot_dat <- k1_dat %>%
 plotORs <- function (v) {
   print(v)
   sub_dat <- plot_dat %>% 
-    filter(SNP == v & sex_strata == "sex_comb") %>% 
+    filter(SNP == v & sex_strata == "sex_comb" & !is.na(sig_lty)) %>% 
     select(all_of(c("or", "lci", "uci",
                     "sex_strata", "ancestry", "pheno_tested", 
                     "strata", "sig_lty")))
+  
+  missing_anc <- ANC_LEVELS[!ANC_LEVELS %in% unique(sub_dat$ancestry)]
+  
+  if (length(missing_anc) > 0) {
+    add_dat <- data.frame(or = NA, lci = NA, uci = NA,
+                          sex_strata = NA, 
+                          ancestry = rep(missing_anc, each = 2),
+                          pheno_tested = rep(c("BMI", "Weight"), times = length(missing_anc)),
+                          strata = NA, sig_lty = "no")
+    add_dat$strata <- paste0(add_dat$ancestry, "_", add_dat$pheno_tested)
+    sub_dat <- bind_rows(sub_dat, add_dat)
+  }
+  sub_dat <- sub_dat %>%
+    mutate(strata = factor(strata, levels = paste0(rep(ANC_LEVELS, each = 2), "_",
+                                                   rep(c("Weight", "BMI"), times = 6))))
+  
   
   res_plot <- ggplot(sub_dat, aes(x = or, y = strata, group = ancestry)) +
     geom_pointrange(aes(xmin = lci, xmax = uci,
@@ -201,11 +232,11 @@ plotORs <- function (v) {
 
 VARIDS <- unique(plot_dat$SNP)
 # Skip rs61955499 because sample sizes are very small
-VARIDS <- VARIDS[VARIDS != "rs61955499"]
+# VARIDS <- VARIDS[VARIDS != "rs61955499"]
 lapply(VARIDS, function (v) {
   tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
               v, "_k1.tiff"),
-       height = 4, width = 4, units = "cm",
+       height = 3, width = 4, units = "cm",
        res = 300)
   print(plotORs(v))
   dev.off()
@@ -213,7 +244,7 @@ lapply(VARIDS, function (v) {
 v <- VARIDS[2]
 tiff(paste0(outfile_path, "/figures/non_wb_ancestry/",
             "chr6_26076446", "_k1.tiff"),
-     height = 4, width = 4, units = "cm",
+     height = 3, width = 4, units = "cm",
      res = 300)
 print(plotORs(v))
 dev.off()
