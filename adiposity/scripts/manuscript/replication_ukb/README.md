@@ -1,5 +1,7 @@
 Scripts to replicate the genome-wide significant associations discovered in the primary-care + UKBB data in UKBB assessment centre data alone.
 
+1. **debias_beta_check_replication_sample_sizes.R** - Estimate the required sample sizes to replicate linear slope associations after adjusting the discovery effect size for winner's curse. Debiasing script adapted from [Palmer *et al.* (2017)](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1006916).
+
 Scripts in *cross_sectional/*: Scripts to replicate baseline obesity associations.
 
 1. **1_prep_cross_sec.R** - Get UK Biobank cross-sectional value by taking the assessment centre visit measurement of BMI or weight, or if there are multiple measurements, the median measurement. Adjust for confounders (age, age-squared, data provider, year of birth, and sex in sex-combined analyses), and rank-based inverse normally transform for GWAS. 
