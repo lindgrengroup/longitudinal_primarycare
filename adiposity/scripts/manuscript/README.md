@@ -1,8 +1,8 @@
 # The genetic architecture of changes in adiposity during adulthood
 
-Code for analyses in pre-printed article here - https://www.medrxiv.org/content/10.1101/2023.01.09.23284364v1
+Code for analyses in published article here - https://www.nature.com/articles/s41467-024-49998-0
 
-Cite as: Venkatesh SS, Ganjgahi H, Palmer DS, Coley K, Wittemans LBL, Nellaker C, Holmes C, Lindgren CM, Nicholson G. The genetic architecture of changes in adiposity during adulthood. medRxiv [Preprint]. 2023 Jan 11:2023.01.09.23284364. doi: 10.1101/2023.01.09.23284364. PMID: 36711652; PMCID: PMC9882550.
+Cite as: Venkatesh, S.S., Ganjgahi, H., Palmer, D.S. et al. Characterising the genetic architecture of changes in adiposity during adulthood using electronic health records. Nat Commun 15, 5801 (2024). https://doi.org/10.1038/s41467-024-49998-0
 
 ## Structure
 Scripts are organised by directories corresponding to sections in the manuscript.
